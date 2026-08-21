@@ -1,0 +1,175 @@
+Этические вопросы проведения игровых конкурсов и фестивалей
+
+Аннотация
+Статья исследует этические проблемы проведения игровых конкурсов и фестивалей: game jam этику, fairness of competition, прозрачность критериев оценки, интеллектуальную собственность в конкурсах, распределение призов, доступность конкурсов, географическую предвзятость, controversies в IGF, ethics Golden Joystick, lobbying award shows, и соотношение recognition vs. commercial success.
+
+=== 1. Введение: конкурс как пространство этики
+
+Игровые конкурсы и фестивали играют crucial role в индустрии: discovery of talent, celebration of creativity, networking, professional development. Где есть competition, есть и ethical questions: fairness, transparency, bias, exploitation.
+
+Конкурсная система в игровой индустрии включает: game jams (48-72 часа), indie festivals (games made by small teams), award shows (IGF, Game Awards, Golden Joystick), competitions (game design contests), and showcases (PAX, E3/Gamescom).
+
+Каждый формат создаёт свои ethical challenges. Статья анализирует key issues и proposes guidelines.
+
+=== 2. Game Jam этика
+
+--- 2.1. Что такое game jam
+
+Game jam: developers create game в ограниченное время (usually 48-72 hours). Цели: creativity under constraints, networking, learning, fun. Примеры: Global Game Jam, Ludum Dare, GMTK Game Jam.
+
+--- 2.2. Fairness в game jams
+
+Issues: team size (individuals vs. teams), asset use (pre-made assets vs. all original), scope (simple vs. complex), judging criteria (subjectivity).
+
+Guidelines: clear rules (what's allowed, what's not), separate categories (individual, team, student), transparent judging criteria.
+
+--- 2.3. Интеллектуальная собственность
+
+Ownership: who owns game created in jam? Usually, developer retains ownership. But jams may require: non-exclusive license for promotion, open source requirements, exclusivity for prizes.
+
+Ethical issue: jams should not exploit developers' work. Clear IP terms in rules.
+
+--- 2.4. Crunch в game jams
+
+Irony: game jams celebrate crunch. 48-hour non-stop development is essentially glorified crunch.
+
+Ethical question: is this healthy? Should jams encourage sustainable practices? Some jams now include: mandatory breaks, wellness check-ins, flexible time limits.
+
+--- 2.5. Accessibility
+
+Physical accessibility: jam locations often not accessible. Online jams: internet requirement, time zones.
+
+Financial accessibility: travel costs, equipment costs. Scholarships, remote participation, equipment loans help.
+
+=== 3. Конкурсная этика: IGF и аналоги
+
+--- 3.1. IGF controversies
+
+Independent Games Festival (IGF) — premier indie game award. History of controversies: judging bias, conflicts of interest, political influence.
+
+Issues: judges may know developers personally, self-nomination bias, genre bias, platform bias.
+
+Reforms: blind judging, conflict of interest disclosure, diverse judging panels, public feedback.
+
+--- 3.2. Transparency критериев
+
+Оценка игр в конкурсах: как criteria определены? Как weighting распределяется? Как feedback предоставляется?
+
+Проблема: многие конкурсы не disclose criteria. Developers не знают, что оценивается. Это создаёт uncertainty и potential for manipulation.
+
+--- 3.3. Lobbying и кампании
+
+Lobbying: developers campaign for awards.花钱 на marketing, relationships с judges, PR campaigns.
+
+Ethical issue: recognition should be based on merit, not marketing budget. Some contests限制 campaigning, others ignore it.
+
+--- 3.4. Жанровая и платформенная предвзятость
+
+Bias: certain genres (narrative, puzzle) may be preferred over others (simulation, strategy). PC games vs. console games vs. mobile games.
+
+Efforts: diversity in categories, genre-specific awards, platform-neutral criteria.
+
+=== 4. Награждение и призы
+
+--- 4.1. Распределение призов
+
+Prize distribution: cash prizes, hardware, software, exposure. Issues: tax implications (prizes are taxable income), equitable distribution (individual vs. team), grand prize vs. participation prizes.
+
+--- 4.2. Ethics of large prizes
+
+Large prizes: attract attention but may distort competition. Example: million-dollar prize pools may attract commercial entries over pure creativity.
+
+Small prizes: less attention but more focused on creativity.
+
+--- 4.3. Non-monetary recognition
+
+Exposure, networking, portfolio building. Ethical issue: "exposure" as compensation undervalues developers' work.
+
+Balance: combine monetary prizes with exposure opportunities.
+
+=== 5. Доступность и инклюзивность
+
+--- 5.1. Географическая предвзятость
+
+Geographic bias: festivals located in US/Europe. Travel costs exclude developers from developing countries. Online festivals mitigate but not solve.
+
+Efforts: regional events, travel grants, virtual attendance.
+
+--- 5.2. Языковые барьеры
+
+Language barrier: competitions primarily in English. Non-English developers disadvantaged.
+
+Efforts: multilingual support, regional competitions, translation services.
+
+--- 5.3. Финансовые барьеры
+
+Entry fees: some contests charge fees. Barriers for indie developers.
+
+Free-to-enter competitions preferred. Sponsorships for entry fees.
+
+--- 5.4. Доступность для людей с инвалидностью
+
+Accessibility: venues, communication materials, game accessibility requirements.
+
+Inclusive design: games in competitions should be accessible. Judging should account for accessibility.
+
+=== 6. Коммерческий успех vs. признание
+
+--- 6.1. Цель конкурсов
+
+Award shows celebrate creativity and innovation. Commercial success is separate issue.
+
+Problem: awards may become marketing tools. Developers pursue awards for commercial benefit, not recognition.
+
+--- 6.2. Balance
+
+Balance: awards celebrate quality, not sales. But recognition helps commercial success.
+
+Ethical issue: should awards consider commercial impact? Or purely artistic merit?
+
+--- 6.3. Lifetime achievement
+
+Career awards: recognize body of work. Ethical issue: past achievements vs. current work, industry influence vs. innovation.
+
+=== 7. Будущее конкурсов
+
+--- 7.1. Виртуальные фестивали
+
+Virtual festivals: accessibility, cost reduction. Loss of networking, community building.
+
+Hybrid approach: combination of physical and virtual.
+
+--- 7.2. Community-driven awards
+
+Player-voted awards: democratic but subject to popularity bias. Jury awards: expert but potential bias.
+
+Combination: jury + player vote.
+
+--- 7.3. Ethics frameworks
+
+Developing ethics frameworks for competitions: transparency, fairness, accessibility, sustainability.
+
+Industry collaboration: shared standards, best practices, accountability.
+
+=== 8. Заключение
+
+Игровые конкурсы и фестивали — важная часть индустрии. Они discover talent, celebrate creativity, build community. Но без этического compass, they can perpetuate inequality, exploit developers, and lose integrity.
+
+Key ethical principles: fairness (clear rules, transparent judging), transparency (disclosure of criteria, funding, conflicts), accessibility (geographic, financial, linguistic), sustainability (no glorification of crunch), merit-based recognition (not marketing-driven), and community benefit (not just individual gain).
+
+Конкурсная этика — это не просто правила; это ценности, которые определяют, как индустрия относится к своим создателям. Ethical competitions strengthen industry; unethical ones undermine trust.
+
+=== Источники
+
+1. Independent Games Festival (2024). Rules and Guidelines.
+2. Global Game Jam (2024). Code of Conduct.
+3. Ludum Dare (2024). Competition Rules.
+4. Game Awards (2024). Judging Process.
+5. Golden Joystick Awards (2024). Voting Methodology.
+6. Developers Choice Awards (2024). Criteria and Process.
+7. International Game Developers Association (2024). Awards Ethics Guidelines.
+8. Game Developer (2024). Analysis of Award Show Ethics.
+9. GDC (2024). Indie Summit: Competition Ethics Panel.
+10. IGDA (2024). Diversity in Game Awards Report.
+11. Russian Game Developers Association (2024). Competition Guidelines.
+12. Fair Play Alliance (2024). Ethical Competition Standards.

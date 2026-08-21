@@ -1,0 +1,215 @@
+Проектное управление в игровой разработке: методологии и этические аспекты
+
+Аннотация
+Статья исследует методологии проектного управления в игровой разработке: Scrum, Kanban, Waterfall. Особое внимание уделяется crunch как признаку провала управления, этическому планированию спринтов, реалистичной оценке, управлению scope, коммуникации с stakeholders, планированию вместимости teams, управлению technical debt, tradeoffs между качеством и дедлайнами, post-mortem этике, и обмену знаниями после завершения проекта.
+
+=== 1. Введение: управление творчеством
+
+Игровая разработка — уникальная форма проектного управления. Она сочетает: technical complexity (software engineering), creative vision (art, design), commercial requirements (deadlines, budgets), и human factors (teams of creative professionals). Ни одна другая отрасль не требует такого баланса.
+
+Традиционные методы управления (Waterfall) spawned Agile, which spawned Scrum, Kanban, и множество гибридных подходов. Но ни один framework не гарантирует success — потому что game development is fundamentally unpredictable.
+
+Статья исследует: как методологии применяются к game dev, какие ethical dilemmas возникают, и как ответственный project management может улучшить outcomes.
+
+=== 2. Методологии проектного управления
+
+--- 2.1. Waterfall
+
+Waterfall: sequential phases (concept → design → development → testing → release). Traditional model, still used for some game projects.
+
+Преимущества: clear milestones, predictable timeline, structured documentation. Недостатки: inflexible, poor for iterative development, delays feedback.
+
+Применение в games: large AAA titles with defined scope (sports games, sequels), outsourced development, regulatory-compliant projects.
+
+--- 2.2. Scrum
+
+Scrum: iterative framework, sprints (1-4 weeks), daily stand-ups, sprint reviews, retrospectives. Most popular agile method in game dev.
+
+Преимущества: flexibility, rapid feedback, team empowerment, adaptive planning. Недостатки: requires experienced team, can lead to scope creep, may lack documentation.
+
+Применение в games: indie and mid-size studios, live service games, post-launch support.
+
+--- 2.3. Kanban
+
+Kanban: continuous flow, work-in-progress limits, visual management. Less structured than Scrum.
+
+Преимущества: flexibility, focus on flow, easy to implement, good for maintenance. Недостатки: less structure, no sprint commitments, may lack urgency.
+
+Применение в games: support teams, QA, live operations, mixed with Scrum (Scrumban).
+
+--- 2.4. Hybrid approaches
+
+Most studios use hybrid: Scrum for development, Waterfall for production milestones, Kanban for support. Or: concept phase (Waterfall), development (Scrum), launch (Kanban).
+
+Key: choose methodology based on project, team, and culture. No one-size-fits-all.
+
+--- 2.5. Game-specific adaptations
+
+Game dev adaptations: "design sprints" (rapid prototyping), "vertical slice" (proof of concept), "production milestones" (publisher requirements).
+
+Challenge: balancing creative iteration with business requirements.
+
+=== 3. Crunch: провал проектного управления
+
+--- 3.1. Определение и причины
+
+Crunch: extended periods of overtime, usually uncompensated, to meet deadlines. Industry norm: 50-80 hour weeks during final months.
+
+Causes: poor planning, scope creep, unrealistic deadlines, technical problems, management failures, publisher pressure.
+
+--- 3.2. Последствия
+
+Health: burnout, physical health problems, mental health issues. Team: morale, turnover, quality (fatigued developers make mistakes). Project: long-term damage, reputation.
+
+--- 3.3. Crunch как failure of project management
+
+Crunch is not dedication — it's failure. Failure to: estimate realistically, manage scope, communicate effectively, prioritize, protect team.
+
+Ethical dimension: management has obligation to protect team health. Crunch is management failure, not developer weakness.
+
+--- 3.4. Стратегии предотвращения
+
+Prevention: realistic planning, scope management, buffer time, transparent communication, prioritization, saying "no" to additional features.
+
+Culture: move from "hero culture" (celebrating crunch) to "sustainable development" culture.
+
+--- 3.5. Примеры
+
+Positive: Supercell (no crunch culture, successful games), Mojang (Minecraft sustainable development). Negative: Rockstar (Red Dead Redemption 2 crunch), CD Projekt Red (Cyberpunk 2077 crunch).
+
+=== 4. Этичное планирование спринтов
+
+--- 4.1. Estimation
+
+Estimation: predicting time/effort for tasks. Agile estimation: story points, t-shirt sizing, planning poker.
+
+Problem: developers underestimate due to optimism, lack of data, pressure to please. Solution: reference class forecasting, historical data, buffer.
+
+--- 4.2. Capacity planning
+
+Capacity: available time for development. Must account for: meetings, communication, unexpected issues, vacation, sick leave.
+
+Ethical planning: don't plan for 100% capacity. Allow buffer (typically 60-70% available for actual work).
+
+--- 4.3. Prioritization
+
+MoSCoW method: Must have, Should have, Could have, Won't have. Ethical prioritization: avoid "all must have" which leads to crunch.
+
+Communication: be transparent about trade-offs.
+
+--- 4.4. Sustainable pace
+
+Agile principle: sustainable pace. Developers should be able to maintain pace indefinitely without burnout.
+
+实践: 40-hour weeks, no overtime as norm, flexible scheduling.
+
+--- 4.5. Transparency
+
+Open communication: daily stand-ups, sprint reviews, retrospectives. Ethical: create safe environment for raising concerns.
+
+=== 5. Управление scope
+
+--- 5.1. Scope creep
+
+Scope creep: uncontrolled expansion of project scope. Causes: new ideas, changing requirements, feature envy, inability to say "no".
+
+Impact: budget overrun, schedule slip, team burnout, quality reduction.
+
+--- 5.2. Feature creep vs. iteration
+
+Feature creep: adding features endlessly. Iteration: refining existing features. Key difference: creep expands scope; iteration improves quality.
+
+--- 5.3. Scope management strategies
+
+Strategies: clear vision document, change control process, prioritization, regular scope reviews, saying "no" to new features.
+
+Ethical: be transparent about scope changes with team and stakeholders.
+
+--- 5.4. Cutting features
+
+Cutting features: painful but necessary. Ethical: cut features before crunch, not during. Be transparent about reasons.
+
+=== 6. Коммуникация со stakeholders
+
+--- 6.1. Publisher-developer relationship
+
+Publishers fund development but may impose: unrealistic deadlines, scope changes, marketing requirements. Developer challenge: balance publisher expectations with team wellbeing.
+
+Ethical: developer should push back against unreasonable demands; publisher should respect developer expertise.
+
+--- 6.2. Team communication
+
+Internal communication: daily stand-ups, sprint reviews, retrospectives, documentation. Ethical: create safe environment, listen to concerns, address conflicts early.
+
+--- 6.3. Community communication
+
+Community: players, fans, media. Communication: transparent, honest, regular. Ethical: don't overpromise, acknowledge issues, respect community.
+
+=== 7. Управление technical debt
+
+--- 7.1. Определение
+
+Technical debt: accumulated shortcuts, outdated code, architectural problems. Similar to financial debt: borrowing from future to deliver now.
+
+Causes: tight deadlines, lack of refactoring, knowledge loss, legacy code.
+
+--- 7.2. Impact
+
+Impact: slower development, more bugs, harder maintenance, team frustration, reduced quality.
+
+--- 7.3. Management strategies
+
+Strategies: regular refactoring, code reviews, automated testing, documentation, allocation of time for debt reduction.
+
+Ethical: management must allocate time for debt reduction; developers must communicate debt concerns.
+
+=== 8. Качество vs. дедлайн
+
+--- 8.1. The classic dilemma
+
+Quality vs. deadline: ship on time with bugs, or delay for quality. No easy answer.
+
+--- 8.2. Options
+
+Options: cut features (reduce scope), extend timeline (delay), increase resources (add people — often makes things worse), release with known issues (crunch alternative), accept lower quality (technical debt).
+
+--- 8.3. Ethical framework
+
+Ethical: prioritize team health and consumer trust. Short-term: ship on time may seem best. Long-term: damaged reputation and team.
+
+Best practice: transparent communication about trade-offs, involving team in decisions, planning buffer.
+
+=== 9. Post-mortem этика
+
+--- 9.1. Purpose
+
+Post-mortem: analysis after project completion. Goals: identify successes, failures, lessons learned. Not about blame — about improvement.
+
+--- 9.2. Ethical post-mortem
+
+Ethical: blameless, honest, inclusive, documented, acted upon. Not: superficial, blame-focused, ignored, forgotten.
+
+--- 9.3. Learning culture
+
+Learning culture: knowledge is shared, not hoarded. Ethical: document knowledge, share with team, contribute to industry.
+
+=== 10. Заключение
+
+Проектное управление в игровой разработке — это не просто methods and tools. It's about people: their health, creativity, and wellbeing. Ethical project management requires: realistic planning, sustainable pace, transparent communication, respect for developers, quality focus, learning culture.
+
+The goal: create great games without sacrificing human wellbeing. This is not idealistic — it's practical. Studios with good project management produce better games, retain talent, and build sustainable businesses.
+
+=== Источники
+
+1. Schwaber, K., & Sutherland, J. (2020). The Scrum Guide.
+2. Poppendieck, M., & Poppendieck, T. (2003). Lean Software Development.
+3. Keith, C. (2010). Agile Game Development with Scrum.
+4. Player, G. (2018). Production Pipeline for Games.
+5. GDC (2024). Production Summit: Project Management.
+6. Game Developer (2024). Crunch Culture Report.
+7. IGDA (2024). Developer Satisfaction Survey.
+8. CD Projekt Red (2024). Post-Mortem: Cyberpunk 2077.
+9. Supercell (2024). Company Culture and Development Practices.
+10. Mojang (2024). Sustainable Game Development Case Study.
+11. Rockstar Games (2023). Production Management Analysis.
+12. Russian Game Developers Association (2024). Project Management Survey.
