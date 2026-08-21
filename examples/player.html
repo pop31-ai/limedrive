@@ -85,6 +85,7 @@ let totalDeaths = 0;
 let levelStartTime = 0;
 let victoryStats = null;
 let levelEntityDefs = [];
+let levelTransitioning = false;
 
 function loadFromURL() {
   const p = new URLSearchParams(window.location.search);
@@ -128,6 +129,7 @@ function loadLevel(idx) {
   }
   currentLevelIdx = idx;
   levelData = gameData.levels[idx];
+  levelTransitioning = false;
   entities = [];
   particles = [];
   collectedPickups = new Set();
@@ -303,6 +305,10 @@ function updateHero(dt) {
     hero.facing = moveX;
   }
 
+  const airRes = s.airResistance || 0;
+  if (!hero.onGround) {
+    hero.vx *= (1 - airRes);
+  }
   hero.vx *= friction;
   if (Math.abs(hero.vx) < 0.1) hero.vx = 0;
   if (hero.vx > maxSpeed) hero.vx = maxSpeed;
@@ -413,7 +419,8 @@ function resolveHeroCollisions() {
     }
 
     if (et === "finish") {
-      if (rectOverlap(hero, e)) {
+      if (rectOverlap(hero, e) && !levelTransitioning) {
+        levelTransitioning = true;
         const next = (e.properties && e.properties.nextLevel != null) ? e.properties.nextLevel : null;
         if (next === null || next === undefined || next === -1 || next >= gameData.levels.length) {
           showVictory();
@@ -436,7 +443,18 @@ function resolveHeroCollisions() {
     if (et === "checkpoint") {
       if (rectOverlap(hero, e) && !e.checked) {
         e.checked = true;
-        checkpointData = { x: e.originX || e.x, y: e.originY - 10 || e.y, health: hero.health };
+        let spawnY = e.originY || e.y;
+        for (let j = 0; j < entities.length; j++) {
+          const pl = entities[j];
+          if ((pl.type === "platform" || pl.type === "moving_platform") && pl.alive) {
+            if (e.x + e.width / 2 > pl.x && e.x + e.width / 2 < pl.x + pl.width &&
+                e.y + e.height <= pl.y + 10 && pl.y < spawnY + 100) {
+              spawnY = pl.y - hero.height;
+              break;
+            }
+          }
+        }
+        checkpointData = { x: e.originX || e.x, y: spawnY, health: hero.health };
         spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#ffffff", 8, "collect");
       }
       continue;
@@ -462,8 +480,9 @@ function resolveHeroCollisions() {
     }
 
     if (et === "trigger") {
-      if (rectOverlap(hero, e) && !e.triggered) {
+      if (rectOverlap(hero, e) && !e.triggered && !levelTransitioning) {
         e.triggered = true;
+        levelTransitioning = true;
         const action = e.properties && e.properties.action;
         if (action === "nextLevel") {
           const next = e.properties.level != null ? e.properties.level : currentLevelIdx + 1;
@@ -555,12 +574,31 @@ function damageEnemy(e, dmg) {
 }
 
 function updateEnemies(dt) {
+  const s = getSettings();
+  const gravity = s.gravity || 18;
   for (let i = 0; i < entities.length; i++) {
     const e = entities[i];
     if (!e.alive || !e.active) continue;
     if (e.type === "enemy" && e.health > 0) {
       e.animTimer += dt;
       e.flashTimer = Math.max(0, e.flashTimer - dt);
+      const isFlying = e.properties.flyPattern || e.properties.flyAmplitude;
+      if (!isFlying) {
+        e.vy = (e.vy || 0) + gravity * dt * 60;
+        e.y += e.vy * dt * 60;
+        for (let j = 0; j < entities.length; j++) {
+          const pl = entities[j];
+          if ((pl.type === "platform" || pl.type === "moving_platform") && pl.alive) {
+            if (e.x + e.width > pl.x && e.x < pl.x + pl.width &&
+                e.y + e.height > pl.y && e.y + e.height < pl.y + pl.height + 20 &&
+                (e.vy || 0) >= 0) {
+              e.y = pl.y - e.height;
+              e.vy = 0;
+              break;
+            }
+          }
+        }
+      }
       const range = e.properties.patrolRange || 200;
       e.patrolDist += Math.abs(e.speed) * dt * 60;
       if (e.patrolDist >= range) {
@@ -596,7 +634,6 @@ function updateBosses(dt) {
     const dir = dx > 0 ? 1 : -1;
     if (e.bossCharging) {
       e.x += e.bossChargeDir * e.speed * 3 * dt * 60;
-      e.bossTimer += dt;
       if (e.bossTimer > 1.5) {
         e.bossCharging = false;
         e.bossTimer = 0;
