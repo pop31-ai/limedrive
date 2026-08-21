@@ -334,7 +334,16 @@ function updateHero(dt) {
   if (hero.vx > maxSpeed) hero.vx = maxSpeed;
   if (hero.vx < -maxSpeed) hero.vx = -maxSpeed;
 
-  hero.vy += gravity * dt * 60;
+  let effectiveGravity = gravity;
+  for (let i = 0; i < entities.length; i++) {
+    const z = entities[i];
+    if (z.type === "zone" && z.alive && rectOverlap(hero, z)) {
+      const mult = (z.properties && z.properties.gravityMultiplier) || 1;
+      effectiveGravity = gravity * mult;
+      break;
+    }
+  }
+  hero.vy += effectiveGravity * dt * 60;
 
   if (!hero.onGround) {
     hero.coyoteTimer = Math.max(0, hero.coyoteTimer - dt);
@@ -379,7 +388,24 @@ function resolveHeroCollisions() {
     if (e === hero || !e.alive || !e.active) continue;
     const et = e.type;
 
-    if (et === "decoration" || et === "spawn_point") continue;
+    if (et === "decoration" || et === "spawn_point" || et === "ui") continue;
+
+    if (et === "boundary") {
+      if (rectOverlap(hero, e)) {
+        const heroRight = hero.x + hero.width;
+        const heroBottom = hero.y + hero.height;
+        const overlapLeft = heroRight - e.x;
+        const overlapRight = (e.x + e.width) - hero.x;
+        const overlapTop = heroBottom - e.y;
+        const overlapBottom = (e.y + e.height) - hero.y;
+        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+        if (minOverlap === overlapTop) { hero.y = e.y - hero.height; hero.vy = 0; hero.onGround = true; }
+        else if (minOverlap === overlapBottom) { hero.y = e.y + e.height; hero.vy = 0; }
+        else if (minOverlap === overlapLeft) { hero.x = e.x - hero.width; hero.vx = 0; }
+        else if (minOverlap === overlapRight) { hero.x = e.x + e.width; hero.vx = 0; }
+      }
+      continue;
+    }
 
     if (et === "platform" || et === "moving_platform") {
       if (rectOverlap(hero, e)) {
@@ -421,12 +447,12 @@ function resolveHeroCollisions() {
       continue;
     }
 
-    if (et === "pickup") {
+    if (et === "pickup" || et === "collectible") {
       if (rectOverlap(hero, e)) {
         e.alive = false;
         e.active = false;
         collectedPickups.add(e.id || (e.originX + "_" + e.originY));
-        const val = (e.properties && e.properties.value) || 10;
+        const val = (e.properties && e.properties.value) || (e.properties && e.properties.scoreValue) || 10;
         if (e.properties && e.properties.pickupType === "health") {
           hero.health = Math.min(hero.maxHealth, hero.health + val);
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#ff4466", 8, "collect");
@@ -434,6 +460,18 @@ function resolveHeroCollisions() {
           score += val;
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, e.color || "#FFD700", 10, "collect");
         }
+        totalPickupsCollected++;
+      }
+      continue;
+    }
+
+    if (et === "powerup") {
+      if (rectOverlap(hero, e)) {
+        e.alive = false;
+        e.active = false;
+        collectedPickups.add(e.id || (e.originX + "_" + e.originY));
+        score += (e.properties && e.properties.scoreValue) || 50;
+        spawnParticles(e.x + e.width / 2, e.y + e.height / 2, e.color || "#00ffff", 12, "collect");
         totalPickupsCollected++;
       }
       continue;
@@ -560,7 +598,7 @@ function heroDie() {
       const sp = entities.find(e => e.type === "spawn_point");
       if (sp) { hero.x = sp.x; hero.y = sp.y; }
       else {
-        const def = levelEntityDefs.find(e => e.type === "hero");
+        const def = levelEntityDefs.find(e => e.type === "hero" || e.type === "player");
         if (def) { hero.x = def.x; hero.y = def.y; }
         else { hero.x = 100; hero.y = 500; }
       }
@@ -859,18 +897,21 @@ function drawEntities(camX, camY) {
     ctx.globalAlpha = 1;
 
     switch (e.type) {
-      case "hero": drawHero(e, sx, sy, sw, sh); break;
+      case "hero": case "player": drawHero(e, sx, sy, sw, sh); break;
       case "platform": drawPlatform(e, sx, sy, sw, sh); break;
       case "moving_platform": drawMovingPlatform(e, sx, sy, sw, sh); break;
       case "enemy": drawEnemy(e, sx, sy, sw, sh); break;
       case "boss": drawBoss(e, sx, sy, sw, sh); break;
-      case "pickup": drawPickup(e, sx, sy, sw, sh); break;
+      case "pickup": case "collectible": drawPickup(e, sx, sy, sw, sh); break;
+      case "powerup": drawPowerup(e, sx, sy, sw, sh); break;
       case "finish": drawFinish(e, sx, sy, sw, sh); break;
       case "decoration": drawDecoration(e, sx, sy, sw, sh); break;
       case "hazard": drawHazard(e, sx, sy, sw, sh); break;
       case "checkpoint": drawCheckpoint(e, sx, sy, sw, sh); break;
       case "trigger": drawTrigger(e, sx, sy, sw, sh); break;
       case "portal": drawPortal(e, sx, sy, sw, sh); break;
+      case "boundary": ctx.fillStyle = stripAlpha(e.color) || "#333"; ctx.fillRect(sx, sy, sw, sh); break;
+      case "zone": ctx.fillStyle = (e.properties && e.properties.zoneColor) || e.color || "rgba(255,255,255,0.05)"; ctx.fillRect(sx, sy, sw, sh); break;
       default:
         ctx.fillStyle = stripAlpha(e.color) || "#888";
         ctx.fillRect(sx, sy, sw, sh);
@@ -1098,6 +1139,33 @@ function drawPickup(e, sx, sy, sw, sh) {
 
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.fillRect(sx + sw / 2 - sw * 0.15, py + sh / 2 - sh * 0.15, sw * 0.15, 3);
+  ctx.restore();
+}
+
+function drawPowerup(e, sx, sy, sw, sh) {
+  if (!e.active || !e.alive) return;
+  e.animTimer += 0.03;
+  const pulse = 0.7 + Math.sin(e.animTimer * 5) * 0.3;
+  const c = stripAlpha(e.color) || "#00ffff";
+  const bob = Math.sin(e.animTimer * 2) * 4;
+  const py = sy + bob;
+  ctx.save();
+  ctx.globalAlpha = 0.4 * pulse;
+  const glowR = sw * 2.5 * pulse;
+  const grd = ctx.createRadialGradient(sx + sw / 2, py + sh / 2, 0, sx + sw / 2, py + sh / 2, glowR);
+  grd.addColorStop(0, c);
+  grd.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grd;
+  ctx.fillRect(sx + sw / 2 - glowR, py + sh / 2 - glowR, glowR * 2, glowR * 2);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.arc(sx + sw / 2, py + sh / 2, sw * 0.35 * pulse, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.beginPath();
+  ctx.arc(sx + sw / 2 - sw * 0.08, py + sh / 2 - sh * 0.1, sw * 0.1, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
