@@ -173,6 +173,21 @@ function loadLevel(idx) {
   hero.maxHealth = hero.health;
   hero.maxJumps = (hero.properties && hero.properties.jumps) || 1;
 
+  const s = getSettings();
+  const wh = s.worldHeight || 1080;
+  let groundY = wh - 100;
+  for (let i = 0; i < entities.length; i++) {
+    const pl = entities[i];
+    if ((pl.type === "platform" || pl.type === "moving_platform") && pl.alive) {
+      if (hero.x + hero.width > pl.x && hero.x < pl.x + pl.width) {
+        if (pl.y < groundY + 50 && pl.y >= hero.y) {
+          groundY = Math.min(groundY, pl.y);
+        }
+      }
+    }
+  }
+  hero.y = groundY - hero.height;
+
   const cam = levelData.cameras && levelData.cameras[0];
   const offX = (cam && cam.offset) ? cam.offset.x : 0;
   const offY = (cam && cam.offset) ? cam.offset.y : 0;
@@ -659,6 +674,7 @@ function updateBosses(dt) {
 }
 
 function updateCamera(dt) {
+  if (fadeDir === 1 && fadeAlpha > 0.5) return;
   const cam = levelData && levelData.cameras && levelData.cameras[0];
   const smooth = (cam && cam.smooth) || 0.08;
   const offX = (cam && cam.offset) ? cam.offset.x : 0;
