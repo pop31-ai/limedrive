@@ -215,7 +215,7 @@
 </head>
 <body>
   <h1>LimeDrive Games</h1>
-  <p class="subtitle">10 complete game examples built with the LimeDrive engine</p>
+  <p class="subtitle">13 complete game examples built with the LimeDrive engine</p>
 
   <div class="games-grid" id="gamesGrid"></div>
 
@@ -330,6 +330,24 @@
         color: 'linear-gradient(135deg, #FFD700 0%, #FF8F00 100%)',
         icon: '💰',
         file: '11-finance-tycoon.json'
+      },
+      {
+        id: '12',
+        name: 'Cyber Heist',
+        type: 'Stealth Action',
+        description: 'Navigate a neon-lit cyberpunk city, hack terminals, dodge security bots, and pull off the ultimate digital heist!',
+        color: 'linear-gradient(135deg, #00E5FF 0%, #0091EA 100%)',
+        icon: '🤖',
+        file: '12-cyber-heist.json'
+      },
+      {
+        id: '13',
+        name: 'Quantum Puzzle',
+        type: 'Puzzle',
+        description: 'Manipulate quantum states, collapse wave functions, and solve mind-bending puzzles across parallel dimensions!',
+        color: 'linear-gradient(135deg, #7C4DFF 0%, #E040FB 100%)',
+        icon: '⚛️',
+        file: '13-quantum-puzzle.json'
       }
     ];
 
@@ -376,8 +394,7 @@
         localStorage.setItem('currentGame', JSON.stringify(gameData));
 
         overlay.classList.remove('active');
-
-        alert(`Successfully loaded "${gameData.name}"!\n\nIn a complete implementation, this would launch the game engine with the loaded JSON data.`);
+        window.location.href = 'player.html?game=' + encodeURIComponent(filename);
 
       } catch (error) {
         console.error('Error loading game:', error);

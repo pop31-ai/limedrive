@@ -307,10 +307,10 @@ function updateHazards(dt) {
 function updateHero(dt) {
   if (!hero || !hero.alive) return;
   const s = getSettings();
-  const gravity = s.gravity || 18;
-  const friction = s.friction || 0.82;
-  const maxSpeed = s.maxSpeed || 7;
-  const jumpForce = s.jumpForce || 16;
+  const gravity = s.gravity != null ? s.gravity : 18;
+  const friction = s.friction != null ? s.friction : 0.82;
+  const maxSpeed = s.maxSpeed != null ? s.maxSpeed : 7;
+  const jumpForce = s.jumpForce != null ? s.jumpForce : 16;
   const accel = 0.5;
 
   hero.animTimer += dt;
@@ -394,7 +394,7 @@ function resolveHeroCollisions() {
         const enemyTop = e.y;
         if (hero.vy > 0 && (heroBottom - enemyTop) < e.height * 0.45 && hero.vy > 2) {
           damageEnemy(e, e.health);
-          hero.vy = -(getSettings().jumpForce || 16) * 0.7;
+          hero.vy = -(getSettings().jumpForce != null ? getSettings().jumpForce : 16) * 0.7;
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, e.color || "#ff0000", 12, "stomp");
           shakeCamera(4, 0.2);
           totalEnemiesKilled++;
@@ -411,7 +411,7 @@ function resolveHeroCollisions() {
         const enemyTop = e.y;
         if (hero.vy > 0 && (heroBottom - enemyTop) < e.height * 0.35 && hero.vy > 2) {
           damageEnemy(e, 25);
-          hero.vy = -(getSettings().jumpForce || 16) * 0.7;
+          hero.vy = -(getSettings().jumpForce != null ? getSettings().jumpForce : 16) * 0.7;
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#ff4444", 16, "stomp");
           shakeCamera(8, 0.3);
         } else if (hero.invincible <= 0) {
@@ -601,7 +601,7 @@ function damageEnemy(e, dmg) {
 
 function updateEnemies(dt) {
   const s = getSettings();
-  const gravity = s.gravity || 18;
+  const gravity = s.gravity != null ? s.gravity : 18;
   for (let i = 0; i < entities.length; i++) {
     const e = entities[i];
     if (!e.alive || !e.active) continue;

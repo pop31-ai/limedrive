@@ -5,10 +5,10 @@
   "description": "Cyberpunk endless runner with procedurally generated neon obstacles. Collect orbs, avoid hazards, and push for the highest score!",
   "author": "LimeDrive Examples",
   "settings": {
-    "gravity": 0,
+    "gravity": 0.8,
     "friction": 0.98,
     "airResistance": 0.99,
-    "jumpForce": 0,
+    "jumpForce": 16,
     "maxSpeed": 12,
     "worldWidth": 800,
     "worldHeight": 600,
