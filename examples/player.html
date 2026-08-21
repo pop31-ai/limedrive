@@ -167,6 +167,7 @@ function loadLevel(idx) {
   hero.vx = 0;
   hero.vy = 0;
   hero.onGround = false;
+  hero.riding = null;
   hero.facing = 1;
   hero.jumpCooldown = 0;
   hero.coyoteTimer = 0;
@@ -255,7 +256,7 @@ function update(dt) {
 
   if (timeLeft > 0) {
     timeLeft -= dt;
-    if (timeLeft <= 0) { timeLeft = 0; heroDie(); }
+    if (timeLeft <= 0) { timeLeft = 0; if (fadeDir === 0 && !levelTransitioning) heroDie(); }
   }
 
   updateMovingPlatforms(dt);
@@ -306,6 +307,11 @@ function updateHazards(dt) {
 
 function updateHero(dt) {
   if (!hero || !hero.alive) return;
+  if (hero.riding && !(hero.riding.alive && hero.riding.active)) hero.riding = null;
+  if (hero.riding) {
+    hero.x += hero.riding.platformDX || 0;
+    hero.y += hero.riding.platformDY || 0;
+  }
   const s = getSettings();
   const gravity = s.gravity != null ? s.gravity : 18;
   const friction = s.friction != null ? s.friction : 0.82;
@@ -321,15 +327,15 @@ function updateHero(dt) {
   if (isLeft()) moveX -= 1;
   if (isRight()) moveX += 1;
   if (moveX !== 0) {
-    hero.vx += moveX * accel;
+    hero.vx += moveX * accel * dt * 60;
     hero.facing = moveX;
   }
 
   const airRes = s.airResistance || 0;
   if (!hero.onGround) {
-    hero.vx *= (1 - airRes);
+    hero.vx *= Math.pow(1 - airRes, dt * 60);
   }
-  hero.vx *= friction;
+  hero.vx *= Math.pow(friction, dt * 60);
   if (Math.abs(hero.vx) < 0.1) hero.vx = 0;
   if (hero.vx > maxSpeed) hero.vx = maxSpeed;
   if (hero.vx < -maxSpeed) hero.vx = -maxSpeed;
@@ -357,11 +363,13 @@ function updateHero(dt) {
     if (hero.coyoteTimer > 0 || hero.onGround) {
       hero.vy = -jumpForce;
       hero.onGround = false;
+      hero.riding = null;
       hero.coyoteTimer = 0;
       hero.jumpCooldown = 0.15;
       jumpUsed = true;
     } else if (jumpsLeft > 1) {
       hero.vy = -jumpForce * 0.85;
+      hero.riding = null;
       hero.jumpCooldown = 0.15;
       jumpUsed = true;
     }
@@ -372,6 +380,7 @@ function updateHero(dt) {
   hero.y += hero.vy * dt * 60;
 
   hero.onGround = false;
+  hero.riding = null;
   resolveHeroCollisions();
 
   const ww = s.worldWidth || 3840;
@@ -562,14 +571,12 @@ function resolveTop(hero, e) {
   const eLeft = e.x;
   const eRight = e.x + e.width;
   const prevBottom = heroPrevY + hero.height;
-  if (hero.vy >= 0 && prevBottom <= eTop + 12 && heroBottom >= eTop - 6 && heroRight > eLeft + 4 && heroLeft < eRight - 4) {
+  const pd = Math.abs(e.platformDY || 0);
+  if (hero.vy >= 0 && prevBottom <= eTop + 2 + pd && heroBottom >= eTop - 2 - pd && heroRight > eLeft + 4 && heroLeft < eRight - 4) {
     hero.y = eTop - hero.height;
     hero.vy = 0;
     hero.onGround = true;
-    if (e.type === "moving_platform") {
-      hero.x += e.platformDX || 0;
-      hero.y += e.platformDY || 0;
-    }
+    if (e.type === "moving_platform") { hero.riding = e; } else { hero.riding = null; }
   }
 }
 
@@ -603,7 +610,7 @@ function heroDie() {
         else { hero.x = 100; hero.y = 500; }
       }
     }
-    hero.vx = 0; hero.vy = 0; hero.onGround = false; hero.invincible = 1.5;
+    hero.vx = 0; hero.vy = 0; hero.onGround = false; hero.riding = null; hero.invincible = 1.5;
     hero.maxJumps = (hero.properties && hero.properties.jumps) || 1;
     const cam = levelData.cameras && levelData.cameras[0];
     const offX = (cam && cam.offset) ? cam.offset.x : 0;
@@ -729,8 +736,9 @@ function updateCamera(dt) {
   camera.targetX = Math.max(-200, Math.min(camera.targetX, ww - W + 200));
   camera.targetY = Math.max(-200, Math.min(camera.targetY, wh - H + 200));
 
-  camera.x += (camera.targetX - camera.x) * smooth;
-  camera.y += (camera.targetY - camera.y) * smooth;
+  const k = Math.pow(smooth, dt * 60);
+  camera.x += (camera.targetX - camera.x) * k;
+  camera.y += (camera.targetY - camera.y) * k;
 
   if (camera.shakeDur > 0) {
     camera.shakeDur -= dt;
@@ -782,9 +790,9 @@ function stripAlpha(hex) {
 function updateParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy += 10 * dt;
+    p.x += p.vx * dt * 60;
+    p.y += p.vy * dt * 60;
+    p.vy += 600 * dt;
     p.life -= dt;
     if (p.life <= 0) particles.splice(i, 1);
   }
