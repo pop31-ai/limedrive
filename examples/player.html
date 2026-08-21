@@ -86,6 +86,8 @@ let levelStartTime = 0;
 let victoryStats = null;
 let levelEntityDefs = [];
 let levelTransitioning = false;
+let heroPrevY = 0;
+let loadLevelCooldown = 0;
 
 function loadFromURL() {
   const p = new URLSearchParams(window.location.search);
@@ -187,6 +189,7 @@ function loadLevel(idx) {
     }
   }
   hero.y = groundY - hero.height;
+  heroPrevY = hero.y;
 
   const cam = levelData.cameras && levelData.cameras[0];
   const offX = (cam && cam.offset) ? cam.offset.x : 0;
@@ -201,7 +204,7 @@ function loadLevel(idx) {
   camera.shakeDur = 0;
 
   fadeAlpha = 1;
-  fadeDir = 1;
+  fadeDir = -1;
   fadeSpeed = 3;
   fadeCallback = null;
   prevKeys = {};
@@ -356,6 +359,7 @@ function updateHero(dt) {
   }
 
   hero.x += hero.vx * dt * 60;
+  heroPrevY = hero.y;
   hero.y += hero.vy * dt * 60;
 
   hero.onGround = false;
@@ -442,7 +446,7 @@ function resolveHeroCollisions() {
         if (next === null || next === undefined || next === -1 || next >= gameData.levels.length) {
           showVictory();
         } else {
-          fadeDir = -1; fadeSpeed = 4;
+          fadeDir = 1; fadeSpeed = 4;
           fadeCallback = function () { loadLevel(next); };
         }
       }
@@ -503,7 +507,7 @@ function resolveHeroCollisions() {
         const action = e.properties && e.properties.action;
         if (action === "nextLevel") {
           const next = e.properties.level != null ? e.properties.level : currentLevelIdx + 1;
-          fadeDir = -1; fadeSpeed = 4;
+          fadeDir = 1; fadeSpeed = 4;
           fadeCallback = function () { loadLevel(next); };
         }
       }
@@ -519,8 +523,8 @@ function resolveTop(hero, e) {
   const eTop = e.y;
   const eLeft = e.x;
   const eRight = e.x + e.width;
-  const prevBottom = heroBottom - hero.vy * 0.016;
-  if (hero.vy >= 0 && prevBottom <= eTop + 10 && heroRight > eLeft + 4 && heroLeft < eRight - 4) {
+  const prevBottom = heroPrevY + hero.height;
+  if (hero.vy >= 0 && prevBottom <= eTop + 2 && heroBottom >= eTop - 2 && heroRight > eLeft + 4 && heroLeft < eRight - 4) {
     hero.y = eTop - hero.height;
     hero.vy = 0;
     hero.onGround = true;
@@ -546,7 +550,7 @@ function damageHero(dmg) {
 
 function heroDie() {
   totalDeaths++;
-  fadeDir = -1; fadeSpeed = 5;
+  fadeDir = 1; fadeSpeed = 5;
   fadeCallback = function () {
     hero.health = hero.maxHealth;
     if (checkpointData) {
@@ -574,7 +578,7 @@ function heroDie() {
     camera.shakeDur = 0;
     camera.shakeX = 0;
     camera.shakeY = 0;
-    fadeDir = 1; fadeSpeed = 3; fadeCallback = null;
+    fadeDir = -1; fadeSpeed = 3; fadeCallback = null;
   };
 }
 
@@ -674,7 +678,6 @@ function updateBosses(dt) {
 }
 
 function updateCamera(dt) {
-  if (fadeDir === 1 && fadeAlpha > 0.5) return;
   const cam = levelData && levelData.cameras && levelData.cameras[0];
   const smooth = (cam && cam.smooth) || 0.08;
   const offX = (cam && cam.offset) ? cam.offset.x : 0;
