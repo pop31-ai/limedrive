@@ -147,7 +147,7 @@ function loadLevel(idx) {
     const def = JSON.parse(JSON.stringify(levelEntityDefs[i]));
     const e = createEntity(def);
     entities.push(e);
-    if (e.type === "hero") {
+    if (e.type === "hero" || e.type === "player") {
       hero = e;
       if (!checkpointData) {
         checkpointData = { x: e.x, y: e.y, health: e.health };
