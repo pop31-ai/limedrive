@@ -5,10 +5,10 @@
   "description": "Classic platformer adventure through forests, caves, mountains, and a final castle. Collect gems, defeat slime enemies, and conquer the Slime King!",
   "author": "Limedrive",
   "settings": {
-    "gravity": 18,
+    "gravity": 1,
     "friction": 0.82,
     "airResistance": 0.05,
-    "jumpForce": 16,
+    "jumpForce": 18,
     "maxSpeed": 7,
     "worldWidth": 3840,
     "worldHeight": 1080,

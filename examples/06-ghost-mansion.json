@@ -4,7 +4,7 @@
   "type": "platformer",
   "description": "Explore a haunted mansion. Light sources reveal hidden paths. Survive ghosts and traps across 3 floors.",
   "author": "Limedrive",
-  "settings": {"gravity": 14, "friction": 0.85, "airResistance": 0.08, "jumpForce": 14, "maxSpeed": 6, "worldWidth": 3200, "worldHeight": 900, "theme": "ghost"},
+  "settings": {"gravity": 0.8, "friction": 0.85, "airResistance": 0.08, "jumpForce": 14, "maxSpeed": 6, "worldWidth": 3200, "worldHeight": 900, "theme": "ghost"},
   "levels": [
     {
       "name": "Ground Floor - The Foyer",

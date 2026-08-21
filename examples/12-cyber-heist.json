@@ -5,10 +5,10 @@
   "description": "Стелс-платформер: пробирайся мимо охраны с фонариками, взламывай терминалы, кради диски с данными и ограбь хранилище под неоновым светом мегаполиса!",
   "author": "Limedrive",
   "settings": {
-    "gravity": 18,
+    "gravity": 1,
     "friction": 0.85,
     "airResistance": 0.05,
-    "jumpForce": 16,
+    "jumpForce": 18,
     "maxSpeed": 6.5,
     "worldWidth": 3840,
     "worldHeight": 1080,

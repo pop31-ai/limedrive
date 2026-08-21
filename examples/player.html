@@ -524,7 +524,7 @@ function resolveTop(hero, e) {
   const eLeft = e.x;
   const eRight = e.x + e.width;
   const prevBottom = heroPrevY + hero.height;
-  if (hero.vy >= 0 && prevBottom <= eTop + 2 && heroBottom >= eTop - 2 && heroRight > eLeft + 4 && heroLeft < eRight - 4) {
+  if (hero.vy >= 0 && prevBottom <= eTop + 12 && heroBottom >= eTop - 6 && heroRight > eLeft + 4 && heroLeft < eRight - 4) {
     hero.y = eTop - hero.height;
     hero.vy = 0;
     hero.onGround = true;

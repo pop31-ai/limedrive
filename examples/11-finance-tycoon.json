@@ -1,22 +1,22 @@
-{
-  "name": "Финансовый Тайкун",
+﻿{
+  "name": "Р¤РёРЅР°РЅСЃРѕРІС‹Р№ РўР°Р№РєСѓРЅ",
   "version": "1.0.0",
   "type": "platformer",
-  "description": "Экономический платформер: собирайте монеты, уклоняйтесь от коллекторов долгов, подписывайте банковские контракты и победите Медвежьего Барона на фондовой бирже!",
+  "description": "Р­РєРѕРЅРѕРјРёС‡РµСЃРєРёР№ РїР»Р°С‚С„РѕСЂРјРµСЂ: СЃРѕР±РёСЂР°Р№С‚Рµ РјРѕРЅРµС‚С‹, СѓРєР»РѕРЅСЏР№С‚РµСЃСЊ РѕС‚ РєРѕР»Р»РµРєС‚РѕСЂРѕРІ РґРѕР»РіРѕРІ, РїРѕРґРїРёСЃС‹РІР°Р№С‚Рµ Р±Р°РЅРєРѕРІСЃРєРёРµ РєРѕРЅС‚СЂР°РєС‚С‹ Рё РїРѕР±РµРґРёС‚Рµ РњРµРґРІРµР¶СЊРµРіРѕ Р‘Р°СЂРѕРЅР° РЅР° С„РѕРЅРґРѕРІРѕР№ Р±РёСЂР¶Рµ!",
   "author": "Limedrive",
   "settings": {
-    "gravity": 18,
-    "friction": 0.82,
-    "airResistance": 0.05,
-    "jumpForce": 16,
-    "maxSpeed": 7,
+    "gravity": 1,
+    "friction": 0.92,
+    "airResistance": 0.03,
+    "jumpForce": 18,
+    "maxSpeed": 8,
     "worldWidth": 3840,
     "worldHeight": 1080,
     "theme": "city"
   },
   "levels": [
     {
-      "name": "Улица Банкиров",
+      "name": "РЈР»РёС†Р° Р‘Р°РЅРєРёСЂРѕРІ",
       "timeLimit": 150,
       "par": 1,
       "background": { "type": "gradient", "colors": ["#FFE0B2", "#FFCC80", "#FFF8E1"] },
@@ -99,7 +99,7 @@
       ]
     },
     {
-      "name": "Конвейер Завода",
+      "name": "РљРѕРЅРІРµР№РµСЂ Р—Р°РІРѕРґР°",
       "timeLimit": 180,
       "par": 2,
       "background": { "type": "gradient", "colors": ["#37474F", "#455A64", "#607D8B"] },
@@ -182,7 +182,7 @@
       ]
     },
     {
-      "name": "Фондовая Биржа",
+      "name": "Р¤РѕРЅРґРѕРІР°СЏ Р‘РёСЂР¶Р°",
       "timeLimit": 220,
       "par": 3,
       "background": { "type": "gradient", "colors": ["#1A237E", "#283593", "#3949AB"] },
@@ -209,7 +209,7 @@
         { "id": "bear_1", "type": "enemy", "x": 1100, "y": 916, "z": 0, "width": 60, "height": 52, "color": "#5D4037", "health": 70, "speed": 2, "damage": 30, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "Patrol", "Shield"], "properties": { "patrolRange": 180, "direction": 1, "shieldHealth": 40, "enemyType": "bear" } },
         { "id": "bear_2", "type": "enemy", "x": 1700, "y": 916, "z": 0, "width": 60, "height": 52, "color": "#5D4037", "health": 70, "speed": 2, "damage": 30, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "Patrol", "Shield"], "properties": { "patrolRange": 180, "direction": -1, "shieldHealth": 40, "enemyType": "bear" } },
         { "id": "bear_3", "type": "enemy", "x": 2300, "y": 916, "z": 0, "width": 60, "height": 52, "color": "#4E342E", "health": 80, "speed": 2.2, "damage": 32, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "Patrol", "Shield"], "properties": { "patrolRange": 200, "direction": 1, "shieldHealth": 45, "enemyType": "bear" } },
-        { "id": "bear_baron", "type": "boss", "x": 3150, "y": 600, "z": 0, "width": 110, "height": 110, "color": "#3E2723", "health": 600, "speed": 3.5, "damage": 40, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "BossAI", "HealthBar"], "properties": { "phases": 3, "phaseThresholds": [0.66, 0.33], "attacks": ["slam", "charge", "spawn_bears"], "bossName": "Медвежий Барон", "slamDamage": 45, "chargeDamage": 35 } },
+        { "id": "bear_baron", "type": "boss", "x": 3150, "y": 600, "z": 0, "width": 110, "height": 110, "color": "#3E2723", "health": 600, "speed": 3.5, "damage": 40, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "BossAI", "HealthBar"], "properties": { "phases": 3, "phaseThresholds": [0.66, 0.33], "attacks": ["slam", "charge", "spawn_bears"], "bossName": "РњРµРґРІРµР¶РёР№ Р‘Р°СЂРѕРЅ", "slamDamage": 45, "chargeDamage": 35 } },
         { "id": "minion_1", "type": "enemy", "x": 2950, "y": 916, "z": 0, "width": 44, "height": 44, "color": "#8D6E63", "health": 30, "speed": 3, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "Patrol"], "properties": { "patrolRange": 150, "direction": 1, "bossMinion": true } },
         { "id": "minion_2", "type": "enemy", "x": 3350, "y": 916, "z": 0, "width": 44, "height": 44, "color": "#8D6E63", "health": 30, "speed": 3, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "Patrol"], "properties": { "patrolRange": 150, "direction": -1, "bossMinion": true } },
         { "id": "boss_arena_trigger", "type": "trigger", "x": 2700, "y": 800, "z": 0, "width": 40, "height": 200, "color": "#FF000000", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Collider", "BossTrigger"], "properties": { "bossId": "bear_baron", "lockCamera": true } },
