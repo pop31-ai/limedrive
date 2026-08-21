@@ -189,6 +189,8 @@ function loadLevel(idx) {
   fadeDir = 1;
   fadeSpeed = 3;
   fadeCallback = null;
+  prevKeys = {};
+  for (const k in keys) prevKeys[k] = false;
 }
 
 function createEntity(def) {
@@ -545,6 +547,7 @@ function heroDie() {
       }
     }
     hero.vx = 0; hero.vy = 0; hero.onGround = false; hero.invincible = 1.5;
+    hero.maxJumps = (hero.properties && hero.properties.jumps) || 1;
     const cam = levelData.cameras && levelData.cameras[0];
     const offX = (cam && cam.offset) ? cam.offset.x : 0;
     const offY = (cam && cam.offset) ? cam.offset.y : 0;
@@ -552,6 +555,10 @@ function heroDie() {
     camera.y = hero.y + offY - H / 2;
     camera.targetX = camera.x;
     camera.targetY = camera.y;
+    camera.shakeMag = 0;
+    camera.shakeDur = 0;
+    camera.shakeX = 0;
+    camera.shakeY = 0;
     fadeDir = 1; fadeSpeed = 3; fadeCallback = null;
   };
 }
