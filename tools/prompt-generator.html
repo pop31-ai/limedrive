@@ -1,0 +1,515 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LimeDrive — Генератор Промпта</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e0e0e0;min-height:100vh}
+.hdr{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:20px 32px;border-bottom:1px solid #2a2a4a;display:flex;align-items:center;gap:20px}
+.hdr h1{font-size:22px;color:#8BC34A}
+.hdr p{color:#888;font-size:13px}
+.wrap{max-width:1100px;margin:0 auto;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:800px){.wrap{grid-template-columns:1fr}}
+.card{background:#111;border-radius:12px;padding:20px;border:1px solid #222}
+.card h2{font-size:15px;color:#8BC34A;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 .icon{font-size:18px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input[type=text],.field textarea{width:100%;background:#1a1a2e;border:1px solid #333;color:#e0e0e0;padding:10px 12px;border-radius:8px;font-size:14px;font-family:inherit;transition:border .2s}
+.field input:focus,.field textarea:focus{border-color:#8BC34A;outline:none}
+.field textarea{resize:vertical;min-height:80px}
+.field select{width:100%;background:#1a1a2e;border:1px solid #333;color:#e0e0e0;padding:10px 12px;border-radius:8px;font-size:14px;cursor:pointer}
+.field select:focus{border-color:#8BC34A;outline:none}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row input[type=range]{flex:1;accent-color:#8BC34A}
+.slider-row .val{min-width:40px;text-align:right;color:#8BC34A;font-weight:700;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:6px 14px;border-radius:20px;border:1px solid #333;background:#1a1a2e;color:#aaa;font-size:13px;cursor:pointer;transition:all .2s;user-select:none}
+.chip:hover{border-color:#8BC34A;color:#fff}
+.chip.active{background:#8BC34A;color:#000;border-color:#8BC34A;font-weight:600}
+.theme-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.theme-btn{padding:8px 4px;border-radius:8px;border:2px solid transparent;background:#1a1a2e;color:#aaa;font-size:11px;cursor:pointer;text-align:center;transition:all .2s}
+.theme-btn:hover{border-color:#555}
+.theme-btn.active{border-color:#8BC34A;color:#fff;font-weight:600}
+.theme-btn .dot{width:24px;height:24px;border-radius:50%;margin:0 auto 4px}
+.output{grid-column:1/-1}
+.output pre{background:#0d0d14;border:1px solid #222;border-radius:10px;padding:16px;font-size:13px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-word;max-height:500px;overflow-y:auto;color:#c8e6c9}
+.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.btn-green{background:#8BC34A;color:#000}.btn-green:hover{background:#9CCC65}
+.btn-dark{background:#2a2a4a;color:#aaa}.btn-dark:hover{background:#3a3a5a;color:#fff}
+.btn-red{background:#f44336;color:#fff}.btn-red:hover{background:#e53935}
+.toast{position:fixed;bottom:24px;right:24px;background:#8BC34A;color:#000;padding:12px 20px;border-radius:8px;font-weight:600;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+.preset-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.preset{padding:5px 12px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#888;font-size:12px;cursor:pointer;transition:all .2s}
+.preset:hover{border-color:#8BC34A;color:#fff}
+.preset.active{background:#333;color:#fff}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>Prompt Generator</h1>
+  <p>Заполни параметры — получи промпт для создания игры</p>
+</div>
+<div class="wrap">
+
+<!-- LEFT COL -->
+<div>
+  <div class="card">
+    <h2><span class="icon">🎮</span> Основное</h2>
+    <div class="field">
+      <label>Название игры</label>
+      <input type="text" id="gameName" placeholder="Lime Quest" oninput="gen()">
+    </div>
+    <div class="field">
+      <label>Тип игры</label>
+      <div class="chips" id="typeChips">
+        <div class="chip active" data-val="platformer" onclick="pick(this,'typeChips')">Платформер</div>
+        <div class="chip" data-val="puzzle" onclick="pick(this,'typeChips')">Головоломка</div>
+        <div class="chip" data-val="shooter" onclick="pick(this,'typeChips')">Шутер</div>
+        <div class="chip" data-val="rpg" onclick="pick(this,'typeChips')">RPG</div>
+        <div class="chip" data-val="racing" onclick="pick(this,'typeChips')">Гонки</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Тема</label>
+      <div class="theme-grid" id="themeGrid"></div>
+    </div>
+    <div class="field">
+      <label>Автор</label>
+      <input type="text" id="author" placeholder="Твоё имя" oninput="gen()">
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2><span class="icon">⚙️</span> Настройки мира</h2>
+    <div class="field">
+      <label>Размер мира</label>
+      <div class="chips" id="sizeChips">
+        <div class="chip" data-val="small" onclick="pick(this,'sizeChips');gen()">Малый (1920)</div>
+        <div class="chip active" data-val="medium" onclick="pick(this,'sizeChips');gen()">Средний (3840)</div>
+        <div class="chip" data-val="large" onclick="pick(this,'sizeChips');gen()">Большой (5760)</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Количество уровней</label>
+      <div class="slider-row">
+        <input type="range" min="1" max="12" value="3" id="numLevels" oninput="gen()">
+        <span class="val" id="numLevelsVal">3</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Сложность</label>
+      <div class="slider-row">
+        <input type="range" min="1" max="10" value="5" id="difficulty" oninput="gen()">
+        <span class="val" id="difficultyVal">5</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Пресет физики</label>
+      <div class="preset-row" id="physRow">
+        <div class="preset active" data-val="normal" onclick="pickPhys(this)">Обычная</div>
+        <div class="preset" data-val="floaty" onclick="pickPhys(this)">Левитация</div>
+        <div class="preset" data-val="heavy" onclick="pickPhys(this)">Тяжёлая</div>
+        <div class="preset" data-val="ninja" onclick="pickPhys(this)">Ниндзя</div>
+        <div class="preset" data-val="space" onclick="pickPhys(this)">Космос</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2><span class="icon">🧩</span> Механики</h2>
+    <div class="field">
+      <label>Включить</label>
+      <div class="chips" id="mechChips">
+        <div class="chip active" data-val="enemies" onclick="toggle(this)">Враги</div>
+        <div class="chip active" data-val="bosses" onclick="toggle(this)">Боссы</div>
+        <div class="chip active" data-val="pickups" onclick="toggle(this)">Подбор</div>
+        <div class="chip" data-val="moving" onclick="toggle(this)">Движ. платформы</div>
+        <div class="chip" data-val="hazards" onclick="toggle(this)">Ловушки</div>
+        <div class="chip" data-val="portals" onclick="toggle(this)">Порталы</div>
+        <div class="chip" data-val="checkpoints" onclick="toggle(this)">Чекпоинты</div>
+        <div class="chip" data-val="triggers" onclick="toggle(this)">Триггеры</div>
+        <div class="chip" data-val="parallax" onclick="toggle(this)">Параллакс</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Количество врагов на уровень</label>
+      <div class="slider-row">
+        <input type="range" min="0" max="30" value="8" id="enemyCount" oninput="gen()">
+        <span class="val" id="enemyCountVal">8</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Количество подбора на уровень</label>
+      <div class="slider-row">
+        <input type="range" min="0" max="50" value="15" id="pickupCount" oninput="gen()">
+        <span class="val" id="pickupCountVal">15</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT COL -->
+<div>
+  <div class="card">
+    <h2><span class="icon">📖</span> Описание и сюжет</h2>
+    <div class="field">
+      <label>Описание игры</label>
+      <textarea id="description" rows="2" placeholder="Классический платформер с лаймами" oninput="gen()"></textarea>
+    </div>
+    <div class="field">
+      <label>Сюжет / концепция</label>
+      <textarea id="story" rows="4" placeholder="Герой — лайм, спасает сад от вредителей. На каждом уровне — новый босс и механика." oninput="gen()"></textarea>
+    </div>
+    <div class="field">
+      <label>Уровни (название + описание через —)</label>
+      <textarea id="levelsText" rows="5" placeholder="1. Лесная поляна — tutorial, gentle slopes
+2. Пещера — темнота, летучие мыши
+3. Вулкан — лава, движущиеся платформы" oninput="gen()"></textarea>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2><span class="icon">🔧</span> Дополнительно</h2>
+    <div class="field">
+      <label>Дополнительные требования</label>
+      <textarea id="extras" rows="3" placeholder="Тайные комнаты, мини-игры, множественные прыжки..." oninput="gen()"></textarea>
+    </div>
+    <div class="field">
+      <label>Стиль</label>
+      <div class="chips" id="styleChips">
+        <div class="chip active" data-val="retro" onclick="pick(this,'styleChips')">Ретро</div>
+        <div class="chip" data-val="modern" onclick="pick(this,'styleChips')">Современный</div>
+        <div class="chip" data-val="minimal" onclick="pick(this,'styleChips')">Минимализм</div>
+        <div class="chip" data-val="detailed" onclick="pick(this,'styleChips')">Детализированный</div>
+        <div class="chip" data-val="cartoon" onclick="pick(this,'styleChips')">Мультяшный</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Тип промпта</label>
+      <div class="chips" id="promptType">
+        <div class="chip active" data-val="basic" onclick="pick(this,'promptType')">Базовый</div>
+        <div class="chip" data-val="detailed" onclick="pick(this,'promptType')">Подробный</div>
+        <div class="chip" data-val="creative" onclick="pick(this,'promptType')">Креативный</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OUTPUT -->
+<div class="output">
+  <div class="card">
+    <h2><span class="icon">📋</span> Готовый промпт</h2>
+    <pre id="promptOut"></pre>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="copyPrompt()">Копировать</button>
+      <button class="btn btn-dark" onclick="downloadPrompt()">Скачать .txt</button>
+      <button class="btn btn-red" onclick="resetAll()">Сбросить</button>
+    </div>
+  </div>
+</div>
+
+</div>
+<div class="toast" id="toast">Скопировано!</div>
+<script>
+const THEMES=[
+  {id:'forest',name:'Лес',c1:'#2d5016',c2:'#8BC34A'},
+  {id:'desert',name:'Пустыня',c1:'#c2a63e',c2:'#e6c200'},
+  {id:'ice',name:'Лёд',c1:'#4a8fa8',c2:'#b3e5fc'},
+  {id:'space',name:'Космос',c1:'#0d0221',c2:'#4a148c'},
+  {id:'lava',name:'Лава',c1:'#b71c1c',c2:'#ff6f00'},
+  {id:'underwater',name:'Воды',c1:'#004d40',c2:'#00bcd4'},
+  {id:'city',name:'Город',c1:'#263238',c2:'#546e7a'},
+  {id:'haunted',name:'Ужастики',c1:'#1a0000',c2:'#4a0000'},
+  {id:'jungle',name:'Джунгли',c1:'#1b5e20',c2:'#66bb6a'},
+  {id:'volcano',name:'Вулкан',c1:'#3e0000',c2:'#ff3d00'},
+  {id:'candy',name:'Конфетки',c1:'#e91e63',c2:'#f8bbd0'},
+  {id:'tech',name:'Техно',c1:'#0d47a1',c2:'#00e5ff'},
+  {id:'ancient',name:'Древний',c1:'#3e2723',c2:'#a1887f'},
+  {id:'cloud',name:'Облака',c1:'#546e7a',c2:'#eceff1'},
+  {id:'crystal',name:'Кристаллы',c1:'#4a148c',c2:'#ea80fc'}
+];
+const PHYS={
+  normal:{g:9.8,f:.8,a:.02,j:15,m:8},
+  floaty:{g:6,f:.85,a:.01,j:18,m:7},
+  heavy:{g:15,f:.6,a:.05,j:10,m:4},
+  ninja:{g:9.8,f:.9,a:.01,j:20,m:15},
+  space:{g:1,f:.2,a:.001,j:8,m:12}
+};
+const SIZES={small:1920,medium:3840,large:5760};
+let curTheme='forest',curPhys='normal';
+
+// Init theme grid
+const tg=$('#themeGrid');
+THEMES.forEach(t=>{
+  const d=document.createElement('div');
+  d.className='theme-btn'+(t.id==='forest'?' active':'');
+  d.dataset.val=t.id;
+  d.onclick=()=>{$$('.theme-btn').forEach(x=>x.classList.remove('active'));d.classList.add('active');curTheme=t.id;gen()};
+  d.innerHTML=`<div class="dot" style="background:linear-gradient(135deg,${t.c1},${t.c2})"></div>${t.name}`;
+  tg.appendChild(d);
+});
+
+function $(s){return document.querySelector(s)}
+function $$(s){return document.querySelectorAll(s)}
+
+function pick(el,id){
+  $$('#'+id+' .chip').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  gen();
+}
+function toggle(el){
+  el.classList.toggle('active');
+  gen();
+}
+function pickPhys(el){
+  $$('#physRow .preset').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  curPhys=el.dataset.val;
+  gen();
+}
+
+function getVal(id){return $(('#'+id)).value}
+function getActive(id){const el=$('#'+id+' .chip.active');return el?el.dataset.val:''}
+function getMechs(){return[...$$('#mechChips .chip.active')].map(x=>x.dataset.val)}
+
+function gen(){
+  $$('.slider-row .val').forEach(v=>{
+    const inp=v.previousElementSibling;
+    v.textContent=inp.value;
+  });
+
+  const name=getVal('gameName')||'Lime Quest';
+  const type=getActive('typeChips')||'platformer';
+  const author=getVal('author')||'Player';
+  const desc=getVal('description')||'';
+  const story=getVal('story')||'';
+  const lvlText=getVal('levelsText')||'';
+  const extras=getVal('extras')||'';
+  const style=getActive('styleChips')||'retro';
+  const promptType=getActive('promptType')||'basic';
+  const size=getActive('sizeChips')||'medium';
+  const nLevels=+getVal('numLevels');
+  const diff=+getVal('difficulty');
+  const nEnemies=+getVal('enemyCount');
+  const nPickups=+getVal('pickupCount');
+  const mechs=getMechs();
+
+  const ph=PHYS[curPhys];
+  const ww=SIZES[size];
+  const wh=1080;
+  const diffStr=diff<=2?'easy':diff<=4?'medium':diff<=7?'hard':'expert';
+
+  // Parse levels from textarea
+  let levelsParsed=[];
+  if(lvlText.trim()){
+    lvlText.split('\n').forEach(l=>{
+      l=l.trim();
+      if(!l)return;
+      const m=l.match(/^\d+[.)]\s*(.+)/);
+      if(m){
+        const parts=m[1].split('—');
+        levelsParsed.push({name:(parts[0]||'').trim(),desc:(parts[1]||'').trim()});
+      }
+    });
+  }
+  while(levelsParsed.length<nLevels){
+    levelsParsed.push({name:'Уровень '+(levelsParsed.length+1),desc:''});
+  }
+
+  let p='';
+  const lang='ru';
+
+  if(promptType==='basic'){
+    p=buildBasic(name,type,author,desc,story,levelsParsed,extras,style,ph,ww,wh,nLevels,diff,diffStr,nEnemies,nPickups,mechs);
+  } else if(promptType==='detailed'){
+    p=buildDetailed(name,type,author,desc,story,levelsParsed,extras,style,ph,ww,wh,nLevels,diff,diffStr,nEnemies,nPickups,mechs);
+  } else {
+    p=buildCreative(name,type,author,desc,story,levelsParsed,extras,style,ph,ww,wh,nLevels,diff,diffStr,nEnemies,nPickups,mechs);
+  }
+
+  $('#promptOut').textContent=p;
+}
+
+function buildBasic(name,type,author,desc,story,levels,extras,style,ph,ww,wh,nL,diff,dS,nE,nP,mechs){
+  let p=`Создай JSON-игру для движка LimeDrive.
+
+Название: ${name}
+Тип: ${type}
+Автор: ${author}
+${desc?'Описание: '+desc+'\n':''}
+Тема: ${curTheme}
+Физика: gravity=${ph.g}, friction=${ph.f}, airResistance=${ph.a}, jumpForce=${ph.j}, maxSpeed=${ph.m}
+Мир: ${ww}x${wh}
+Сложность: ${dS} (${diff}/10)
+Уровней: ${nL}
+
+`;
+  if(story) p+=`Сюжет:\n${story}\n\n`;
+  p+=`Уровни:\n`;
+  levels.forEach((l,i)=>{p+=`${i+1}. ${l.name}${l.desc?' — '+l.desc:''}\n`});
+  p+=`\n`;
+  if(mechs.length) p+=`Механики: ${mechs.join(', ')}\n`;
+  if(nE) p+=`Врагов на уровень: ~${nE}\n`;
+  if(nP) p+=`Подбора на уровень: ~${nP}\n`;
+  if(extras) p+=`\nДополнительно:\n${extras}\n`;
+  p+=`\n`;
+  p+=`Формат JSON:
+{
+  "name": "${name}",
+  "version": "1.0.0",
+  "type": "${type}",
+  "description": "${desc||name}",
+  "author": "${author}",
+  "settings": {
+    "gravity": ${ph.g}, "friction": ${ph.f}, "airResistance": ${ph.a},
+    "jumpForce": ${ph.j}, "maxSpeed": ${ph.m},
+    "worldWidth": ${ww}, "worldHeight": ${wh},
+    "theme": "${curTheme}"
+  },
+  "levels": [...],
+  "ai": { "globalDifficulty": "${dS}", "adaptToPlayer": true }
+}
+
+Правила:
+- Каждый уровень: hero, финиш, платформы, враги, подбор
+- Земля на y = ${wh-100}, высота 100
+- Герой стартует слева (x≈100), финиш справа (x≈${ww-200})
+- Декорации z=-1/-2 для параллакса
+- Камера следит за героем
+- Боссы: health>200, damage>20
+
+Выведи ТОЛЬКО JSON без пояснений.`;
+  return p;
+}
+
+function buildDetailed(name,type,author,desc,story,levels,extras,style,ph,ww,wh,nL,diff,dS,nE,nP,mechs){
+  let p=`Создай JSON-игру для движка LimeDrive. Следующий формат строго обязателен.
+
+=== МЕТАДАННЫЕ ===
+name: ${name}
+version: 1.0.0
+type: ${type}
+author: ${author}
+description: ${desc||name}
+theme: ${curTheme}
+style: ${style}
+
+=== НАСТРОЙКИ ФИЗИКИ ===
+gravity: ${ph.g}
+friction: ${ph.f}
+airResistance: ${ph.a}
+jumpForce: ${ph.j}
+maxSpeed: ${ph.m}
+worldWidth: ${ww}
+worldHeight: ${wh}
+groundY: ${wh-100} (платформы-земля: y=${wh-100}, height=100)
+
+=== СЛОЖНОСТЬ ===
+difficulty: ${diff}/10 (${dS})
+Врагов на уровень: ~${nE}
+Предметов на уровень: ~${nP}
+
+=== СЮЖЕТ ===
+${story||'Без сюжета, чистый геймплей.'}
+
+=== УРОВНИ (${nL} шт.) ===`;
+  levels.forEach((l,i)=>{
+    p+=`\nУровень ${i+1}: "${l.name}"
+  Описание: ${l.desc||'—'}
+  Враги: ${nE} шт.
+  Подбор: ${nP} шт.
+  Платформы: наземная полоса + 5-8 плавающих`;
+  });
+  p+=`\n\n=== МЕХАНИКИ ===\n`;
+  if(mechs.includes('enemies')) p+='./Враги: type="enemy", компоненты ["Transform","Sprite","PhysicsBody","Collider","EnemyAI","Health","Patrol"], свойства patrolRange, direction\n';
+  if(mechs.includes('bosses')) p+='./Боссы: type="boss", health>200, damage>20, phaseThresholds, attacks\n';
+  if(mechs.includes('pickups')) p+='./Подбор: type="pickup", свойства value, pickupType\n';
+  if(mechs.includes('moving')) p+='./Движущиеся платформы: type="moving_platform", axis, range, delay\n';
+  if(mechs.includes('hazards')) p+='./Ловушки: type="hazard", damage>0, interval/duration\n';
+  if(mechs.includes('portals')) p+='./Порталы: type="portal", target\n';
+  if(mechs.includes('checkpoints')) p+='./Чекпоинты: type="checkpoint"\n';
+  if(mechs.includes('triggers')) p+='./Триггеры: type="trigger", action, level\n';
+  if(mechs.includes('parallax')) p+='./Параллакс: type="decoration", z=-1/-2, parallaxLayer\n';
+  p+=`\n=== ТРЕБОВАНИЯ К JSON ===
+- Минимум 3 уровня, каждый с уникальным фоном
+- hero: ["Transform","Sprite","PhysicsBody","Collider","PlayerControl","Platformer","Health"]
+- Каждая сущность: id, type, x, y, z, width, height, color, health, speed, damage, components, properties
+- Координаты x∈[0,${ww}], y∈[0,${wh}]
+- Камера: {"type":"follow","target":"hero","smooth":0.08,"offset":{"x":0,"y":-150}}
+
+${extras?`=== ДОПОЛНИТЕЛЬНО ===\n${extras}\n\n`:''}Выведи ТОЛЬКО JSON без пояснений.`;
+  return p;
+}
+
+function buildCreative(name,type,author,desc,story,levels,extras,style,ph,ww,wh,nL,diff,dS,nE,nP,mechs){
+  let p=`Ты — гейм-дизайнер. Создай игру для LimeDrive.
+
+Игра называется "${name}". Это ${type} в стилистике ${style}.
+
+${story||desc||'Придумай концепцию сам.'}
+
+Тема: ${curTheme}. Мир ${ww}x${wh}. Гравитация ${ph.g}, прыжок ${ph.j}.
+
+Уровни:
+`;
+  levels.forEach((l,i)=>{
+    p+=`${i+1}. ${l.name}${l.desc?' — '+l.desc:''}\n`;
+  });
+  p+=`\n`;
+  if(mechs.length) p+=`Механики: ${mechs.join(', ')}\n`;
+  if(nE) p+=`Врагов/уровень: ~${nE}\n`;
+  if(nP) p+=`Подбора/уровень: ~${nP}\n`;
+  if(extras) p+=`${extras}\n`;
+  p+=`\nПравила формата: JSON LimeDrive, каждый уровень с hero/finish/platforms/enemies/pickups/decorations. Земля на y=${wh-100}. Камера следует за героем. Боссы health>200.
+
+Выведи чистый JSON.`;
+  return p;
+}
+
+function copyPrompt(){
+  const t=$('#promptOut').textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const toast=$('#toast');
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),1500);
+  });
+}
+
+function downloadPrompt(){
+  const t=$('#promptOut').textContent;
+  const b=new Blob([t],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download='prompt_'+(getVal('gameName')||'game').toLowerCase().replace(/\s+/g,'_')+'.txt';
+  a.click();
+}
+
+function resetAll(){
+  if(!confirm('Сбросить всё?'))return;
+  $$('.chip').forEach(x=>x.classList.remove('active'));
+  $$('.chip[data-val="platformer"]').forEach(x=>x.classList.add('active'));
+  $$('.chip[data-val="enemies"],.chip[data-val="bosses"],.chip[data-val="pickups"]').forEach(x=>x.classList.add('active'));
+  $$('.chip[data-val="retro"],.chip[data-val="basic"]').forEach(x=>x.classList.add('active'));
+  $$('.chip[data-val="medium"]').forEach(x=>x.classList.add('active'));
+  $$('.theme-btn').forEach(x=>x.classList.remove('active'));
+  $$('.theme-btn[data-val="forest"]')[0].classList.add('active');
+  curTheme='forest';curPhys='normal';
+  $$('#physRow .preset').forEach(x=>x.classList.remove('active'));
+  $$('#physRow .preset[data-val="normal"]')[0].classList.add('active');
+  $$('#numLevels')[0].value=3;$$('#difficulty')[0].value=5;
+  $$('#enemyCount')[0].value=8;$$('#pickupCount')[0].value=15;
+  $$('#gameName')[0].value='';$$('#author')[0].value='';
+  $$('#description')[0].value='';$$('#story')[0].value='';
+  $$('#levelsText')[0].value='';$$('#extras')[0].value='';
+  gen();
+}
+
+gen();
+</script>
+</body>
+</html>
