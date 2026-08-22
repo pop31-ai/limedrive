@@ -118,6 +118,61 @@ let chessMessage = "";
 let chessMessageTimer = 0;
 let chessTurnCount = 0;
 let chessLastMove = null;
+
+let puzzleMode = false;
+let puzzleMovesLeft = 0;
+let puzzleCellSize = 64;
+let puzzleMsg = "";
+let puzzleMsgTimer = 0;
+
+let tdMode = false;
+let tdGold = 0;
+let tdLives = 0;
+let tdWaveNum = 0;
+let tdWaves = [];
+let tdSpawnQueue = [];
+let tdSpawnTimer = 0;
+let tdEnemies = [];
+let tdTowers = [];
+let tdProjectiles = [];
+let tdWaypoints = [];
+let tdSlots = [];
+let tdBase = null;
+let tdIntermission = 3;
+let tdGameOver = false;
+let tdSelected = 0;
+let tdTowerTypes = [];
+const TD_TOWER_STATS = {
+  arrow:  { cost: 50,  range: 150, damage: 10, cooldown: 0.5, color: "#8BC34A" },
+  cannon: { cost: 100, range: 120, damage: 35, cooldown: 1.6, color: "#FF7043", splash: 60 },
+  ice:    { cost: 75,  range: 110, damage: 6,  cooldown: 0.9, color: "#4FC3F7", slow: 0.55, slowDur: 1.2 },
+  laser:  { cost: 125, range: 180, damage: 18, cooldown: 0.8, color: "#E040FB" }
+};
+
+let runnerMode = false;
+let runnerWorldRight = 0;
+
+let shooterMode = false;
+let shBullets = [];
+let shEnemyBullets = [];
+let shFormation = null;
+let shFireCd = 0;
+let shDescend = 0;
+let shDbg = null;
+
+let raceMode = false;
+let raceAngle = 0;
+let raceSpeed = 0;
+let raceCps = [];
+let raceNextCp = 0;
+let raceLap = 1;
+let raceLapsReq = 3;
+let raceBoostT = 0;
+let raceSlowZone = false;
+let raceSlipZone = false;
+let raceHazardCd = 0;
+let raceAi = [];
+let raceFinish = null;
 let chessPromoPending = null;
 let chessRangedMode = false;
 
@@ -189,6 +244,43 @@ function loadLevel(idx) {
     return;
   }
 
+  tdMode = false;
+  runnerMode = gameData.type === "endless-runner";
+  shooterMode = gameData.type === "shooter" && !tdMode;
+  raceMode = gameData.type === "racing";
+  if (gameData.type !== "puzzle" && gameData.type !== "turn-based-strategy") {
+    const defs0 = levelData.entities || [];
+    for (let i = 0; i < defs0.length; i++) {
+      const cs = defs0[i].components || [];
+      for (let j = 0; j < cs.length; j++) {
+        if (cs[j] === "WaveSpawner" || cs[j] === "TowerPlacer") { tdMode = true; break; }
+      }
+      if (tdMode) break;
+    }
+  }
+  if (tdMode) {
+    initTdLevel();
+    fadeAlpha = 1;
+    fadeDir = -1;
+    fadeSpeed = 3;
+    fadeCallback = null;
+    prevKeys = {};
+    for (const k in keys) prevKeys[k] = false;
+    return;
+  }
+
+  puzzleMode = gameData.type === "puzzle";
+  if (puzzleMode) {
+    initPuzzleLevel();
+    fadeAlpha = 1;
+    fadeDir = -1;
+    fadeSpeed = 3;
+    fadeCallback = null;
+    prevKeys = {};
+    for (const k in keys) prevKeys[k] = false;
+    return;
+  }
+
   levelEntityDefs = levelData.entities || [];
   for (let i = 0; i < levelEntityDefs.length; i++) {
     const def = JSON.parse(JSON.stringify(levelEntityDefs[i]));
@@ -225,18 +317,20 @@ function loadLevel(idx) {
 
   const s = getSettings();
   const wh = s.worldHeight || 1080;
-  let groundY = wh - 100;
-  for (let i = 0; i < entities.length; i++) {
-    const pl = entities[i];
-    if ((pl.type === "platform" || pl.type === "moving_platform") && pl.alive) {
-      if (hero.x + hero.width > pl.x && hero.x < pl.x + pl.width) {
-        if (pl.y < groundY + 50 && pl.y >= hero.y) {
-          groundY = Math.min(groundY, pl.y);
+  if (!raceMode && !shooterMode) {
+    let groundY = wh - 100;
+    for (let i = 0; i < entities.length; i++) {
+      const pl = entities[i];
+      if ((pl.type === "platform" || pl.type === "moving_platform") && pl.alive) {
+        if (hero.x + hero.width > pl.x && hero.x < pl.x + pl.width) {
+          if (pl.y < groundY + 50 && pl.y >= hero.y) {
+            groundY = Math.min(groundY, pl.y);
+          }
         }
       }
     }
+    hero.y = groundY - hero.height;
   }
-  hero.y = groundY - hero.height;
   heroPrevY = hero.y;
 
   const cam = levelData.cameras && levelData.cameras[0];
@@ -251,12 +345,45 @@ function loadLevel(idx) {
   camera.shakeMag = 0;
   camera.shakeDur = 0;
 
+  if (runnerMode) {
+    let rx = 0;
+    for (let i = 0; i < entities.length; i++) {
+      const e = entities[i];
+      rx = Math.max(rx, e.x + e.width);
+    }
+    runnerWorldRight = rx + 400;
+    hero.maxJumps = Math.max(hero.maxJumps || 1, (hero.properties && hero.properties.doubleJump) ? 2 : hero.maxJumps || 1);
+  }
+
+  if (shooterMode) {
+    shBullets = [];
+    shEnemyBullets = [];
+    shFireCd = 0;
+    shDescend = 0;
+    for (const e of entities) {
+      if ((e.type === "enemy" || e.type === "boss") && e.health > 0) {
+        e.ox = e.x; e.oy = e.y; e.shootT = Math.random() * 3;
+        e.fCol = e.properties && e.properties.col != null ? e.properties.col : null;
+        e.fRow = e.properties && e.properties.row != null ? e.properties.row : null;
+      }
+    }
+    camera.x = 0;
+    camera.y = 0;
+    camera.targetX = 0;
+    camera.targetY = 0;
+  }
+
+  if (raceMode) {
+    initRacing();
+  }
+
   fadeAlpha = 1;
   fadeDir = -1;
   fadeSpeed = 3;
   fadeCallback = null;
   prevKeys = {};
   for (const k in keys) prevKeys[k] = false;
+
 }
 
 function createEntity(def) {
@@ -308,9 +435,29 @@ function update(dt) {
     return;
   }
 
+  if (puzzleMode) {
+    updatePuzzle(dt);
+    return;
+  }
+
+  if (tdMode) {
+    updateTd(dt);
+    return;
+  }
+
   if (timeLeft > 0) {
     timeLeft -= dt;
     if (timeLeft <= 0) { timeLeft = 0; if (fadeCallback === null && !levelTransitioning) heroDie(); }
+  }
+
+  if (shooterMode) {
+    updateShooter(dt);
+    return;
+  }
+
+  if (raceMode) {
+    updateRacing(dt);
+    return;
   }
 
   updateMovingPlatforms(dt);
@@ -380,9 +527,25 @@ function updateHero(dt) {
   let moveX = 0;
   if (isLeft()) moveX -= 1;
   if (isRight()) moveX += 1;
-  if (moveX !== 0) {
-    hero.vx += moveX * accel * dt * 60;
-    hero.facing = moveX;
+  if (runnerMode) {
+    let runSpeed = maxSpeed;
+    for (let i = 0; i < entities.length; i++) {
+      const z = entities[i];
+      if (z.type === "zone" && z.alive && rectOverlap(hero, z)) {
+        const m = (z.properties && z.properties.speedMultiplier) || 1;
+        runSpeed = maxSpeed * m;
+        break;
+      }
+    }
+    moveX = runSpeed > 0 ? 1 : 0;
+    hero.vx = moveX * Math.abs(runSpeed);
+    hero.facing = 1;
+    score = Math.max(score, Math.floor(hero.x / 10));
+  } else {
+    if (moveX !== 0) {
+      hero.vx += moveX * accel * dt * 60;
+      hero.facing = moveX;
+    }
   }
 
   const airRes = s.airResistance || 0;
@@ -391,8 +554,10 @@ function updateHero(dt) {
   }
   hero.vx *= Math.pow(friction, dt * 60);
   if (Math.abs(hero.vx) < 0.1) hero.vx = 0;
-  if (hero.vx > maxSpeed) hero.vx = maxSpeed;
-  if (hero.vx < -maxSpeed) hero.vx = -maxSpeed;
+  if (!runnerMode) {
+    if (hero.vx > maxSpeed) hero.vx = maxSpeed;
+    if (hero.vx < -maxSpeed) hero.vx = -maxSpeed;
+  }
 
   let effectiveGravity = gravity;
   for (let i = 0; i < entities.length; i++) {
@@ -437,7 +602,7 @@ function updateHero(dt) {
   hero.riding = null;
   resolveHeroCollisions();
 
-  const ww = s.worldWidth || 3840;
+  const ww = runnerMode ? (runnerWorldRight || s.worldWidth || 3840) : (s.worldWidth || 3840);
   const wh = s.worldHeight || 1080;
   if (hero.x < 0) { hero.x = 0; hero.vx = 0; }
   if (hero.x + hero.width > ww) { hero.x = ww - hero.width; hero.vx = 0; }
@@ -882,8 +1047,11 @@ function initChessLevel(lvl) {
     if (entities[i].type === "grid") { chessGrid = entities[i]; break; }
   }
   const gridProps = chessGrid && chessGrid.properties ? chessGrid.properties : {};
-  chessCellSize = gridProps.cellSize || 80;
   var boardGridSize = gridProps.gridSize || getSettings().gridSize || 8;
+  var maxCellW = Math.floor((W - 40) / boardGridSize);
+  var maxCellH = Math.floor((H - 80) / boardGridSize);
+  chessCellSize = Math.min(gridProps.cellSize || 80, maxCellW, maxCellH);
+  if (chessCellSize < 20) chessCellSize = 20;
   const bw = boardGridSize * chessCellSize;
   chessBoardX = Math.round((W - bw) / 2);
   chessBoardY = Math.round((H - bw) / 2);
@@ -926,7 +1094,8 @@ function chessHasEnemy(gx, gy, side) {
 }
 
 function chessIsEmpty(gx, gy) {
-  return gx >= 0 && gx <= 7 && gy >= 0 && gy <= 7 && !chessBoard[gy][gx];
+  var bs = (getSettings().gridSize || 8) - 1;
+  return gx >= 0 && gx <= bs && gy >= 0 && gy <= bs && chessBoard[gy] && !chessBoard[gy][gx];
 }
 
 function getValidMoves(gx, gy) {
@@ -1196,6 +1365,7 @@ function aiTurn() {
       chessTurn = "player";
       chessRegen("player");
       chessTurnCount++;
+      chessAnimating = false;
       if (!hasValidMoves("player")) {
         chessMessage = "No moves available!";
         chessMessageTimer = 2;
@@ -1205,9 +1375,10 @@ function aiTurn() {
 }
 
 function chessClickToGrid(mx, my) {
+  var bs = (getSettings().gridSize || 8) - 1;
   var gx = Math.floor((mx - chessBoardX) / chessCellSize);
   var gy = Math.floor((my - chessBoardY) / chessCellSize);
-  if (gx < 0 || gx > 7 || gy < 0 || gy > 7) return null;
+  if (gx < 0 || gx > bs || gy < 0 || gy > bs) return null;
   return {x: gx, y: gy};
 }
 
@@ -1436,6 +1607,1030 @@ function drawChessPiece(cx, cy, size, piece, selected) {
   ctx.globalAlpha = 1;
 }
 
+// ---------- PUZZLE MODE (Sokoban) ----------
+function initPuzzleLevel() {
+  levelEntityDefs = levelData.entities || [];
+  for (let i = 0; i < levelEntityDefs.length; i++) {
+    entities.push(createEntity(JSON.parse(JSON.stringify(levelEntityDefs[i]))));
+  }
+  hero = null;
+  for (let i = 0; i < entities.length; i++) {
+    const t = entities[i].type;
+    if ((t === "hero" || t === "player") && !hero) hero = entities[i];
+  }
+  if (!hero) {
+    hero = createEntity({ type: "hero", x: 96, y: 96, width: 48, height: 48, color: "#8BC34A", properties: {} });
+    entities.unshift(hero);
+  }
+  puzzleMovesLeft = (hero.properties && hero.properties.moveLimit) || 50;
+  puzzleCellSize = (hero.properties && hero.properties.gridSize) || 64;
+  camera.x = 0;
+  camera.y = 0;
+  camera.targetX = 0;
+  camera.targetY = 0;
+}
+
+function puzzleSolidAt(rect, ignore) {
+  for (let i = 0; i < entities.length; i++) {
+    const e = entities[i];
+    if (e === ignore || e === hero || !e.alive || !e.active) continue;
+    let solid = false;
+    if (e.type === "platform") solid = true;
+    else if (e.type === "enemy" && e.properties && e.properties.pushable) solid = true;
+    else if (e.type === "trigger" && e.properties && e.properties.locked) solid = true;
+    if (!solid) continue;
+    if (rectOverlap(rect, e)) return e;
+  }
+  return null;
+}
+
+function updatePuzzle(dt) {
+  updateFade(dt);
+  updateParticles(dt);
+  if (puzzleMsgTimer > 0) puzzleMsgTimer -= dt;
+  if (fadeDir !== 0 || levelTransitioning || paused) return;
+
+  if (justPressed.KeyR) {
+    fadeDir = 1;
+    fadeSpeed = 4;
+    fadeCallback = function () { loadLevel(currentLevelIdx); };
+    return;
+  }
+
+  var dx = 0, dy = 0;
+  if (justPressed.ArrowLeft || justPressed.KeyA) dx = -1;
+  else if (justPressed.ArrowRight || justPressed.KeyD) dx = 1;
+  else if (justPressed.ArrowUp || justPressed.KeyW) dy = -1;
+  else if (justPressed.ArrowDown || justPressed.KeyS) dy = 1;
+  if (!dx && !dy) return;
+  tryPuzzleStep(dx, dy);
+}
+
+function tryPuzzleStep(dx, dy) {
+  if (!hero || !hero.alive) return;
+  if (dx !== 0) hero.facing = dx;
+  var nx = hero.x + dx * puzzleCellSize;
+  var ny = hero.y + dy * puzzleCellSize;
+  var blocker = puzzleSolidAt({ x: nx, y: ny, width: hero.width, height: hero.height }, null);
+  if (!blocker) {
+    hero.x = nx;
+    hero.y = ny;
+    puzzleConsumeMove();
+    return;
+  }
+  if (blocker.type === "enemy" && blocker.properties && blocker.properties.pushable) {
+    var bx = nx + dx * puzzleCellSize;
+    var by = ny + dy * puzzleCellSize;
+    if (!puzzleSolidAt({ x: bx, y: by, width: blocker.width, height: blocker.height }, blocker)) {
+      blocker.x = bx;
+      blocker.y = by;
+      hero.x = nx;
+      hero.y = ny;
+      spawnParticles(bx + blocker.width / 2, by + blocker.height / 2, stripAlpha(blocker.color) || "#aaaaaa", 6, "collect");
+      shakeCamera(2, 0.12);
+      puzzleUpdateSwitches();
+      puzzleConsumeMove();
+    } else {
+      spawnParticles(blocker.x + blocker.width / 2, blocker.y + blocker.height / 2, "#888888", 3, "collect");
+    }
+  }
+}
+
+function puzzleConsumeMove() {
+  puzzleMovesLeft--;
+  for (let i = 0; i < entities.length; i++) {
+    const f = entities[i];
+    if (f.type === "finish" && f.alive && f.active && rectOverlap(hero, f)) {
+      levelTransitioning = true;
+      const next = (f.properties && f.properties.nextLevel != null) ? f.properties.nextLevel : null;
+      if (next === null || next === -1 || next >= gameData.levels.length) {
+        showVictory();
+      } else {
+        fadeDir = 1;
+        fadeSpeed = 4;
+        fadeCallback = function () { loadLevel(next); };
+      }
+      return;
+    }
+  }
+  if (puzzleMovesLeft <= 0 && gameState === "playing" && !levelTransitioning) {
+    puzzleMsg = "Out of moves! Restarting...";
+    puzzleMsgTimer = 1.2;
+    fadeDir = 1;
+    fadeSpeed = 2.5;
+    fadeCallback = function () { loadLevel(currentLevelIdx); };
+  }
+}
+
+function puzzleUpdateSwitches() {
+  for (const sw of entities) {
+    if (sw.type !== "trigger" || !sw.alive || !sw.properties || sw.properties.switchColor === undefined) continue;
+    sw.properties.activated = false;
+    for (const b of entities) {
+      if (b !== sw && b.alive && b.active && b.type === "enemy" &&
+          b.properties && b.properties.pushable && rectOverlap(sw, b)) {
+        sw.properties.activated = true;
+        break;
+      }
+    }
+  }
+  for (const door of entities) {
+    const p = door.properties;
+    if (door.type !== "trigger" || !door.alive || !p || !Array.isArray(p.requiredSwitches)) continue;
+    let all = true;
+    for (const id of p.requiredSwitches) {
+      const sw = entities.find(s => s.id === id && s.properties && s.properties.activated);
+      if (!sw) { all = false; break; }
+    }
+    if (all && p.locked) {
+      p.locked = false;
+      door.alive = false;
+      score += 100;
+      spawnParticles(door.x + door.width / 2, door.y + door.height / 2, "#FFD700", 14, "collect");
+      puzzleMsg = "Door opened!";
+      puzzleMsgTimer = 1.2;
+    }
+  }
+}
+
+function renderPuzzle() {
+  drawBackground(camera.x, camera.y);
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+  drawEntities(camera.x, camera.y);
+  ctx.restore();
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#00ff88";
+  ctx.font = "bold 20px monospace";
+  ctx.fillText("MOVES LEFT: " + Math.max(0, puzzleMovesLeft), 24, H - 24);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#FFD700";
+  ctx.fillText("SCORE: " + score, W - 24, H - 24);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 22px monospace";
+  ctx.fillText(levelData.name || "", W / 2, 30);
+  ctx.fillStyle = "#888888";
+  ctx.font = "13px monospace";
+  ctx.fillText("Arrows/WASD move & push | R restart", W / 2, H - 8);
+
+  if (puzzleMsgTimer > 0) {
+    ctx.globalAlpha = Math.min(1, puzzleMsgTimer);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(puzzleMsg, W / 2, H / 2 - 10);
+    ctx.globalAlpha = 1;
+  }
+
+  drawParticles();
+  if (fadeAlpha > 0) {
+    ctx.fillStyle = "rgba(0,0,0," + fadeAlpha + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+// ---------- END PUZZLE MODE ----------
+
+// ---------- TOWER DEFENSE MODE ----------
+function initTdLevel() {
+  tdWaves = [];
+  tdEnemies = [];
+  tdTowers = [];
+  tdProjectiles = [];
+  tdSpawnQueue = [];
+  tdSlots = [];
+  tdWaypoints = [];
+  tdGameOver = false;
+  tdSelected = 0;
+  tdWaveNum = 0;
+  tdIntermission = 3;
+  tdSpawnTimer = 0;
+  levelEntityDefs = levelData.entities || [];
+  for (let i = 0; i < levelEntityDefs.length; i++) {
+    const def = JSON.parse(JSON.stringify(levelEntityDefs[i]));
+    entities.push(createEntity(def));
+  }
+  hero = null;
+  for (const e of entities) {
+    if ((e.type === "hero" || e.type === "player") && !hero) hero = e;
+  }
+  if (!hero) {
+    hero = createEntity({ type: "hero", x: 0, y: 0, width: 1, height: 1, color: "#fff", properties: {} });
+    entities.push(hero);
+  }
+  tdGold = (hero.properties && hero.properties.gold) || 150;
+  tdLives = (hero.properties && hero.properties.lives) || 10;
+  tdTowerTypes = (hero.properties && hero.properties.towerTypes) || ["arrow", "cannon", "ice"];
+  for (const e of entities) {
+    if (e.type === "spawn_point" && e.properties && e.properties.spawnInterval != null) {
+      tdSpawnTimerMax = e.properties.spawnInterval;
+    }
+    if (e.type === "trigger" && e.properties && Array.isArray(e.properties.waypointIndex)) {
+      // not used
+    } else if (e.type === "trigger" && e.properties && typeof e.properties.waypointIndex === "number") {
+      tdWaypoints.push({ idx: e.properties.waypointIndex, x: e.x, y: e.y });
+      e.active = false;
+      continue;
+    } else if (e.type === "trigger" && e.properties && e.properties.wave != null) {
+      tdWaves.push(e);
+      e.active = false;
+      continue;
+    } else if (e.type === "decoration" && (e.components || []).includes("TowerSlot")) {
+      tdSlots.push(e);
+      continue;
+    } else if (e.type === "finish") {
+      tdBase = e;
+      continue;
+    }
+  }
+  tdWaypoints.sort((a, b) => a.idx - b.idx);
+  tdWaves.sort((a, b) => a.properties.wave - b.properties.wave);
+  camera.x = 0;
+  camera.y = 0;
+  camera.targetX = 0;
+  camera.targetY = 0;
+}
+let tdSpawnTimerMax = 2;
+
+const TD_ENEMY_COLORS = { grunt: "#ff5252", fast: "#FFD740", tank: "#8D6E63" };
+
+function updateTd(dt) {
+  updateFade(dt);
+  updateParticles(dt);
+
+  if (tdGameOver) {
+    if (justPressed.KeyR) {
+      startGame();
+    }
+    return;
+  }
+
+  // tower selection keys 1..4
+  for (let k = 1; k <= 4; k++) {
+    if (justPressed["Digit" + k] && k <= tdTowerTypes.length) tdSelected = k - 1;
+  }
+
+  // build tower on click
+  if (mouseClicked) {
+    mouseClicked = false;
+    for (const slot of tdSlots) {
+      if (!slot.built && mouseX >= slot.x && mouseX <= slot.x + slot.width &&
+          mouseY >= slot.y && mouseY <= slot.y + slot.height) {
+        const type = tdTowerTypes[tdSelected] || "arrow";
+        const st = TD_TOWER_STATS[type];
+        if (st && tdGold >= st.cost) {
+          tdGold -= st.cost;
+          slot.built = true;
+          tdTowers.push({ x: slot.x + slot.width / 2, y: slot.y + slot.height / 2,
+            type: type, cd: 0, range: st.range, damage: st.damage,
+            cooldown: st.cooldown, color: st.color,
+            splash: st.splash || 0, slow: st.slow || 0, slowDur: st.slowDur || 0 });
+          spawnParticles(slot.x + slot.width / 2, slot.y + slot.height / 2, st.color, 10, "collect");
+        }
+        break;
+      }
+    }
+  }
+
+  // wave scheduling
+  if (tdIntermission > 0) {
+    tdIntermission -= dt;
+    if (justPressed.Space) tdIntermission = 0;
+    if (tdIntermission > 0) return;
+    if (tdWaveNum < tdWaves.length) {
+      tdStartWave(tdWaves[tdWaveNum]);
+      tdWaveNum++;
+    } else {
+      return;
+    }
+  }
+
+  // spawn from queue
+    if (tdSpawnQueue.length > 0) {
+    tdSpawnTimer -= dt;
+    if (tdSpawnTimer <= 0) {
+      const spec = tdSpawnQueue.shift();
+      let sp = null;
+      for (const e of entities) if (e.type === "spawn_point") { sp = e; break; }
+      tdEnemies.push({
+        x: sp ? sp.x + sp.width / 2 : 0,
+        y: sp ? sp.y + sp.height / 2 : 0,
+        hp: spec.hp, maxHp: spec.hp, speed: spec.speed, reward: spec.reward,
+        color: TD_ENEMY_COLORS[spec.type] || "#ff5555",
+        pathIdx: 0, slowTimer: 0, r: spec.type === "tank" ? 16 : spec.type === "fast" ? 8 : 11
+      });
+      tdSpawnTimer = tdSpawnTimerMax;
+    }
+  }
+
+  updateTdEnemies(dt);
+  updateTdTowers(dt);
+
+  // wave end conditions
+  if (tdIntermission <= 0 && tdWaveNum >= tdWaves.length &&
+      tdSpawnQueue.length === 0 && tdEnemies.length === 0) {
+    showVictory();
+    return;
+  }
+  if (tdWaveNum < tdWaves.length && tdWaveNum > 0 &&
+      tdSpawnQueue.length === 0 && tdEnemies.length === 0 && tdIntermission <= 0) {
+    tdGold += 50;
+    score += 100;
+    tdIntermission = 4;
+  }
+}
+
+function tdStartWave(waveEnt) {
+  const groups = waveEnt.properties.enemies || [];
+  tdSpawnQueue = [];
+  for (const g of groups) {
+    for (let n = 0; n < (g.count || 1); n++) tdSpawnQueue.push(g);
+  }
+  tdSpawnTimer = 0.5;
+}
+
+function updateTdEnemies(dt) {
+  for (let i = tdEnemies.length - 1; i >= 0; i--) {
+    const en = tdEnemies[i];
+    if (en.slowTimer > 0) en.slowTimer -= dt;
+    const spd = en.speed * 60 * dt * (en.slowTimer > 0 ? 0.55 : 1);
+    const wp = tdWaypoints[en.pathIdx];
+    if (!wp) {
+      // reached base
+      tdEnemies.splice(i, 1);
+      tdLives--;
+      shakeCamera(6, 0.3);
+      if (tdLives <= 0) { tdLives = 0; tdGameOver = true; }
+      continue;
+    }
+    const dx = wp.x - en.x, dy = wp.y - en.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < Math.max(6, spd)) {
+      en.pathIdx++;
+    } else {
+      en.x += dx / dist * spd;
+      en.y += dy / dist * spd;
+    }
+  }
+}
+
+function updateTdTowers(dt) {
+  for (const tw of tdTowers) {
+    tw.cd -= dt;
+    if (tw.cd > 0) continue;
+    let best = null, bestD = 1e9;
+    for (const en of tdEnemies) {
+      const d = Math.hypot(en.x - tw.x, en.y - tw.y);
+      if (d <= tw.range && d < bestD) { bestD = d; best = en; }
+    }
+    if (!best) continue;
+    tw.cd = tw.cooldown;
+    tdProjectiles.push({
+      x: tw.x, y: tw.y, tx: best.x, ty: best.y,
+      target: best, speed: 420, damage: tw.damage,
+      splash: tw.splash, slow: tw.slow, slowDur: tw.slowDur,
+      color: tw.color
+    });
+  }
+
+  for (let i = tdProjectiles.length - 1; i >= 0; i--) {
+    const pr = tdProjectiles[i];
+    if (pr.target && pr.target.hp > 0) { pr.tx = pr.target.x; pr.ty = pr.target.y; }
+    const dx = pr.tx - pr.x, dy = pr.ty - pr.y;
+    const d = Math.hypot(dx, dy);
+    const step = pr.speed * dt;
+    if (d <= step || d < 5) {
+      tdHit(pr.tx, pr.ty, pr);
+      tdProjectiles.splice(i, 1);
+    } else {
+      pr.x += dx / d * step;
+      pr.y += dy / d * step;
+    }
+  }
+}
+
+function tdHit(x, y, pr) {
+  spawnParticles(x, y, pr.color, 4, "collect");
+  for (const en of tdEnemies) {
+    const d = Math.hypot(en.x - x, en.y - y);
+    if (pr.splash ? d <= pr.splash : d <= 14) {
+      en.hp -= pr.damage;
+      if (pr.slow) en.slowTimer = pr.slowDur;
+      if (en.hp <= 0) {
+        tdGold += en.reward;
+        score += en.reward;
+        totalEnemiesKilled++;
+        spawnParticles(en.x, en.y, en.color, 10, "stomp");
+      }
+    }
+  }
+  for (let i = tdEnemies.length - 1; i >= 0; i--) {
+    if (tdEnemies[i].hp <= 0) tdEnemies.splice(i, 1);
+  }
+}
+
+function renderTd() {
+  drawBackground(camera.x, camera.y);
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+
+  // path line
+  if (tdWaypoints.length > 1) {
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 26;
+    ctx.beginPath();
+    let sp = null;
+    for (const e of entities) if (e.type === "spawn_point") { sp = e; break; }
+    ctx.moveTo(sp ? sp.x + sp.width / 2 : tdWaypoints[0].x, sp ? sp.y + sp.height / 2 : tdWaypoints[0].y);
+    for (const wp of tdWaypoints) ctx.lineTo(wp.x, wp.y);
+    if (tdBase) ctx.lineTo(tdBase.x + tdBase.width / 2, tdBase.y + tdBase.height / 2);
+    ctx.stroke();
+  }
+
+  drawEntities(camera.x, camera.y);
+
+  // towers
+  for (const tw of tdTowers) {
+    ctx.fillStyle = tw.color;
+    roundRect(tw.x - 16, tw.y - 16, 32, 32, 5);
+    ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath();
+    ctx.arc(tw.x, tw.y, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // enemies
+  for (const en of tdEnemies) {
+    ctx.fillStyle = en.color;
+    ctx.beginPath();
+    ctx.arc(en.x, en.y, en.r, 0, Math.PI * 2);
+    ctx.fill();
+    const ratio = en.hp / en.maxHp;
+    ctx.fillStyle = "#333";
+    ctx.fillRect(en.x - en.r, en.y - en.r - 9, en.r * 2, 4);
+    ctx.fillStyle = ratio > 0.5 ? "#4CAF50" : ratio > 0.25 ? "#ff9800" : "#f44336";
+    ctx.fillRect(en.x - en.r, en.y - en.r - 9, en.r * 2 * ratio, 4);
+    if (en.slowTimer > 0) {
+      ctx.strokeStyle = "#4FC3F7";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  // projectiles
+  ctx.fillStyle = "#ffffff";
+  for (const pr of tdProjectiles) {
+    ctx.fillStyle = pr.color;
+    ctx.beginPath();
+    ctx.arc(pr.x, pr.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawParticles();
+  ctx.restore();
+
+  // HUD
+  ctx.textAlign = "left";
+  ctx.font = "bold 20px monospace";
+  ctx.fillStyle = "#FFD700";
+  ctx.fillText("GOLD: " + tdGold, 24, 36);
+  ctx.fillStyle = tdLives > 5 ? "#00ff88" : "#ff4444";
+  ctx.fillText("LIVES: " + tdLives, 24, 64);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText("WAVE: " + Math.min(tdWaveNum, tdWaves.length) + "/" + tdWaves.length, 24, 92);
+
+  // build palette
+  ctx.textAlign = "center";
+  for (let i = 0; i < tdTowerTypes.length; i++) {
+    const t = tdTowerTypes[i];
+    const st = TD_TOWER_STATS[t];
+    const px = W / 2 + (i - tdTowerTypes.length / 2) * 150;
+    const sel = i === tdSelected;
+    ctx.fillStyle = sel ? st.color : "#666666";
+    ctx.font = "bold 18px monospace";
+    ctx.fillText((i + 1) + " " + t.toUpperCase(), px, H - 46);
+    ctx.fillStyle = sel ? "#ffffff" : "#888888";
+    ctx.font = "15px monospace";
+    ctx.fillText(st.cost + "g", px, H - 24);
+  }
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#888888";
+  ctx.font = "13px monospace";
+  ctx.fillText("click empty slot to build | 1-" + tdTowerTypes.length + " select | SPACE next wave", W - 24, H - 12);
+
+  if (tdIntermission > 0 && !tdGameOver) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 26px monospace";
+    ctx.fillText(tdWaveNum < tdWaves.length
+      ? "WAVE " + (tdWaveNum + 1) + " IN " + Math.ceil(tdIntermission) + "s — SPACE to start"
+      : "", W / 2, 60);
+  }
+
+  if (tdGameOver) {
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ff4444";
+    ctx.font = "bold 52px monospace";
+    ctx.fillText("GAME OVER", W / 2, H / 2 - 20);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "18px monospace";
+    ctx.fillText("Press R to retry", W / 2, H / 2 + 30);
+  }
+
+  if (fadeAlpha > 0) {
+    ctx.fillStyle = "rgba(0,0,0," + fadeAlpha + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+// ---------- END TOWER DEFENSE MODE ----------
+
+// ---------- SHOOTER MODE (formation shooter) ----------
+function updateShooter(dt) {
+  updateFade(dt);
+  updateParticles(dt);
+  if (fadeDir !== 0 || levelTransitioning || paused) return;
+  if (isPause()) paused = !paused;
+  if (!hero || !hero.alive) return;
+
+  const s = getSettings();
+  const spd = (s.maxSpeed || 6) * 60 * dt;
+  if (isLeft()) hero.x -= spd;
+  if (isRight()) hero.x += spd;
+  if (keys.ArrowUp || keys.KeyW) hero.y -= spd;
+  if (keys.ArrowDown || keys.KeyS) hero.y += spd;
+  hero.facing = 1;
+  hero.x = Math.max(0, Math.min((s.worldWidth || 800) - hero.width, hero.x));
+  hero.y = Math.max((s.worldHeight || 600) * 0.35, Math.min((s.worldHeight || 600) - hero.height - 10, hero.y));
+
+  // hero shooting
+  shFireCd -= dt;
+  shDbg = { cd: shFireCd, space: !!keys.Space, jp: !!justPressed.Space, shots: (shDbg && shDbg.shots) || 0 };
+  if ((justPressed.Space || keys.Space) && shFireCd <= 0) {
+    const fr = (hero.properties && hero.properties.fireRate) || 2.5;
+    const bs = (hero.properties && hero.properties.bulletSpeed) || 9;
+    const bd = (hero.properties && hero.properties.bulletDamage) || 10;
+    shBullets.push({ x: hero.x + hero.width / 2, y: hero.y, vy: -bs * 60 });
+    shBullets[shBullets.length - 1].damage = bd;
+    shFireCd = 1 / fr;
+    shDbg.shots++;
+    spawnParticles(hero.x + hero.width / 2, hero.y, "#ffff88", 3, "collect");
+  }
+
+  // formation drift
+  const t = Date.now() * 0.001;
+  const amp = 46 + shDescend * 4;
+  let anyAlive = false;
+  for (const e of entities) {
+    if (!(e.type === "enemy" || e.type === "boss") || e.health <= 0) continue;
+    anyAlive = true;
+    if (e.fCol != null) {
+      e.x = e.ox + Math.sin(t * 0.45) * amp;
+      e.y = e.oy + shDescend * 26;
+    }
+    // enemy fire
+    const rate = (e.properties && e.properties.shootRate) || 0;
+    if (rate > 0 && e.type === "enemy") {
+      e.shootT -= dt;
+      if (e.shootT <= 0) {
+        e.shootT = rate + Math.random() * rate;
+        shEnemyBullets.push({ x: e.x + e.width / 2, y: e.y + e.height, vy: 260,
+          damage: (e.damage || 8) });
+      }
+    }
+  }
+
+  // bullets vs enemies
+  for (let i = shBullets.length - 1; i >= 0; i--) {
+    const b = shBullets[i];
+    b.y += b.vy * dt;
+    let hit = false;
+    for (const e of entities) {
+      if (!(e.type === "enemy" || e.type === "boss") || e.health <= 0) continue;
+      if (b.x > e.x - 4 && b.x < e.x + e.width + 4 && b.y > e.y && b.y < e.y + e.height) {
+        e.health -= b.damage;
+        e.flashTimer = 0.08;
+        hit = true;
+        if (e.health <= 0) {
+          score += (e.properties && e.properties.scoreValue) || 20;
+          totalEnemiesKilled++;
+          shakeCamera(e.type === "boss" ? 10 : 3, e.type === "boss" ? 0.5 : 0.15);
+          spawnParticles(e.x + e.width / 2, e.y + e.height / 2, stripAlpha(e.color) || "#ff5555", e.type === "boss" ? 40 : 12, "stomp");
+          if (e.properties && e.properties.powerupType) spawnFallingPowerup(e);
+        }
+        break;
+      }
+    }
+    if (hit || b.y < -20) shBullets.splice(i, 1);
+  }
+
+  // enemy bullets vs hero
+  for (let i = shEnemyBullets.length - 1; i >= 0; i--) {
+    const b = shEnemyBullets[i];
+    b.y += b.vy * dt;
+    let done = b.y > (s.worldHeight || 600) + 30;
+    if (!done && hero.invincible <= 0 &&
+        b.x > hero.x && b.x < hero.x + hero.width && b.y > hero.y && b.y < hero.y + hero.height) {
+      damageHero(b.damage || 8);
+      done = true;
+    }
+    if (done) shEnemyBullets.splice(i, 1);
+  }
+
+  // falling powerups & pickups collect
+  for (let i = entities.length - 1; i >= 0; i--) {
+    const e = entities[i];
+    if (e.type === "powerup" && e.fallSpeed) {
+      e.y += e.fallSpeed * dt;
+      if (e.y > (s.worldHeight || 600) + 40) entities.splice(i, 1);
+    }
+  }
+  resolveHeroCollisions();
+
+  // descend pressure when few enemies remain
+  const aliveCount = entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length;
+  if (aliveCount === 0 && !levelTransitioning) {
+    levelTransitioning = true;
+    fadeDir = 1;
+    fadeSpeed = 4;
+    fadeCallback = function () {
+      if (currentLevelIdx + 1 < gameData.levels.length) loadLevel(currentLevelIdx + 1);
+      else showVictory();
+    };
+  }
+}
+
+function spawnFallingPowerup(srcEnt) {
+  const def = {
+    id: "pw_" + srcEnt.id + "_" + Math.floor(Math.random() * 1e5),
+    type: "powerup",
+    x: srcEnt.x + srcEnt.width / 2 - 14,
+    y: srcEnt.y,
+    width: 28, height: 28,
+    color: "#00ffff",
+    properties: { scoreValue: (srcEnt.properties && srcEnt.properties.powerupScore) || 50 }
+  };
+  const pu = createEntity(def);
+  pu.fallSpeed = 140;
+  entities.push(pu);
+}
+
+function renderShooter() {
+  drawBackground(camera.x, camera.y);
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+  drawEntities(camera.x, camera.y);
+
+  ctx.fillStyle = "#ffff88";
+  for (const b of shBullets) ctx.fillRect(b.x - 2, b.y - 10, 4, 12);
+  ctx.fillStyle = "#ff6644";
+  for (const b of shEnemyBullets) ctx.fillRect(b.x - 2, b.y - 4, 4, 12);
+
+  drawParticles();
+  ctx.restore();
+  drawHUD();
+
+  if (damageFlash > 0) {
+    ctx.fillStyle = "rgba(255,0,0," + (damageFlash * 0.35) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (paused) {
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 34px monospace";
+    ctx.fillText("PAUSED", W / 2, H / 2);
+  }
+  if (fadeAlpha > 0) {
+    ctx.fillStyle = "rgba(0,0,0," + fadeAlpha + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+// ---------- END SHOOTER MODE ----------
+
+// ---------- RACING MODE (top-down arcade) ----------
+function initRacing() {
+  raceCps = [];
+  raceNextCp = 0;
+  raceLap = 1;
+  raceBoostT = 0;
+  raceHazardCd = 0;
+  raceSpeed = 0;
+  raceAi = [];
+  for (const e of entities) {
+    if (e.type === "checkpoint" && e.properties && e.properties.lapCheckpoint) {
+      const num = parseInt((e.id || "").replace(/\D/g, ""), 10);
+      raceCps.push({ num: isNaN(num) ? 99 : num, e: e });
+    } else if (e.type === "finish") {
+      raceFinish = e;
+    }
+  }
+  raceCps.sort((a, b) => a.num - b.num);
+  raceLapsReq = (raceFinish && raceFinish.properties && raceFinish.properties.lapsRequired) || 3;
+  hero.maxHealth = hero.maxHealth || 100;
+  if (!hero.health) hero.health = hero.maxHealth;
+  // face first checkpoint
+  const t0 = raceCps[0] ? raceCps[0].e : null;
+  if (t0) raceAngle = Math.atan2(t0.y + t0.height / 2 - (hero.y + hero.height / 2),
+                                 t0.x + t0.width / 2 - (hero.x + hero.width / 2));
+  for (const e of entities) {
+    if (e.type !== "enemy" || !(e.components || []).includes("RacerAI")) continue;
+    const p = e.properties || {};
+    let a = raceAngle;
+    if (t0) a = Math.atan2(t0.y - e.y, t0.x - e.x);
+    raceAi.push({ ent: e, angle: a, speed: 0, nextCp: 0,
+      top: p.acceleration && p.turnSpeed ? 10 : 10,
+      acc: p.acceleration || 0.25, turn: p.turnSpeed || 3.5,
+      skill: p.skill || 0.6, name: p.racerName || "AI", lap: 1 });
+    e.raceData = raceAi[raceAi.length - 1];
+  }
+}
+
+function raceWallCollide(ent) {
+  for (const w of entities) {
+    if (w.type !== "platform" || !w.alive) continue;
+    if (rectOverlap(ent, w)) {
+      const pr = ent.x + ent.width - w.x, pl = (w.x + w.width) - ent.x;
+      const pt = ent.y + ent.height - w.y, pb = (w.y + w.height) - ent.y;
+      const m = Math.min(pr, pl, pt, pb);
+      if (m === pt) { ent.y = w.y - ent.height; }
+      else if (m === pb) { ent.y = w.y + w.height; }
+      else if (m === pr) { ent.x = w.x - ent.width; }
+      else { ent.x = w.x + w.width; }
+      return true;
+    }
+  }
+  return false;
+}
+
+function raceProgress(car) {
+  const cpIdx = car === hero ? raceNextCp : car.raceData.nextCp;
+  const lap = car === hero ? raceLap : car.raceData.lap;
+  return lap * 100 + cpIdx * 20 +
+    (raceCps[cpIdx] ?
+      10 - Math.min(10, Math.hypot(raceCps[cpIdx].e.x - car.x, raceCps[cpIdx].e.y - car.y) / 100) :
+      0);
+}
+
+function updateRacing(dt) {
+  updateFade(dt);
+  updateParticles(dt);
+  if (fadeDir !== 0 || levelTransitioning || paused) return;
+  if (!hero) return;
+
+  raceSlowZone = false;
+  raceSlipZone = false;
+  raceBoostT = Math.max(0, raceBoostT - dt);
+  raceHazardCd = Math.max(0, raceHazardCd - dt);
+
+  const s = getSettings();
+  const p = hero.properties || {};
+  const acc = p.acceleration || 0.3;
+  const top = p.topSpeed || (s.maxSpeed || 10);
+  const turn = p.turnSpeed || 4;
+  const boostEff = raceBoostT > 0 ? 1.5 : 1;
+
+  // zones
+  for (const z of entities) {
+    if ((z.type !== "hazard") || !z.alive) continue;
+    const zp = z.properties || {};
+    if (!zp.effect) continue;
+    if (rectOverlap(hero, z)) {
+      if (zp.effect === "slowdown") raceSlowZone = true;
+      if (zp.effect === "slippery") raceSlipZone = true;
+    }
+  }
+
+  // controls
+  const throttle = keys.ArrowUp || keys.KeyW;
+  const brake = keys.ArrowDown || keys.KeyS;
+  if (throttle) raceSpeed += acc * dt * 60 * boostEff;
+  else raceSpeed *= Math.pow(0.985, dt * 60);
+  if (brake) raceSpeed -= 0.7 * dt * 60;
+  const cap = top * boostEff * (raceSlowZone ? 0.5 : 1);
+  if (raceSpeed > cap) raceSpeed = cap;
+  if (raceSpeed < -top * 0.35) raceSpeed = -top * 0.35;
+
+  const steerEff = (raceSlipZone ? 0.55 : 1) * Math.min(1, Math.abs(raceSpeed) / 3);
+  const dAng = turn * dt * 60 * Math.PI / 180 * steerEff * (raceSpeed < 0 ? -1 : 1);
+  if (isLeft()) raceAngle -= dAng;
+  if (isRight()) raceAngle += dAng;
+
+  hero.x += Math.cos(raceAngle) * raceSpeed * dt * 60;
+  hero.y += Math.sin(raceAngle) * raceSpeed * dt * 60;
+  hero.facing = 1;
+
+  if (raceWallCollide(hero)) {
+    raceSpeed *= -0.25;
+    shakeCamera(3, 0.15);
+    spawnParticles(hero.x + hero.width / 2, hero.y + hero.height / 2, "#cccccc", 4, "collect");
+  }
+
+  // small hazards
+  for (const hz of entities) {
+    if (hz.type !== "hazard" || !hz.alive) continue;
+    const hp2 = hz.properties || {};
+    if (!hp2.hazardType) continue;
+    if (raceHazardCd <= 0 && rectOverlap(hero, hz)) {
+      raceSpeed *= 0.35;
+      raceHazardCd = 0.6;
+      damageFlash = 0.6;
+      shakeCamera(4, 0.2);
+    }
+  }
+
+  // pickups
+  for (const pk of entities) {
+    if ((pk.type !== "pickup" && pk.type !== "collectible") || !pk.alive) continue;
+    if (!rectOverlap(hero, pk)) continue;
+    pk.alive = false;
+    pk.active = false;
+    collectedPickups.add(pk.id);
+    const pp = pk.properties || {};
+    if (pp.pickupType === "boost") {
+      raceBoostT = pp.boostDuration || 2;
+      raceSpeed = Math.max(raceSpeed, (pp.boostForce || 15) * 0.8);
+      spawnParticles(pk.x + 20, pk.y + 20, "#FFD700", 12, "collect");
+    } else if (pp.pickupType === "repair") {
+      hero.health = Math.min(hero.maxHealth, hero.health + (pp.value || 30));
+      spawnParticles(pk.x + 20, pk.y + 20, "#66ff88", 10, "collect");
+    } else {
+      score += (pp.value != null ? pp.value : 10);
+      spawnParticles(pk.x + 20, pk.y + 20, stripAlpha(pk.color) || "#FFD700", 8, "collect");
+    }
+    totalPickupsCollected++;
+  }
+
+  // checkpoints / laps
+  if (raceNextCp < raceCps.length &&
+      rectOverlap(hero, raceCps[raceNextCp].e)) {
+    raceNextCp++;
+    spawnParticles(hero.x + hero.width / 2, hero.y + hero.height / 2, "#00ff88", 8, "collect");
+    if (raceNextCp >= raceCps.length) {
+      raceLap++;
+      raceNextCp = 0;
+      if (raceLap > raceLapsReq && !levelTransitioning) {
+        levelTransitioning = true;
+        const next = (raceFinish && raceFinish.properties && raceFinish.properties.nextLevel != null)
+          ? raceFinish.properties.nextLevel : null;
+        fadeDir = 1; fadeSpeed = 4;
+        fadeCallback = function () {
+          if (next === null || next === -1 || next >= gameData.levels.length) showVictory();
+          else loadLevel(next);
+        };
+      }
+    }
+  }
+
+  // AI drivers
+  for (const ai of raceAi) {
+    const cpE = raceCps[ai.nextCp] ? raceCps[ai.nextCp].e : (raceFinish || raceCps[0].e);
+    const tx = cpE.x + cpE.width / 2, ty = cpE.y + cpE.height / 2;
+    const desired = Math.atan2(ty - (ai.ent.y + 32), tx - (ai.ent.x + 32));
+    let da = desired - ai.angle;
+    while (da > Math.PI) da -= 2 * Math.PI;
+    while (da < -Math.PI) da += 2 * Math.PI;
+    const maxTurn = ai.turn * dt * 60 * Math.PI / 180;
+    ai.angle += Math.max(-maxTurn, Math.min(maxTurn, da));
+    const targetSpeed = (p.topSpeed || top) * ai.skill * (raceBoostT > 0 ? 1 : 1);
+    ai.speed += ai.acc * dt * 60;
+    if (ai.speed > targetSpeed) ai.speed = targetSpeed;
+    ai.ent.x += Math.cos(ai.angle) * ai.speed * dt * 60;
+    ai.ent.y += Math.sin(ai.angle) * ai.speed * dt * 60;
+    if (raceWallCollide(ai.ent)) { ai.speed *= 0.3; }
+    if (ai.nextCp < raceCps.length && rectOverlap(ai.ent, raceCps[ai.nextCp].e)) {
+      ai.nextCp++;
+      if (ai.nextCp >= raceCps.length) { ai.nextCp = 0; ai.lap++; }
+    }
+  }
+
+  updateCamera(dt);
+}
+
+function renderRacing() {
+  const bgc = (levelData.background && levelData.background.colors && levelData.background.colors[0]) || "#203020";
+  ctx.fillStyle = bgc;
+  ctx.fillRect(0, 0, W, H);
+
+  const camX = Math.round(camera.x + camera.shakeX);
+  const camY = Math.round(camera.y + camera.shakeY);
+  ctx.save();
+  ctx.translate(-camX, -camY);
+
+  for (const e of entities) {
+    if (!e.alive && e.type !== "decoration") continue;
+    switch (e.type) {
+      case "platform": drawPlatform(e, e.x, e.y, e.width, e.height); break;
+      case "hazard": drawHazard(e, e.x, e.y, e.width, e.height); break;
+      case "pickup": case "collectible": drawPickup(e, e.x, e.y, e.width, e.height); break;
+      case "checkpoint": drawCheckpoint(e, e.x, e.y, e.width, e.height); break;
+      case "finish": drawFinish(e, e.x, e.y, e.width, e.height); break;
+      case "decoration": drawDecoration(e, e.x, e.y, e.width, e.height); break;
+      default: break;
+    }
+  }
+
+  // highlight next checkpoint
+  if (raceCps[raceNextCp]) {
+    const ce = raceCps[raceNextCp].e;
+    ctx.strokeStyle = "rgba(0,255,136," + (0.4 + 0.3 * Math.sin(Date.now() * 0.006)) + ")";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(ce.x - 4, ce.y - 4, ce.width + 8, ce.height + 8);
+  }
+
+  // cars
+  function drawCar(x, y, w, h, ang, color, isPlayer, name) {
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2);
+    ctx.rotate(ang);
+    ctx.fillStyle = color;
+    roundRect(-w / 2, -h / 2, w, h, 8);
+    ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    roundRect(-w / 2 + 6, -h / 2 + 6, w - 12, 12, 4);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillRect(w / 2 - 10, -h / 2 + 4, 4, h - 8);
+    ctx.restore();
+    if (!isPlayer && name) {
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.font = "11px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(name, x + w / 2, y - 6);
+    }
+  }
+  drawCar(hero.x, hero.y, hero.width, hero.height, raceAngle, stripAlpha(hero.color) || "#00ff88", true, null);
+  for (const ai of raceAi) {
+    drawCar(ai.ent.x, ai.ent.y, ai.ent.width, ai.ent.height, ai.angle,
+      stripAlpha(ai.ent.color) || "#ff4444", false, ai.name);
+  }
+
+  drawParticles();
+  ctx.restore();
+
+  // HUD
+  const total = raceAi.length + 1;
+  const myProg = raceProgress(hero);
+  let pos = 1;
+  for (const ai of raceAi) if (raceProgress(ai.ent) > myProg) pos++;
+
+  ctx.textAlign = "left";
+  ctx.font = "bold 22px monospace";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText("LAP " + Math.min(raceLap, raceLapsReq) + "/" + raceLapsReq, 24, 40);
+  ctx.fillStyle = pos === 1 ? "#FFD700" : "#dddddd";
+  ctx.fillText("POS " + pos + "/" + total, 24, 70);
+  ctx.font = "14px monospace";
+  ctx.fillStyle = "#888888";
+  ctx.fillText("UP/W gas | LEFT/RIGHT steer | DOWN brake", 24, H - 16);
+
+  // speed bar
+  const sw = 140, sp = Math.min(1, Math.abs(raceSpeed) / ((hero.properties.topSpeed || 10) * 1.5));
+  ctx.fillStyle = "#333344";
+  ctx.fillRect(W - sw - 24, 28, sw, 14);
+  ctx.fillStyle = raceBoostT > 0 ? "#FFD700" : "#00ff88";
+  ctx.fillRect(W - sw - 24, 28, sw * sp, 14);
+  if (raceBoostT > 0) {
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#FFD700";
+    ctx.font = "bold 16px monospace";
+    ctx.fillText("BOOST " + raceBoostT.toFixed(1), W - 24, 60);
+  }
+
+  // minimap
+  const mm = entities.find(e => (e.components || []).includes("Minimap"));
+  const scale = (mm && mm.properties && mm.properties.trackScale) || 0.07;
+  const mw = (getSettings().worldWidth || 2000) * scale;
+  const mh = (getSettings().worldHeight || 2000) * scale;
+  const mx = W - mw - 20, my = H - mh - 20;
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.fillRect(mx - 6, my - 6, mw + 12, mh + 12);
+  ctx.strokeStyle = "#555555";
+  ctx.strokeRect(mx - 6, my - 6, mw + 12, mh + 12);
+  ctx.fillStyle = "#777777";
+  for (const c of raceCps) ctx.fillRect(mx + c.e.x * scale - 1, my + c.e.y * scale - 1, 3, 3);
+  ctx.fillStyle = "#ff4444";
+  for (const ai of raceAi) ctx.fillRect(mx + ai.ent.x * scale - 2, my + ai.ent.y * scale - 2, 4, 4);
+  ctx.fillStyle = "#00ff88";
+  ctx.fillRect(mx + hero.x * scale - 2, my + hero.y * scale - 2, 5, 5);
+
+  if (damageFlash > 0) damageFlash = Math.max(0, damageFlash);
+  if (damageFlash > 0) {
+    ctx.fillStyle = "rgba(255,0,0," + (damageFlash * 0.3) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (fadeAlpha > 0) {
+    ctx.fillStyle = "rgba(0,0,0," + fadeAlpha + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+// ---------- END RACING MODE ----------
+
 function rectOverlap(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x &&
          a.y < b.y + b.height && a.y + a.height > b.y;
@@ -1448,6 +2643,26 @@ function render() {
 
   if (chessMode) {
     renderChess();
+    return;
+  }
+
+  if (puzzleMode) {
+    renderPuzzle();
+    return;
+  }
+
+  if (tdMode) {
+    renderTd();
+    return;
+  }
+
+  if (shooterMode) {
+    renderShooter();
+    return;
+  }
+
+  if (raceMode) {
+    renderRacing();
     return;
   }
 
@@ -2184,6 +3399,33 @@ function gameLoop(now) {
 
 requestAnimationFrame(gameLoop);
 loadFromURL();
+
+window.LimeDriveDebug = function () {
+  return {
+    gameState: gameState,
+    score: score,
+    level: currentLevelIdx,
+    mode: chessMode ? "chess" : (puzzleMode ? "puzzle" : (tdMode ? "td" : (shooterMode ? "shooter" : (raceMode ? "racing" : (runnerMode ? "runner" : "platformer"))))),
+    movesLeft: puzzleMovesLeft,
+    entityCount: entities.length,
+    heroPos: hero ? { x: hero.x, y: hero.y } : null,
+    race: raceMode ? { angleDeg: Math.round(raceAngle * 180 / Math.PI),
+      speed: Math.round(raceSpeed * 10) / 10, nextCp: raceNextCp,
+      cpsTotal: raceCps.length, lap: raceLap, lapsReq: raceLapsReq,
+      aiCount: raceAi.length } : null,
+    sh: shooterMode ? { dbg: shDbg, bullets: shBullets.length, ebullets: shEnemyBullets.length,
+      alive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length,
+      eps: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0)
+        .map(e => ({ id: e.id, x: Math.round(e.x), y: Math.round(e.y), hp: e.health }))
+    } : null,
+    td: tdMode ? {
+      gold: tdGold, lives: tdLives, wave: tdWaveNum, wavesTotal: tdWaves.length,
+      enemies: tdEnemies.length, queue: tdSpawnQueue.length,
+      towers: tdTowers.length, intermission: Math.max(0, tdIntermission),
+      gameOver: tdGameOver
+    } : null
+  };
+};
 })();
 </script>
 </body>
