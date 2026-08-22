@@ -5,10 +5,10 @@
   "description": "Explore dark dungeons, find keys, fight skeletons, and defeat the Necromancer across three perilous floors!",
   "author": "LimeDrive Examples",
   "settings": {
-    "gravity": 980,
+    "gravity": 1,
     "friction": 0.8,
-    "airResistance": 0.02,
-    "jumpForce": 380,
+    "airResistance": 0.05,
+    "jumpForce": 18,
     "maxSpeed": 6,
     "worldWidth": 2400,
     "worldHeight": 1800,
