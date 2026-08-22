@@ -318,17 +318,145 @@ ai{}          — настройки ИИ
 
 ## Примеры игр для вдохновения
 
-Смотри `examples/` — 13 готовых игр:
+Смотри `examples/` — 15 готовых игр:
 - `01-lime-platformer.json` — классический платформер
-- `02-space-invaders.json` — космический шутер
+- `02-space-invaders.json` — космический шутер с формациями
 - `03-dungeon-crawler.json` — подземелье
-- `04-puzzle-cubes.json` — головоломка
-- `05-race-lime.json` — гонки
+- `04-puzzle-cubes.json` — сокобан-головоломка (толкание блоков, рубильники)
+- `05-race-lime.json` — гонки с ИИ-соперниками и кругами
 - `06-ghost-mansion.json` — хоррор
 - `07-ocean-diver.json` — подводное исследование
-- `08-tower-defense.json` — башенная защита
-- `09-neon-runner.json` — раннер
+- `08-tower-defense.json` — башенная защита (волны, башни, золото)
+- `09-neon-runner.json` — раннер с автобегом
 - `10-chess-battle.json` — тактический бой (3 шахматные сцены)
 - `11-finance-tycoon.json` — финансовый тайкун
 - `12-cyber-heist.json` — кибер-ограбление
 - `13-quantum-puzzle.json` — квантовая головоломка
+- `14-tower-defense.json`, `15-dungeon-crawl.json` — платформеры (кандидаты на реворк)
+
+---
+
+# РЕЖИМЫ ДВИЖКА — что реально работает (v1.1)
+
+Движок выбирает режим по `type`. Ниже — параметры, которые движок ЧИТАЕТ.
+Всё, что не указано — игнорируется (рисуется, но не влияет).
+
+## 1) Platformer (type: "platformer") — базовый режим
+См. базовый промпт выше. Ключевое: hero/enemy/platform/pickup/hazard/
+moving_platform/checkpoint/finish/boss; properties: patrolRange, direction,
+axis, range, interval, duration, value, pickupType, nextLevel, jumps,
+flyPattern, flyAmplitude, gravityMultiplier (zone).
+
+## 2) Puzzle / Сокобан (type: "puzzle")
+Герой ходит по сетке, толкает блоки, блоки активируют рубильники,
+открытые двери освобождают путь к финишу.
+
+| Entity | Обязательные поля | Properties движка |
+|--------|-------------------|-------------------|
+| hero | type=hero | gridSize (ячейка, напр. 64), moveLimit |
+| блок | type=**enemy**, health>0 | pushable:true |
+| рубильник | type=trigger | switchColor:"red", activated:false, activatesDoor:"door_id" |
+| дверь | type=trigger | locked:true, requiredSwitches:["id1","id2"] |
+| финиш | type=finish | nextLevel |
+
+Правила: толчок только по одному блоку; блок на рубильнике держит его
+активным; дверь открывается когда ВСЕ requiredSwitches активны.
+Ходы кончились → авто-рестарт уровня. R — рестарт вручную.
+
+```json
+{
+  "name": "[НАЗВАНИЕ]", "version": "1.0", "type": "puzzle",
+  "settings": { "gravity": 0, "friction": 1, "airResistance": 0, "jumpForce": 0,
+    "maxSpeed": 4, "worldWidth": "[cols*64+64]", "worldHeight": "[rows*64+64]", "theme": "neon" },
+  "levels": [{
+    "name": "[УРОВЕНЬ]", "timeLimit": [сек],
+    "background": { "type": "solid", "colors": ["#0a0a2e"] },
+    "entities": [
+      { "id": "hero_1", "type": "hero", "x": "[64*k]", "y": "[64*m]", "width": 48, "height": 48,
+        "color": "#8BC34A", "properties": { "gridSize": 64, "moveLimit": [20-60] } },
+      { "id": "wall_N", "type": "platform", ... "properties": {} },
+      { "id": "block_red_1", "type": "enemy", ..., "health": 9999, "color": "#e74c3c",
+        "properties": { "pushable": true } },
+      { "id": "switch_red_1", "type": "trigger", "properties": {
+          "switchColor": "red", "activated": false, "activatesDoor": "door_1" } },
+      { "id": "door_1", "type": "trigger", "properties": {
+          "locked": true, "requiredSwitches": ["switch_red_1"] } },
+      { "id": "finish_1", "type": "finish", "properties": { "nextLevel": [0..] } }
+    ]
+  }]
+}
+```
+
+## 3) Tower Defense (type: "shooter" + компоненты)
+Определяется наличием компонентов WaveSpawner/TowerPlacer.
+
+| Entity | Роль | Properties движка |
+|--------|------|-------------------|
+| hero | TowerPlacer | gold, lives, towerTypes:["arrow","cannon","ice","laser"] |
+| spawn_point | старт пути | spawnInterval (сек между спавнами) |
+| trigger | waypoint | waypointIndex: 1,2,3... (цепочка к базе) |
+| trigger | волна | wave:N, delay, enemies:[{type,count,hp,speed,reward}] |
+| decoration | слот башни | components:["TowerSlot"], properties:{} |
+| finish | БАЗА | прорыв врага = -1 жизнь (не переход уровня!) |
+
+Цены башен: arrow 50g (дальняя, быстрая), cannon 100g (сплэш), ice 75g
+(замедление 55%), laser 125g. Награда за убийство = reward → золото.
+Клик по пустому слоту строит выбранную башню; 1–4 выбор типа; Space —
+начать волну раньше. Все волны отбиты → victory; lives=0 → GAME OVER.
+
+## 4) Endless Runner (type: "endless-runner")
+Герой бежит вправо сам. Игрок управляет прыжком (Space), скорость меняют зоны.
+
+| Entity | Properties движка |
+|--------|-------------------|
+| zone | speedMultiplier (0.5–2.5), gravityMultiplier |
+| platform/hazard/pickup | как в платформере |
+
+Трек = реальные x сущностей (может быть >> worldWidth). Скор = дистанция +
+пикапы. Смерть → респавн на checkpoint, собранное сохраняется.
+
+## 5) Shooter / Формации (type: "shooter", без TD-компонентов)
+Топ-даун: герой стреляет вверх, враги летают формацией и отвечают огнём.
+
+| Entity | Properties движка |
+|--------|-------------------|
+| hero | fireRate (выстр/сек), bulletSpeed (~9), bulletDamage |
+| enemy | shootRate (перезарядка сек), scoreValue, formation:"grid", col, row |
+| boss | health большой; убивается пулями |
+| powerup | падает с врага если задан properties.powerupType у врага |
+
+Зачистил уровень → следующий; последний → victory.
+
+## 6) Racing (type: "racing")
+Аркадные гонки вид сверху: газ/тормоз/поворот, круги по чекпоинтам.
+
+| Entity | Properties движка |
+|--------|-------------------|
+| hero (машина) | acceleration (~0.3), topSpeed (~10), turnSpeed (~4 град/тик) |
+| enemy (RacerAI) | те же + skill (0.5–0.9), racerName |
+| checkpoint ×N | lapCheckpoint:true; порядок = число в id ("checkpoint_1"...) |
+| finish | lapsRequired, nextLevel |
+| pickup | pickupType:"boost" (+boostForce, boostDuration) или "repair" (+value) |
+| hazard (точечный) | hazardType:"rock"/"cactus"/"snowman" — удар гасит скорость |
+| hazard (зона) | effect:"slowdown"+reduction ИЛИ "slippery"+frictionReduction |
+
+Круг засчитывается при прохождении всех чекпоинтов ПО ПОРЯДКУ id.
+HUD: LAP, POS (позиция в гонке), спидбар, миникарта (components:["Minimap"],
+trackScale ~0.07).
+
+## 7) Turn-Based Strategy / Шахматы (type: "turn-based-strategy")
+См. продвинутый промпт выше — полностью работает: сетка, фигуры, контратаки.
+
+---
+
+## Матрица «режим → какой промпт»
+
+| Хочу игру про… | type | Секция |
+|----------------|------|--------|
+| прыжки/платформы | platformer | 1 |
+| толкать блоки, двери | puzzle | 2 |
+| защищать базу волнами | shooter + TD-компоненты | 3 |
+| бесконечный бег | endless-runner | 4 |
+| космическая стрельба | shooter | 5 |
+| гонки | racing | 6 |
+| пошаговая тактика | turn-based-strategy | 7 |
