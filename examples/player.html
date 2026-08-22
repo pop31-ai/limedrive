@@ -36,6 +36,21 @@ function isDown() { return keys.ArrowDown || keys.KeyS; }
 function isJump() { return justPressed.Space || justPressed.ArrowUp || justPressed.KeyW; }
 function isPause() { return justPressed.Escape; }
 
+let mouseX = 0, mouseY = 0, mouseClicked = false;
+if (canvas && typeof canvas.addEventListener === "function") {
+  canvas.addEventListener("mousemove", function(ev) {
+    const r = canvas.getBoundingClientRect();
+    mouseX = (ev.clientX - r.left) * (canvas.width / r.width);
+    mouseY = (ev.clientY - r.top) * (canvas.height / r.height);
+  });
+  canvas.addEventListener("click", function(ev) {
+    const r = canvas.getBoundingClientRect();
+    mouseX = (ev.clientX - r.left) * (canvas.width / r.width);
+    mouseY = (ev.clientY - r.top) * (canvas.height / r.height);
+    mouseClicked = true;
+  });
+}
+
 const THEMES = {
   forest: ["#1a5c2a", "#2d8a4e", "#87CEEB"],
   space: ["#0a0a1a", "#16213e", "#1a1a3e"],
@@ -89,6 +104,23 @@ let levelTransitioning = false;
 let heroPrevY = 0;
 let loadLevelCooldown = 0;
 
+let chessMode = false;
+let chessTurn = "player";
+let chessBoard = [];
+let chessSelected = null;
+let chessValidMoves = [];
+let chessGrid = null;
+let chessCellSize = 80;
+let chessBoardX = 0;
+let chessBoardY = 0;
+let chessAnimating = false;
+let chessMessage = "";
+let chessMessageTimer = 0;
+let chessTurnCount = 0;
+let chessLastMove = null;
+let chessPromoPending = null;
+let chessRangedMode = false;
+
 function loadFromURL() {
   const p = new URLSearchParams(window.location.search);
   const g = p.get("game");
@@ -141,6 +173,21 @@ function loadLevel(idx) {
   hero = null;
   timeLeft = levelData.timeLimit || 0;
   levelStartTime = Date.now();
+
+  chessMode = gameData.type === "turn-based-strategy";
+
+  if (chessMode) {
+    levelEntityDefs = levelData.entities || [];
+    for (let i = 0; i < levelEntityDefs.length; i++) {
+      const def = JSON.parse(JSON.stringify(levelEntityDefs[i]));
+      entities.push(createEntity(def));
+    }
+    initChessLevel(levelData);
+    fadeAlpha = 1; fadeDir = -1; fadeSpeed = 3; fadeCallback = null;
+    prevKeys = {};
+    for (const k in keys) prevKeys[k] = false;
+    return;
+  }
 
   levelEntityDefs = levelData.entities || [];
   for (let i = 0; i < levelEntityDefs.length; i++) {
@@ -225,6 +272,7 @@ function createEntity(def) {
     speed: def.speed || 0,
     damage: def.damage || 0,
     properties: p,
+    components: def.components || [],
     id: def.id || "",
     vx: 0, vy: 0,
     onGround: false,
@@ -253,6 +301,12 @@ function update(dt) {
   fpsTimer += dt;
   fpsCount++;
   if (fpsTimer >= 1) { fps = fpsCount; fpsCount = 0; fpsTimer = 0; }
+
+  if (chessMode) {
+    handleChessClick();
+    updateChess(dt);
+    return;
+  }
 
   if (timeLeft > 0) {
     timeLeft -= dt;
@@ -811,6 +865,577 @@ function updateFade(dt) {
   }
 }
 
+function initChessLevel(lvl) {
+  chessTurn = "player";
+  chessSelected = null;
+  chessValidMoves = [];
+  chessAnimating = false;
+  chessMessage = "";
+  chessMessageTimer = 0;
+  chessTurnCount = 0;
+  chessLastMove = null;
+  chessPromoPending = null;
+  chessBoard = [];
+  chessGrid = null;
+  chessRangedMode = (getSettings().attackMode === "ranged");
+  for (let i = 0; i < entities.length; i++) {
+    if (entities[i].type === "grid") { chessGrid = entities[i]; break; }
+  }
+  const gridProps = chessGrid && chessGrid.properties ? chessGrid.properties : {};
+  chessCellSize = gridProps.cellSize || 80;
+  var boardGridSize = gridProps.gridSize || getSettings().gridSize || 8;
+  const bw = boardGridSize * chessCellSize;
+  chessBoardX = Math.round((W - bw) / 2);
+  chessBoardY = Math.round((H - bw) / 2);
+  for (let gy = 0; gy < boardGridSize; gy++) {
+    chessBoard[gy] = [];
+    for (let gx = 0; gx < boardGridSize; gx++) chessBoard[gy][gx] = null;
+  }
+  for (let i = 0; i < entities.length; i++) {
+    const e = entities[i];
+    if (e.type === "piece" && e.alive) {
+      const gx = Math.round(e.x);
+      const gy = Math.round(e.y);
+      if (gx >= 0 && gx < boardGridSize && gy >= 0 && gy < boardGridSize) {
+        const side = (e.components && e.components.indexOf("PlayerControlled") >= 0) ? "player" : "enemy";
+        chessBoard[gy][gx] = {
+          id: e.id, type: e.properties.pieceType, side: side,
+          health: e.health, maxHealth: e.maxHealth || e.health,
+          damage: e.damage || 0, props: e.properties, entity: e,
+          moved: false
+        };
+      }
+    }
+  }
+}
+
+function getChessPiece(gx, gy) {
+  var bs = (getSettings().gridSize || 8) - 1;
+  if (gx < 0 || gx > bs || gy < 0 || gy > bs) return null;
+  return chessBoard[gy] ? chessBoard[gy][gx] : null;
+}
+
+function chessHasAlly(gx, gy, side) {
+  const p = getChessPiece(gx, gy);
+  return p && p.side === side;
+}
+
+function chessHasEnemy(gx, gy, side) {
+  const p = getChessPiece(gx, gy);
+  return p && p.side !== side;
+}
+
+function chessIsEmpty(gx, gy) {
+  return gx >= 0 && gx <= 7 && gy >= 0 && gy <= 7 && !chessBoard[gy][gx];
+}
+
+function getValidMoves(gx, gy) {
+  var piece = getChessPiece(gx, gy);
+  if (!piece) return [];
+  var moves = [];
+  var pattern = piece.props.movePattern || "adjacent";
+  var dist = piece.props.maxMoveDistance || 1;
+  var side = piece.side;
+  var s = getSettings();
+  var ff = s.friendlyFire || false;
+  var boardSize = (s.gridSize || 8) - 1;
+  function canOccupy(nx, ny) {
+    if (nx < 0 || nx > boardSize || ny < 0 || ny > boardSize) return false;
+    if (chessHasAlly(nx, ny, side)) return ff ? "capture" : false;
+    if (chessHasEnemy(nx, ny, side)) return "capture";
+    return "move";
+  }
+  function addStepMoves(dirs) {
+    for (var d = 0; d < dirs.length; d++) {
+      for (var step = 1; step <= dist; step++) {
+        var nx = gx + dirs[d][0]*step, ny = gy + dirs[d][1]*step;
+        var occ = canOccupy(nx, ny);
+        if (!occ) break;
+        moves.push({x: nx, y: ny, capture: occ === "capture"});
+        if (occ === "capture") break;
+      }
+    }
+  }
+  function addJumpMoves(offsets) {
+    for (var d = 0; d < offsets.length; d++) {
+      var nx = gx + offsets[d][0], ny = gy + offsets[d][1];
+      var occ = canOccupy(nx, ny);
+      if (occ) moves.push({x: nx, y: ny, capture: occ === "capture"});
+    }
+  }
+  switch (pattern) {
+    case "straight":
+      addStepMoves([[0,-1],[0,1],[-1,0],[1,0]]);
+      break;
+    case "diagonal":
+      addStepMoves([[-1,-1],[-1,1],[1,-1],[1,1]]);
+      break;
+    case "any-direction":
+      addStepMoves([[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]);
+      break;
+    case "adjacent":
+      addJumpMoves([[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]);
+      break;
+    case "l-shape":
+      addJumpMoves([[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]);
+      break;
+    case "forward":
+      var fwd = side === "player" ? 1 : -1;
+      var startRow = piece.props.startRow != null ? piece.props.startRow : (side === "player" ? 1 : boardSize - 1);
+      var ny = gy + fwd;
+      if (ny >= 0 && ny <= boardSize && chessIsEmpty(gx, ny)) {
+        moves.push({x: gx, y: ny, capture: false});
+        if (gy === startRow) {
+          var ny2 = gy + fwd * 2;
+          if (chessIsEmpty(gx, ny2)) {
+            moves.push({x: gx, y: ny2, capture: false});
+          }
+        }
+      }
+      if (piece.props.canCaptureDiagonal) {
+        for (var dd = -1; dd <= 1; dd += 2) {
+          var cx = gx + dd, cy = gy + fwd;
+          var target = getChessPiece(cx, cy);
+          if (target && (target.side !== side || ff)) {
+            moves.push({x: cx, y: cy, capture: true});
+          }
+        }
+      }
+      break;
+    case "custom":
+      var customMoves = piece.props.customMoves || [];
+      for (var m = 0; m < customMoves.length; m++) {
+        var nx = gx + customMoves[m].dx, ny = gy + customMoves[m].dy;
+        var occ = canOccupy(nx, ny);
+        if (occ) moves.push({x: nx, y: ny, capture: occ === "capture"});
+      }
+      break;
+  }
+  return moves;
+}
+
+function executeMove(fx, fy, tx, ty, callback) {
+  var attacker = getChessPiece(fx, fy);
+  var defender = getChessPiece(tx, ty);
+  chessLastMove = {fx: fx, fy: fy, tx: tx, ty: ty};
+  chessBoard[fy][fx] = null;
+  if (defender) {
+    var s = getSettings();
+    var dmg = attacker.damage || 1;
+    var isCrit = (s.critChance || 0) > 0 && Math.random() < s.critChance;
+    if (isCrit) dmg = Math.round(dmg * (s.critMultiplier || 1.5));
+    defender.health -= dmg;
+    chessAnimating = true;
+    if (isCrit) {
+      spawnParticles(chessBoardX + tx * chessCellSize + chessCellSize/2, chessBoardY + ty * chessCellSize + chessCellSize/2, "#ffff00", 14, "damage");
+    }
+    var captureFlash = 0.3;
+    var flashTick = setInterval(function() {
+      captureFlash -= 0.05;
+      if (captureFlash <= 0) {
+        clearInterval(flashTick);
+        chessAnimating = false;
+        if (defender.health <= 0) {
+          var idx = entities.indexOf(defender.entity);
+          if (idx >= 0) { entities[idx].alive = false; entities[idx].active = false; }
+        } else {
+          if (defender.props.counterattackChance && Math.random() < defender.props.counterattackChance && defender.props.counterattackDamage) {
+            attacker.health -= defender.props.counterattackDamage;
+            chessMessage = "Counterattack! -" + defender.props.counterattackDamage + " HP";
+            chessMessageTimer = 1.5;
+          }
+        }
+        if (defender.health > 0) {
+          chessBoard[ty][tx] = defender;
+        } else {
+          chessBoard[ty][tx] = null;
+        }
+        chessBoard[ty][tx] = attacker;
+        attacker.moved = true;
+        checkPawnPromo(tx, ty, attacker, callback);
+      }
+    }, 30);
+  } else {
+    chessBoard[ty][tx] = attacker;
+    attacker.moved = true;
+    checkPawnPromo(tx, ty, attacker, callback);
+  }
+}
+
+function checkPawnPromo(tx, ty, piece, callback) {
+  if (piece.type === "pawn" && ((piece.side === "player" && ty === 7) || (piece.side === "enemy" && ty === 0))) {
+    piece.type = "queen";
+    piece.props = Object.assign({}, piece.props, {pieceType: "queen", movePattern: "any-direction", maxMoveDistance: 7});
+    piece.damage = 3;
+    chessMessage = (piece.side === "player" ? "Your" : "Enemy") + " pawn promoted to Queen!";
+    chessMessageTimer = 2;
+  }
+  if (callback) setTimeout(callback, 100);
+}
+
+function doChessAttack(tx, ty, callback) {
+  var attacker = getChessPiece(chessSelected.x, chessSelected.y);
+  var defender = getChessPiece(tx, ty);
+  var s = getSettings();
+  var atkDmg = attacker.damage || 1;
+  var isCrit = (s.critChance || 0) > 0 && Math.random() < s.critChance;
+  if (isCrit) atkDmg = Math.round(atkDmg * (s.critMultiplier || 1.5));
+  defender.health -= atkDmg;
+  chessAnimating = true;
+  chessLastMove = {fx: chessSelected.x, fy: chessSelected.y, tx: tx, ty: ty, attack: true};
+  spawnParticles(chessBoardX + tx * chessCellSize + chessCellSize/2, chessBoardY + ty * chessCellSize + chessCellSize/2, isCrit ? "#ffff00" : "#ff4444", isCrit ? 14 : 8, "damage");
+  chessMessage = isCrit ? "CRIT! -" + atkDmg + " HP" : "";
+  chessMessageTimer = isCrit ? 1.2 : 0;
+  setTimeout(function() {
+    var defenderDead = defender.health <= 0;
+    if (defenderDead) {
+      chessBoard[ty][tx] = null;
+      var eidx = entities.indexOf(defender.entity);
+      if (eidx >= 0) { entities[eidx].alive = false; entities[eidx].active = false; }
+    }
+    if (!defenderDead && defender.props.counterattackChance && Math.random() < defender.props.counterattackChance && defender.props.counterattackDamage) {
+      attacker.health -= defender.props.counterattackDamage;
+      chessMessage = "Counterattack! -" + defender.props.counterattackDamage + " HP";
+      chessMessageTimer = 1.5;
+      spawnParticles(chessBoardX + chessSelected.x * chessCellSize + chessCellSize/2, chessBoardY + chessSelected.y * chessCellSize + chessCellSize/2, "#ffff00", 6, "damage");
+      if (attacker.health <= 0) {
+        chessBoard[chessSelected.y][chessSelected.x] = null;
+        var aidx = entities.indexOf(attacker.entity);
+        if (aidx >= 0) { entities[aidx].alive = false; entities[aidx].active = false; }
+      }
+    }
+    chessAnimating = false;
+    if (callback) setTimeout(callback, 100);
+  }, 300);
+}
+
+function chessRegen(side) {
+  var regen = getSettings().regenPerTurn || 0;
+  if (regen <= 0) return;
+  var bs = (getSettings().gridSize || 8) - 1;
+  for (var gy = 0; gy <= bs; gy++) {
+    for (var gx = 0; gx <= bs; gx++) {
+      var p = getChessPiece(gx, gy);
+      if (p && p.side === side && p.health > 0) {
+        p.health = Math.min(p.maxHealth, p.health + regen);
+      }
+    }
+  }
+}
+
+function hasValidMoves(side) {
+  var bs = (getSettings().gridSize || 8) - 1;
+  for (var gy = 0; gy <= bs; gy++) {
+    for (var gx = 0; gx <= bs; gx++) {
+      var p = getChessPiece(gx, gy);
+      if (p && p.side === side) {
+        var mv = getValidMoves(gx, gy);
+        for (var i = 0; i < mv.length; i++) {
+          if (mv[i].capture || chessIsEmpty(mv[i].x, mv[i].y)) return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function countSideHealth(side) {
+  var total = 0;
+  var bs = (getSettings().gridSize || 8) - 1;
+  for (var gy = 0; gy <= bs; gy++) {
+    for (var gx = 0; gx <= bs; gx++) {
+      var p = getChessPiece(gx, gy);
+      if (p && p.side === side) total += p.health;
+    }
+  }
+  return total;
+}
+
+function aiTurn() {
+  if (!hasValidMoves("enemy")) {
+    chessMessage = "Enemy has no moves!";
+    chessMessageTimer = 2;
+    chessTurn = "player";
+    chessRegen("player");
+    return;
+  }
+  var candidates = [];
+  var bs = (getSettings().gridSize || 8) - 1;
+  for (var gy = 0; gy <= bs; gy++) {
+    for (var gx = 0; gx <= bs; gx++) {
+      var p = getChessPiece(gx, gy);
+      if (p && p.side === "enemy") {
+        var mv = getValidMoves(gx, gy);
+        for (var i = 0; i < mv.length; i++) {
+          var score = 0;
+          if (mv[i].capture) {
+            var target = getChessPiece(mv[i].x, mv[i].y);
+            score += (target.health || 1) * 10 + (target.damage || 0) * 5;
+          }
+          if (p.type === "pawn") score += (mv[i].y) * 1;
+          if (p.type === "king") score -= 2;
+          score += Math.random() * 3;
+          candidates.push({fx: gx, fy: gy, tx: mv[i].x, ty: mv[i].y, capture: mv[i].capture, score: score});
+        }
+      }
+    }
+  }
+  if (candidates.length === 0) {
+    chessTurn = "player";
+    chessRegen("player");
+    return;
+  }
+  candidates.sort(function(a, b) { return b.score - a.score; });
+  var pick = candidates[0];
+  chessSelected = {x: pick.fx, y: pick.fy};
+  chessAnimating = true;
+  setTimeout(function() {
+    executeMove(pick.fx, pick.fy, pick.tx, pick.ty, function() {
+      chessSelected = null;
+      chessValidMoves = [];
+      chessTurn = "player";
+      chessRegen("player");
+      chessTurnCount++;
+      if (!hasValidMoves("player")) {
+        chessMessage = "No moves available!";
+        chessMessageTimer = 2;
+      }
+    });
+  }, 400);
+}
+
+function chessClickToGrid(mx, my) {
+  var gx = Math.floor((mx - chessBoardX) / chessCellSize);
+  var gy = Math.floor((my - chessBoardY) / chessCellSize);
+  if (gx < 0 || gx > 7 || gy < 0 || gy > 7) return null;
+  return {x: gx, y: gy};
+}
+
+function handleChessClick() {
+  if (!mouseClicked || chessAnimating || chessTurn !== "player" || fadeDir !== 0) { mouseClicked = false; return; }
+  mouseClicked = false;
+  var cell = chessClickToGrid(mouseX, mouseY);
+  if (!cell) return;
+  if (chessSelected) {
+    var validMove = null;
+    var validAttack = null;
+    for (var i = 0; i < chessValidMoves.length; i++) {
+      if (chessValidMoves[i].x === cell.x && chessValidMoves[i].y === cell.y) {
+        if (chessValidMoves[i].capture) validAttack = chessValidMoves[i];
+        else validMove = chessValidMoves[i];
+        break;
+      }
+    }
+    if (validAttack) {
+      chessAnimating = true;
+      var afterAttack = function() {
+        chessSelected = null;
+        chessValidMoves = [];
+        chessTurn = "enemy";
+        chessTurnCount++;
+        chessRegen("enemy");
+        chessAnimating = false;
+        var eHP = countSideHealth("enemy");
+        if (eHP <= 0) {
+          chessMessage = "Victory!";
+          chessMessageTimer = 3;
+          setTimeout(function() { fadeDir = 1; fadeSpeed = 3; fadeCallback = function() {
+            if (currentLevelIdx + 1 < gameData.levels.length) loadLevel(currentLevelIdx + 1);
+            else showVictory();
+          }; }, 1000);
+        } else {
+          setTimeout(aiTurn, 600);
+        }
+      };
+      if (chessRangedMode) {
+        doChessAttack(cell.x, cell.y, afterAttack);
+      } else {
+        executeMove(chessSelected.x, chessSelected.y, cell.x, cell.y, afterAttack);
+      }
+      return;
+    }
+    if (validMove) {
+      chessAnimating = true;
+      executeMove(chessSelected.x, chessSelected.y, cell.x, cell.y, function() {
+        chessSelected = null;
+        chessValidMoves = [];
+        chessTurn = "enemy";
+        chessTurnCount++;
+        chessAnimating = false;
+        setTimeout(aiTurn, 600);
+      });
+      return;
+    }
+    var clickedPiece = getChessPiece(cell.x, cell.y);
+    if (clickedPiece && clickedPiece.side === "player") {
+      chessSelected = {x: cell.x, y: cell.y};
+      chessValidMoves = getValidMoves(cell.x, cell.y);
+    } else {
+      chessSelected = null;
+      chessValidMoves = [];
+    }
+  } else {
+    var piece = getChessPiece(cell.x, cell.y);
+    if (piece && piece.side === "player") {
+      chessSelected = {x: cell.x, y: cell.y};
+      chessValidMoves = getValidMoves(cell.x, cell.y);
+    }
+  }
+}
+
+function updateChess(dt) {
+  chessMessageTimer = Math.max(0, chessMessageTimer - dt);
+  updateFade(dt);
+  updateParticles(dt);
+}
+
+function renderChess() {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, W, H);
+  var gs = chessCellSize * 8;
+  ctx.fillStyle = "#0a0a0a";
+  ctx.fillRect(chessBoardX - 12, chessBoardY - 12, gs + 24, gs + 24);
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(chessBoardX - 12, chessBoardY - 12, gs + 24, gs + 24);
+  var boardGs = getSettings().gridSize || 8;
+  for (var gy = 0; gy < boardGs; gy++) {
+    for (var gx = 0; gx < boardGs; gx++) {
+      var cx = chessBoardX + gx * chessCellSize;
+      var cy = chessBoardY + gy * chessCellSize;
+      var light = (gx + gy) % 2 === 0;
+      var gridProps = chessGrid && chessGrid.properties ? chessGrid.properties : {};
+      ctx.fillStyle = light ? (gridProps.lightColor || "#f0d9b5") : (gridProps.darkColor || "#b58863");
+      ctx.fillRect(cx, cy, chessCellSize, chessCellSize);
+      if (chessLastMove && !chessLastMove.attack) {
+        if ((gx === chessLastMove.fx && gy === chessLastMove.fy) || (gx === chessLastMove.tx && gy === chessLastMove.ty)) {
+          ctx.fillStyle = "rgba(255,255,0,0.2)";
+          ctx.fillRect(cx, cy, chessCellSize, chessCellSize);
+        }
+      }
+      if (chessSelected && gx === chessSelected.x && gy === chessSelected.y) {
+        ctx.fillStyle = "rgba(0,255,100,0.35)";
+        ctx.fillRect(cx, cy, chessCellSize, chessCellSize);
+      }
+      var piece = getChessPiece(gx, gy);
+      if (piece) {
+        var isSel = chessSelected && chessSelected.x === gx && chessSelected.y === gy;
+        drawChessPiece(cx, cy, chessCellSize, piece, isSel);
+      }
+    }
+  }
+  if (getSettings().highlightMoves !== false) {
+    for (var i = 0; i < chessValidMoves.length; i++) {
+      var mv = chessValidMoves[i];
+      var cx = chessBoardX + mv.x * chessCellSize;
+      var cy = chessBoardY + mv.y * chessCellSize;
+      if (mv.capture) {
+        ctx.strokeStyle = "rgba(255,60,60,0.8)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(cx + 3, cy + 3, chessCellSize - 6, chessCellSize - 6);
+      } else {
+        ctx.fillStyle = "rgba(0,200,80,0.35)";
+        ctx.beginPath();
+        ctx.arc(cx + chessCellSize/2, cy + chessCellSize/2, chessCellSize * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  var coords = "abcdefgh";
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.font = "11px monospace";
+  ctx.textAlign = "center";
+  for (var i = 0; i < 8; i++) {
+    ctx.fillText(coords[i], chessBoardX + i * chessCellSize + chessCellSize/2, chessBoardY + gs + 18);
+    ctx.fillText(8 - i, chessBoardX - 18, chessBoardY + i * chessCellSize + chessCellSize/2 + 4);
+  }
+  ctx.textAlign = "center";
+  var turnText = chessTurn === "player" ? "YOUR TURN" : "ENEMY TURN";
+  var turnColor = chessTurn === "player" ? "#00ff88" : "#ff4444";
+  ctx.fillStyle = turnColor;
+  ctx.font = "bold 22px monospace";
+  ctx.fillText(turnText, W / 2, 30);
+  ctx.fillStyle = "#888";
+  ctx.font = "14px monospace";
+  ctx.fillText("Turn " + (chessTurnCount + 1), W / 2, 52);
+  var pH = countSideHealth("player");
+  var eH = countSideHealth("enemy");
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#00ff88";
+  ctx.font = "bold 16px monospace";
+  ctx.fillText("You: " + pH + " HP", 24, H - 20);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#ff4444";
+  ctx.fillText("Enemy: " + eH + " HP", W - 24, H - 20);
+  if (chessSelected) {
+    var sp = getChessPiece(chessSelected.x, chessSelected.y);
+    if (sp) {
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#fff";
+      ctx.font = "14px monospace";
+      ctx.fillText(sp.type.toUpperCase() + " | HP:" + sp.health + " | ATK:" + sp.damage, W / 2, H - 20);
+    }
+  }
+  if (chessMessageTimer > 0) {
+    ctx.globalAlpha = Math.min(1, chessMessageTimer);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 20px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(chessMessage, W / 2, H / 2 - 10);
+    ctx.globalAlpha = 1;
+  }
+  drawParticles();
+  if (fadeAlpha > 0) {
+    ctx.fillStyle = "rgba(0,0,0," + fadeAlpha + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawChessPiece(cx, cy, size, piece, selected) {
+  var pad = size * 0.08;
+  var px = cx + pad;
+  var py = cy + pad;
+  var pw = size - pad * 2;
+  var ph = size - pad * 2;
+  var isPlayer = piece.side === "player";
+  var bgColor = isPlayer ? "#2a5a3a" : "#5a2a2a";
+  var borderColor = isPlayer ? "#4CAF50" : "#e74c3c";
+  if (piece.health <= 0) { ctx.globalAlpha = 0.3; }
+  ctx.fillStyle = bgColor;
+  roundRect(px, py, pw, ph, 5);
+  ctx.fill();
+  if (selected) {
+    ctx.strokeStyle = "#ffff00";
+    ctx.lineWidth = 2;
+    roundRect(px - 1, py - 1, pw + 2, ph + 2, 6);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 1.5;
+  roundRect(px, py, pw, ph, 5);
+  ctx.stroke();
+  var symbols = {king:"\u2654",queen:"\u2655",rook:"\u2656",bishop:"\u2657",knight:"\u2658",pawn:"\u2659"};
+  var sym = symbols[piece.type] || "?";
+  ctx.fillStyle = isPlayer ? "#fff" : "#ddd";
+  ctx.font = "bold " + Math.floor(pw * 0.55) + "px serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(sym, cx + size/2, cy + size/2 - 2);
+  ctx.textBaseline = "alphabetic";
+  if (piece.health < piece.maxHealth) {
+    var ratio = piece.health / piece.maxHealth;
+    var barW = pw * 0.7;
+    var barH = 4;
+    var barX = cx + (size - barW) / 2;
+    var barY = cy + ph + pad - 1;
+    ctx.fillStyle = "#333";
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = ratio > 0.5 ? "#4CAF50" : ratio > 0.25 ? "#ff9800" : "#f44336";
+    ctx.fillRect(barX, barY, barW * ratio, barH);
+  }
+  ctx.globalAlpha = 1;
+}
+
 function rectOverlap(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x &&
          a.y < b.y + b.height && a.y + a.height > b.y;
@@ -820,6 +1445,11 @@ function render() {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W, H);
   if (gameState !== "playing" || !levelData) return;
+
+  if (chessMode) {
+    renderChess();
+    return;
+  }
 
   const camX = Math.round(camera.x + camera.shakeX);
   const camY = Math.round(camera.y + camera.shakeY);
@@ -865,7 +1495,11 @@ function render() {
     ctx.fillText("CONTROLS", W / 2, H / 2 - 100);
     ctx.fillStyle = "rgba(200,220,240," + a + ")";
     ctx.font = "20px monospace";
-    const lines = [
+    const lines = chessMode ? [
+      "Click — Select / Move piece",
+      "Click enemy — Attack",
+      "ESC — Pause"
+    ] : [
       "Arrow Keys / WASD \u2014 Move",
       "Space \u2014 Jump",
       "ESC \u2014 Pause"

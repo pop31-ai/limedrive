@@ -583,7 +583,8 @@ LD.VERSION = '1.0.0';
     } else {
       const defaults = ['PhysicsSystem', 'CollisionSystem', 'PlayerInputSystem',
         'AIControlSystem', 'PlatformerSystem', 'AnimatorSystem', 'ParticleSystem',
-        'HealthSystem', 'CameraSystem', 'PickupSystem', 'WeaponSystem', 'RenderSystem'];
+        'HealthSystem', 'CameraSystem', 'PickupSystem', 'WeaponSystem',
+        'CooldownSystem', 'TrailSystem', 'DelayedActionSystem', 'RenderSystem'];
       defaults.forEach(function (sysName) {
         const SysClass = LD.Systems[sysName];
         if (SysClass) _world.addSystem(new SysClass());

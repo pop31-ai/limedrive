@@ -1,0 +1,1439 @@
+{
+  "name": "Shadow Labyrinth",
+  "version": "1.0.0",
+  "type": "platformer",
+  "description": "Explore dark dungeons, find keys, fight skeletons, and defeat the Necromancer across three perilous floors!",
+  "author": "LimeDrive Examples",
+  "settings": {
+    "gravity": 980,
+    "friction": 0.8,
+    "airResistance": 0.02,
+    "jumpForce": 380,
+    "maxSpeed": 6,
+    "worldWidth": 2400,
+    "worldHeight": 1800,
+    "theme": "dungeon"
+  },
+  "levels": [
+    {
+      "name": "Crypt Entrance",
+      "timeLimit": 150,
+      "par": 3,
+      "background": {
+        "type": "gradient",
+        "colors": [
+          "#0a0a0a",
+          "#1a0a2e",
+          "#2d1b4e"
+        ]
+      },
+      "entities": [
+        {
+          "id": "l1-ground",
+          "type": "platform",
+          "x": 0,
+          "y": 1740,
+          "z": 0,
+          "width": 2400,
+          "height": 60,
+          "color": "#1a1a2e",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-wl",
+          "type": "platform",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 40,
+          "height": 1800,
+          "color": "#3d3d5c",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-wr",
+          "type": "platform",
+          "x": 2360,
+          "y": 0,
+          "z": 0,
+          "width": 40,
+          "height": 1800,
+          "color": "#3d3d5c",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-w3",
+          "type": "platform",
+          "x": 400,
+          "y": 600,
+          "z": 0,
+          "width": 600,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-w4",
+          "type": "platform",
+          "x": 1200,
+          "y": 800,
+          "z": 0,
+          "width": 500,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-w5",
+          "type": "platform",
+          "x": 800,
+          "y": 1200,
+          "z": 0,
+          "width": 600,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-w6",
+          "type": "platform",
+          "x": 1600,
+          "y": 400,
+          "z": 0,
+          "width": 400,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-w7",
+          "type": "platform",
+          "x": 1000,
+          "y": 1400,
+          "z": 0,
+          "width": 800,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l1-hero",
+          "type": "hero",
+          "x": 100,
+          "y": 1652,
+          "z": 1,
+          "width": 32,
+          "height": 48,
+          "color": "#00ff88",
+          "health": 100,
+          "speed": 5,
+          "damage": 10,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlayerControl",
+            "Platformer",
+            "Health"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l1-skel-1",
+          "type": "enemy",
+          "x": 600,
+          "y": 1720,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 35,
+          "speed": 2,
+          "damage": 8,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 200,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l1-skel-2",
+          "type": "enemy",
+          "x": 1500,
+          "y": 1720,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 40,
+          "speed": 2,
+          "damage": 10,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 180,
+            "direction": -1
+          }
+        },
+        {
+          "id": "l1-key-1",
+          "type": "pickup",
+          "x": 1000,
+          "y": 520,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "value": 1,
+            "pickupType": "key"
+          }
+        },
+        {
+          "id": "l1-potion-1",
+          "type": "pickup",
+          "x": 1800,
+          "y": 320,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#ff69b4",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "HealthPickup"
+          ],
+          "properties": {
+            "healAmount": 30
+          }
+        },
+        {
+          "id": "l1-pickup-1",
+          "type": "pickup",
+          "x": 500,
+          "y": 520,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "value": 10
+          }
+        },
+        {
+          "id": "l1-t1",
+          "type": "decoration",
+          "x": 200,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l1-t2",
+          "type": "decoration",
+          "x": 1300,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l1-t3",
+          "type": "decoration",
+          "x": 2100,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l1-finish",
+          "type": "finish",
+          "x": 2200,
+          "y": 1680,
+          "z": 1,
+          "width": 40,
+          "height": 60,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "nextLevel": "l2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bone Halls",
+      "timeLimit": 180,
+      "par": 4,
+      "background": {
+        "type": "gradient",
+        "colors": [
+          "#0a0a0a",
+          "#1a0a2e",
+          "#2d1b4e"
+        ]
+      },
+      "entities": [
+        {
+          "id": "l2-ground",
+          "type": "platform",
+          "x": 0,
+          "y": 1740,
+          "z": 0,
+          "width": 2400,
+          "height": 60,
+          "color": "#1a1a2e",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-wl",
+          "type": "platform",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 40,
+          "height": 1800,
+          "color": "#3d3d5c",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-wr",
+          "type": "platform",
+          "x": 2360,
+          "y": 0,
+          "z": 0,
+          "width": 40,
+          "height": 1800,
+          "color": "#3d3d5c",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-w3",
+          "type": "platform",
+          "x": 300,
+          "y": 400,
+          "z": 0,
+          "width": 800,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-w4",
+          "type": "platform",
+          "x": 1100,
+          "y": 600,
+          "z": 0,
+          "width": 600,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-w5",
+          "type": "platform",
+          "x": 500,
+          "y": 900,
+          "z": 0,
+          "width": 700,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-w6",
+          "type": "platform",
+          "x": 1400,
+          "y": 1000,
+          "z": 0,
+          "width": 600,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-w7",
+          "type": "platform",
+          "x": 200,
+          "y": 1300,
+          "z": 0,
+          "width": 500,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-w8",
+          "type": "platform",
+          "x": 1200,
+          "y": 1400,
+          "z": 0,
+          "width": 700,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l2-hero",
+          "type": "hero",
+          "x": 100,
+          "y": 1652,
+          "z": 1,
+          "width": 32,
+          "height": 48,
+          "color": "#00ff88",
+          "health": 100,
+          "speed": 5,
+          "damage": 10,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlayerControl",
+            "Platformer",
+            "Health"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l2-skel-1",
+          "type": "enemy",
+          "x": 500,
+          "y": 1720,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 45,
+          "speed": 2,
+          "damage": 10,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 200,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l2-skel-2",
+          "type": "enemy",
+          "x": 1000,
+          "y": 1720,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 50,
+          "speed": 3,
+          "damage": 12,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 250,
+            "direction": -1
+          }
+        },
+        {
+          "id": "l2-skel-3",
+          "type": "enemy",
+          "x": 1600,
+          "y": 780,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 50,
+          "speed": 2,
+          "damage": 12,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 200,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l2-skel-4",
+          "type": "enemy",
+          "x": 2000,
+          "y": 1720,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 55,
+          "speed": 3,
+          "damage": 12,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 180,
+            "direction": -1
+          }
+        },
+        {
+          "id": "l2-bat-1",
+          "type": "enemy",
+          "x": 700,
+          "y": 310,
+          "z": 1,
+          "width": 24,
+          "height": 20,
+          "color": "#8B008B",
+          "health": 20,
+          "speed": 5,
+          "damage": 5,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 300,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l2-bat-2",
+          "type": "enemy",
+          "x": 1800,
+          "y": 510,
+          "z": 1,
+          "width": 24,
+          "height": 20,
+          "color": "#8B008B",
+          "health": 20,
+          "speed": 5,
+          "damage": 5,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 300,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l2-key-1",
+          "type": "pickup",
+          "x": 600,
+          "y": 320,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "value": 1,
+            "pickupType": "key"
+          }
+        },
+        {
+          "id": "l2-key-2",
+          "type": "pickup",
+          "x": 1600,
+          "y": 920,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "value": 1,
+            "pickupType": "key"
+          }
+        },
+        {
+          "id": "l2-potion-1",
+          "type": "pickup",
+          "x": 900,
+          "y": 820,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#ff69b4",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "HealthPickup"
+          ],
+          "properties": {
+            "healAmount": 30
+          }
+        },
+        {
+          "id": "l2-potion-2",
+          "type": "pickup",
+          "x": 350,
+          "y": 1260,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#ff69b4",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "HealthPickup"
+          ],
+          "properties": {
+            "healAmount": 30
+          }
+        },
+        {
+          "id": "l2-pickup-1",
+          "type": "pickup",
+          "x": 1200,
+          "y": 520,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "value": 10
+          }
+        },
+        {
+          "id": "l2-t1",
+          "type": "decoration",
+          "x": 200,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l2-t2",
+          "type": "decoration",
+          "x": 1300,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l2-t3",
+          "type": "decoration",
+          "x": 2100,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l2-finish",
+          "type": "finish",
+          "x": 2200,
+          "y": 1680,
+          "z": 1,
+          "width": 40,
+          "height": 60,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "nextLevel": "l3"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Necromancer Chamber",
+      "timeLimit": 240,
+      "par": 5,
+      "background": {
+        "type": "gradient",
+        "colors": [
+          "#0a0a0a",
+          "#1a0a2e",
+          "#2d1b4e"
+        ]
+      },
+      "entities": [
+        {
+          "id": "l3-ground",
+          "type": "platform",
+          "x": 0,
+          "y": 1740,
+          "z": 0,
+          "width": 2400,
+          "height": 60,
+          "color": "#1a1a2e",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-wl",
+          "type": "platform",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 40,
+          "height": 1800,
+          "color": "#3d3d5c",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-wr",
+          "type": "platform",
+          "x": 2360,
+          "y": 0,
+          "z": 0,
+          "width": 40,
+          "height": 1800,
+          "color": "#3d3d5c",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-w3",
+          "type": "platform",
+          "x": 350,
+          "y": 500,
+          "z": 0,
+          "width": 700,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-w4",
+          "type": "platform",
+          "x": 1300,
+          "y": 700,
+          "z": 0,
+          "width": 600,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-w5",
+          "type": "platform",
+          "x": 600,
+          "y": 1000,
+          "z": 0,
+          "width": 800,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-w6",
+          "type": "platform",
+          "x": 1500,
+          "y": 900,
+          "z": 0,
+          "width": 500,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-w7",
+          "type": "platform",
+          "x": 250,
+          "y": 1200,
+          "z": 0,
+          "width": 600,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-w8",
+          "type": "platform",
+          "x": 1100,
+          "y": 1400,
+          "z": 0,
+          "width": 700,
+          "height": 40,
+          "color": "#5c5c7a",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider"
+          ],
+          "properties": {
+            "static": true
+          }
+        },
+        {
+          "id": "l3-hero",
+          "type": "hero",
+          "x": 100,
+          "y": 1652,
+          "z": 1,
+          "width": 32,
+          "height": 48,
+          "color": "#00ff88",
+          "health": 100,
+          "speed": 5,
+          "damage": 10,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlayerControl",
+            "Platformer",
+            "Health"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l3-skel-1",
+          "type": "enemy",
+          "x": 500,
+          "y": 1720,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 50,
+          "speed": 3,
+          "damage": 12,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 200,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l3-skel-2",
+          "type": "enemy",
+          "x": 1200,
+          "y": 1720,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 55,
+          "speed": 3,
+          "damage": 14,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 250,
+            "direction": -1
+          }
+        },
+        {
+          "id": "l3-skel-3",
+          "type": "enemy",
+          "x": 1800,
+          "y": 620,
+          "z": 1,
+          "width": 30,
+          "height": 40,
+          "color": "#ff4444",
+          "health": 55,
+          "speed": 3,
+          "damage": 14,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 200,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l3-necro",
+          "type": "boss",
+          "x": 2000,
+          "y": 580,
+          "z": 2,
+          "width": 64,
+          "height": 80,
+          "color": "#8B00FF",
+          "health": 300,
+          "speed": 2,
+          "damage": 25,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "AIControl",
+            "Health"
+          ],
+          "properties": {
+            "patrolRange": 150,
+            "direction": 1
+          }
+        },
+        {
+          "id": "l3-potion-1",
+          "type": "pickup",
+          "x": 900,
+          "y": 820,
+          "z": 1,
+          "width": 16,
+          "height": 16,
+          "color": "#ff69b4",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "HealthPickup"
+          ],
+          "properties": {
+            "healAmount": 30
+          }
+        },
+        {
+          "id": "l3-t1",
+          "type": "decoration",
+          "x": 200,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l3-t2",
+          "type": "decoration",
+          "x": 1300,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l3-t3",
+          "type": "decoration",
+          "x": 2100,
+          "y": 1720,
+          "z": -1,
+          "width": 12,
+          "height": 20,
+          "color": "#FF8C00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "l3-finish",
+          "type": "finish",
+          "x": 2200,
+          "y": 1680,
+          "z": 1,
+          "width": 40,
+          "height": 60,
+          "color": "#FFD700",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider"
+          ],
+          "properties": {
+            "nextLevel": ""
+          }
+        }
+      ]
+    }
+  ],
+  "cameras": [
+    {
+      "type": "follow",
+      "target": "hero",
+      "smooth": 0.08,
+      "offsetX": 0,
+      "offsetY": -100
+    }
+  ],
+  "ai": {
+    "globalDifficulty": "medium",
+    "adaptToPlayer": true
+  }
+}

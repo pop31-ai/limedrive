@@ -1,8 +1,8 @@
 {
   "name": "Chess Clash",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "turn-based-strategy",
-  "description": "Turn-based grid combat with chess-inspired piece movement. Counterattack mechanic rewards smart positioning.",
+  "description": "Three theatrical chess scenarios — each a different battlefield, same engine quality.",
   "author": "LimeDrive Examples",
   "settings": {
     "gravity": 0,
@@ -12,15 +12,20 @@
     "maxSpeed": 1,
     "worldWidth": 640,
     "worldHeight": 640,
-    "theme": "chess-board"
+    "theme": "chess-board",
+    "attackMode": "classic",
+    "friendlyFire": false,
+    "regenPerTurn": 0,
+    "critChance": 0,
+    "critMultiplier": 1.5,
+    "highlightMoves": true
   },
   "levels": [
     {
-      "id": "tutorial-board",
-      "name": "First Moves",
+      "id": "classic-endgame",
+      "name": "Классика",
       "worldWidth": 640,
       "worldHeight": 640,
-      "difficulty": 1,
       "entities": [
         {
           "id": "grid",
@@ -106,114 +111,6 @@
           }
         },
         {
-          "id": "player-bishop",
-          "type": "piece",
-          "x": 3,
-          "y": 0,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#ffffff",
-          "health": 2,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Bishop", "PlayerControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "bishop",
-            "movePattern": "diagonal",
-            "maxMoveDistance": 7,
-            "counterattackChance": 0.5,
-            "counterattackDamage": 1
-          }
-        },
-        {
-          "id": "player-knight",
-          "type": "piece",
-          "x": 1,
-          "y": 0,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#ffffff",
-          "health": 2,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Knight", "PlayerControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "knight",
-            "movePattern": "l-shape",
-            "maxMoveDistance": 1,
-            "counterattackChance": 0.4,
-            "counterattackDamage": 1
-          }
-        },
-        {
-          "id": "player-pawn-1",
-          "type": "piece",
-          "x": 0,
-          "y": 1,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#ffffff",
-          "health": 1,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Pawn", "PlayerControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "pawn",
-            "movePattern": "forward",
-            "maxMoveDistance": 1,
-            "canCaptureDiagonal": true,
-            "counterattackChance": 0.3,
-            "counterattackDamage": 1
-          }
-        },
-        {
-          "id": "player-pawn-2",
-          "type": "piece",
-          "x": 1,
-          "y": 1,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#ffffff",
-          "health": 1,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Pawn", "PlayerControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "pawn",
-            "movePattern": "forward",
-            "maxMoveDistance": 1,
-            "canCaptureDiagonal": true,
-            "counterattackChance": 0.3,
-            "counterattackDamage": 1
-          }
-        },
-        {
-          "id": "player-pawn-3",
-          "type": "piece",
-          "x": 2,
-          "y": 1,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#ffffff",
-          "health": 1,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Pawn", "PlayerControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "pawn",
-            "movePattern": "forward",
-            "maxMoveDistance": 1,
-            "canCaptureDiagonal": true,
-            "counterattackChance": 0.3,
-            "counterattackDamage": 1
-          }
-        },
-        {
           "id": "enemy-king",
           "type": "piece",
           "x": 3,
@@ -231,165 +128,7 @@
             "movePattern": "adjacent",
             "maxMoveDistance": 1,
             "counterattackChance": 1.0,
-            "counterattackDamage": 0,
-            "aiDifficulty": "easy"
-          }
-        },
-        {
-          "id": "enemy-rook-1",
-          "type": "piece",
-          "x": 0,
-          "y": 7,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#333333",
-          "health": 3,
-          "speed": 1,
-          "damage": 2,
-          "components": ["Piece", "Rook", "AIControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "rook",
-            "movePattern": "straight",
-            "maxMoveDistance": 7,
-            "counterattackChance": 0.6,
-            "counterattackDamage": 2,
-            "aiDifficulty": "easy"
-          }
-        },
-        {
-          "id": "enemy-rook-2",
-          "type": "piece",
-          "x": 7,
-          "y": 7,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#333333",
-          "health": 3,
-          "speed": 1,
-          "damage": 2,
-          "components": ["Piece", "Rook", "AIControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "rook",
-            "movePattern": "straight",
-            "maxMoveDistance": 7,
-            "counterattackChance": 0.6,
-            "counterattackDamage": 2,
-            "aiDifficulty": "easy"
-          }
-        },
-        {
-          "id": "enemy-bishop",
-          "type": "piece",
-          "x": 4,
-          "y": 7,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#333333",
-          "health": 2,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Bishop", "AIControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "bishop",
-            "movePattern": "diagonal",
-            "maxMoveDistance": 7,
-            "counterattackChance": 0.5,
-            "counterattackDamage": 1,
-            "aiDifficulty": "easy"
-          }
-        },
-        {
-          "id": "enemy-knight",
-          "type": "piece",
-          "x": 6,
-          "y": 7,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#333333",
-          "health": 2,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Knight", "AIControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "knight",
-            "movePattern": "l-shape",
-            "maxMoveDistance": 1,
-            "counterattackChance": 0.4,
-            "counterattackDamage": 1,
-            "aiDifficulty": "easy"
-          }
-        },
-        {
-          "id": "enemy-pawn-1",
-          "type": "piece",
-          "x": 0,
-          "y": 6,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#333333",
-          "health": 1,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Pawn", "AIControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "pawn",
-            "movePattern": "forward",
-            "maxMoveDistance": 1,
-            "canCaptureDiagonal": true,
-            "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "easy"
-          }
-        },
-        {
-          "id": "enemy-pawn-2",
-          "type": "piece",
-          "x": 1,
-          "y": 6,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#333333",
-          "health": 1,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Pawn", "AIControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "pawn",
-            "movePattern": "forward",
-            "maxMoveDistance": 1,
-            "canCaptureDiagonal": true,
-            "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "easy"
-          }
-        },
-        {
-          "id": "enemy-pawn-3",
-          "type": "piece",
-          "x": 2,
-          "y": 6,
-          "z": 1,
-          "width": 70,
-          "height": 70,
-          "color": "#333333",
-          "health": 1,
-          "speed": 1,
-          "damage": 1,
-          "components": ["Piece", "Pawn", "AIControlled", "Counterattack"],
-          "properties": {
-            "pieceType": "pawn",
-            "movePattern": "forward",
-            "maxMoveDistance": 1,
-            "canCaptureDiagonal": true,
-            "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "easy"
+            "counterattackDamage": 0
           }
         },
         {
@@ -506,11 +245,10 @@
       ]
     },
     {
-      "id": "knight-ambush",
-      "name": "Knight's Gambit",
+      "id": "queens-assault",
+      "name": "Ферзевая Атака",
       "worldWidth": 640,
       "worldHeight": 640,
-      "difficulty": 2,
       "entities": [
         {
           "id": "grid",
@@ -722,8 +460,7 @@
             "movePattern": "adjacent",
             "maxMoveDistance": 1,
             "counterattackChance": 1.0,
-            "counterattackDamage": 0,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 0
           }
         },
         {
@@ -744,8 +481,7 @@
             "movePattern": "any-direction",
             "maxMoveDistance": 7,
             "counterattackChance": 0.8,
-            "counterattackDamage": 3,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 3
           }
         },
         {
@@ -766,8 +502,7 @@
             "movePattern": "l-shape",
             "maxMoveDistance": 1,
             "counterattackChance": 0.4,
-            "counterattackDamage": 1,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 1
           }
         },
         {
@@ -788,8 +523,7 @@
             "movePattern": "l-shape",
             "maxMoveDistance": 1,
             "counterattackChance": 0.4,
-            "counterattackDamage": 1,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 1
           }
         },
         {
@@ -810,8 +544,7 @@
             "movePattern": "diagonal",
             "maxMoveDistance": 7,
             "counterattackChance": 0.5,
-            "counterattackDamage": 1,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 1
           }
         },
         {
@@ -832,8 +565,7 @@
             "movePattern": "straight",
             "maxMoveDistance": 7,
             "counterattackChance": 0.6,
-            "counterattackDamage": 2,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 2
           }
         },
         {
@@ -855,8 +587,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 1
           }
         },
         {
@@ -878,8 +609,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 1
           }
         },
         {
@@ -901,8 +631,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 1
           }
         },
         {
@@ -924,8 +653,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "medium"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1042,11 +770,10 @@
       ]
     },
     {
-      "id": "endgame-grind",
-      "name": "Endgame Grind",
+      "id": "royal-defense",
+      "name": "Королевская Защита",
       "worldWidth": 640,
       "worldHeight": 640,
-      "difficulty": 3,
       "entities": [
         {
           "id": "grid",
@@ -1279,8 +1006,7 @@
             "movePattern": "adjacent",
             "maxMoveDistance": 1,
             "counterattackChance": 1.0,
-            "counterattackDamage": 0,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 0
           }
         },
         {
@@ -1301,8 +1027,7 @@
             "movePattern": "any-direction",
             "maxMoveDistance": 7,
             "counterattackChance": 0.8,
-            "counterattackDamage": 3,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 3
           }
         },
         {
@@ -1323,8 +1048,7 @@
             "movePattern": "straight",
             "maxMoveDistance": 7,
             "counterattackChance": 0.6,
-            "counterattackDamage": 2,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 2
           }
         },
         {
@@ -1345,8 +1069,7 @@
             "movePattern": "straight",
             "maxMoveDistance": 7,
             "counterattackChance": 0.6,
-            "counterattackDamage": 2,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 2
           }
         },
         {
@@ -1367,8 +1090,7 @@
             "movePattern": "diagonal",
             "maxMoveDistance": 7,
             "counterattackChance": 0.5,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1389,8 +1111,7 @@
             "movePattern": "diagonal",
             "maxMoveDistance": 7,
             "counterattackChance": 0.5,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1411,8 +1132,7 @@
             "movePattern": "l-shape",
             "maxMoveDistance": 1,
             "counterattackChance": 0.4,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1433,8 +1153,7 @@
             "movePattern": "l-shape",
             "maxMoveDistance": 1,
             "counterattackChance": 0.4,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1456,8 +1175,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1479,8 +1197,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1502,8 +1219,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1525,8 +1241,7 @@
             "maxMoveDistance": 1,
             "canCaptureDiagonal": true,
             "counterattackChance": 0.3,
-            "counterattackDamage": 1,
-            "aiDifficulty": "hard"
+            "counterattackDamage": 1
           }
         },
         {
@@ -1661,7 +1376,6 @@
   "ai": {
     "aggressive": true,
     "pattern": "chess-ai",
-    "difficultyScaling": true,
     "spawnRate": 0,
     "maxEnemies": 0
   }

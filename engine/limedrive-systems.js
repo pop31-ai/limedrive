@@ -506,6 +506,75 @@ LD.Systems = LD.Systems || {};
     }
   });
 
+  // ── CooldownSystem ────────────────────────────────────────────────
+  LD.Systems.CooldownSystem = _register('CooldownSystem', class CooldownSystem extends LD.System {
+    constructor() {
+      super([LD.Components.Cooldown]);
+      this.priority = 7;
+    }
+    update(dt, entities) {
+      const cooldownEntities = this.getEntities(entities);
+      for (let i = 0; i < cooldownEntities.length; i++) {
+        cooldownEntities[i].getComponent(LD.Components.Cooldown).update(dt);
+      }
+    }
+  });
+
+  // ── TrailSystem ──────────────────────────────────────────────────
+  LD.Systems.TrailSystem = _register('TrailSystem', class TrailSystem extends LD.System {
+    constructor() {
+      super([LD.Components.Transform, LD.Components.Trail]);
+      this.priority = 84;
+    }
+    update(dt, entities) {
+      const trailEntities = this.getEntities(entities);
+      for (let i = 0; i < trailEntities.length; i++) {
+        const e = trailEntities[i];
+        const tf = e.getComponent(LD.Components.Transform);
+        const tr = e.getComponent(LD.Components.Trail);
+        if (tr.active) {
+          tr.update(dt, tf.x + tf.width / 2, tf.y + tf.height / 2);
+        }
+      }
+    }
+    render(ctx, entities) {
+      const trailEntities = this.getEntities(entities);
+      for (let i = 0; i < trailEntities.length; i++) {
+        const e = trailEntities[i];
+        const tr = e.getComponent(LD.Components.Trail);
+        const points = tr.points;
+        if (points.length < 2) continue;
+        for (let j = 0; j < points.length; j++) {
+          const p = points[j];
+          const alpha = (p.life / p.maxLife) * tr.opacity;
+          const sz = tr.width * (p.life / p.maxLife);
+          if (tr.endColor) {
+            ctx.fillStyle = _lerpColor(tr.color || '#ffffff', tr.endColor, 1 - p.life / p.maxLife);
+          } else {
+            ctx.fillStyle = tr.color || '#ffffff';
+          }
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+  });
+
+  // ── DelayedActionSystem ──────────────────────────────────────────
+  LD.Systems.DelayedActionSystem = _register('DelayedActionSystem', class DelayedActionSystem extends LD.System {
+    constructor() {
+      super([LD.Components.DelayedAction]);
+      this.priority = 4;
+    }
+    update(dt, entities) {
+      const actionEntities = this.getEntities(entities);
+      for (let i = 0; i < actionEntities.length; i++) {
+        actionEntities[i].getComponent(LD.Components.DelayedAction).update(dt);
+      }
+    }
+  });
+
   // ── WeaponSystem ─────────────────────────────────────────────────
   LD.Systems.WeaponSystem = _register('WeaponSystem', class WeaponSystem extends LD.System {
     constructor() {

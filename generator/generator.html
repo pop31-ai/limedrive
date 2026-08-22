@@ -287,8 +287,10 @@ const THEMES=[
   'Underwater','City','Haunted','Jungle','Volcano',
   'Candy','Tech','Ancient','Cloud','Crystal'
 ];
-const ENTITY_TYPES=['hero','enemy','platform','pickup','decoration','trigger','spawn_point'];
+const ENTITY_TYPES=['hero','enemy','platform','pickup','decoration','trigger','spawn_point','king','queen','rook','bishop','knight','pawn'];
 const AI_PERSONALITIES=['aggressive','defensive','balanced','trickster'];
+const MOVE_PATTERNS=['adjacent','straight','diagonal','any-direction','l-shape','forward'];
+const MOVE_PATTERN_LABELS=['Adjacent (1sq)','Straight (line)','Diagonal (line)','Any Direction','L-Shape','Forward'];
 const COMPONENT_MAP={
   hero:['Transform','Sprite','PhysicsBody','Collider','PlayerControl','Platformer','Health'],
   enemy:['Transform','Sprite','PhysicsBody','Collider','EnemyAI','Health','Patrol'],
@@ -296,7 +298,13 @@ const COMPONENT_MAP={
   pickup:['Transform','Sprite','Collider','Pickup','Animation'],
   decoration:['Transform','Sprite','Animation'],
   trigger:['Transform','Collider','Trigger'],
-  spawn_point:['Transform','SpawnMarker']
+  spawn_point:['Transform','SpawnMarker'],
+  king:['Piece','King','PlayerControlled','Counterattack'],
+  queen:['Piece','Queen','PlayerControlled','Counterattack'],
+  rook:['Piece','Rook','PlayerControlled','Counterattack'],
+  bishop:['Piece','Bishop','PlayerControlled','Counterattack'],
+  knight:['Piece','Knight','PlayerControlled','Counterattack'],
+  pawn:['Piece','Pawn','PlayerControlled','Counterattack']
 };
 const WORLD_SIZES=[
   {label:'Small',w:1920,h:1080},
@@ -313,7 +321,19 @@ const ENTITY_TEMPLATES=[
   {name:'Checkpoint Flag',typeIdx:5,x:800,y:500,z:0,width:16,height:64,health:1,speed:0,damage:0,hue:200,sat:60,lit:60,aiPersonality:2,aiDifficulty:1},
   {name:'Spike Trap',typeIdx:5,x:350,y:540,z:0,width:64,height:16,health:1,speed:0,damage:25,hue:0,sat:0,lit:30,aiPersonality:2,aiDifficulty:1},
   {name:'Tree Decoration',typeIdx:6,x:150,y:450,z:10,width:48,height:80,health:1,speed:0,damage:0,hue:120,sat:50,lit:30,aiPersonality:2,aiDifficulty:1},
-  {name:'Mega Boss',typeIdx:1,x:1600,y:400,z:0,width:128,height:128,health:500,speed:3,damage:30,hue:330,sat:70,lit:40,aiPersonality:0,aiDifficulty:5}
+  {name:'Mega Boss',typeIdx:1,x:1600,y:400,z:0,width:128,height:128,health:500,speed:3,damage:30,hue:330,sat:70,lit:40,aiPersonality:0,aiDifficulty:5},
+  {name:'White King',typeIdx:7,x:4,y:0,z:1,width:70,height:70,health:5,speed:1,damage:0,hue:0,sat:0,lit:95,aiPersonality:2,aiDifficulty:3,movePattern:0,maxMoveDistance:1,counterattackChance:100,counterattackDamage:0,canCaptureDiagonal:0,side:0},
+  {name:'White Queen',typeIdx:8,x:3,y:0,z:1,width:70,height:70,health:4,speed:1,damage:3,hue:0,sat:0,lit:95,aiPersonality:2,aiDifficulty:3,movePattern:3,maxMoveDistance:7,counterattackChance:80,counterattackDamage:3,canCaptureDiagonal:0,side:0},
+  {name:'White Rook',typeIdx:9,x:0,y:0,z:1,width:70,height:70,health:3,speed:1,damage:2,hue:0,sat:0,lit:95,aiPersonality:2,aiDifficulty:3,movePattern:1,maxMoveDistance:7,counterattackChance:60,counterattackDamage:2,canCaptureDiagonal:0,side:0},
+  {name:'White Bishop',typeIdx:10,x:2,y:0,z:1,width:70,height:70,health:2,speed:1,damage:1,hue:0,sat:0,lit:95,aiPersonality:2,aiDifficulty:3,movePattern:2,maxMoveDistance:7,counterattackChance:50,counterattackDamage:1,canCaptureDiagonal:0,side:0},
+  {name:'White Knight',typeIdx:11,x:1,y:0,z:1,width:70,height:70,health:2,speed:1,damage:1,hue:0,sat:0,lit:95,aiPersonality:2,aiDifficulty:3,movePattern:4,maxMoveDistance:1,counterattackChance:40,counterattackDamage:1,canCaptureDiagonal:0,side:0},
+  {name:'White Pawn',typeIdx:12,x:0,y:1,z:1,width:70,height:70,health:1,speed:1,damage:1,hue:0,sat:0,lit:95,aiPersonality:2,aiDifficulty:3,movePattern:5,maxMoveDistance:1,counterattackChance:30,counterattackDamage:1,canCaptureDiagonal:1,side:0},
+  {name:'Black King',typeIdx:7,x:3,y:7,z:1,width:70,height:70,health:5,speed:1,damage:0,hue:0,sat:0,lit:20,aiPersonality:2,aiDifficulty:3,movePattern:0,maxMoveDistance:1,counterattackChance:100,counterattackDamage:0,canCaptureDiagonal:0,side:1},
+  {name:'Black Queen',typeIdx:8,x:4,y:7,z:1,width:70,height:70,health:4,speed:1,damage:3,hue:0,sat:0,lit:20,aiPersonality:2,aiDifficulty:3,movePattern:3,maxMoveDistance:7,counterattackChance:80,counterattackDamage:3,canCaptureDiagonal:0,side:1},
+  {name:'Black Rook',typeIdx:9,x:7,y:7,z:1,width:70,height:70,health:3,speed:1,damage:2,hue:0,sat:0,lit:20,aiPersonality:2,aiDifficulty:3,movePattern:1,maxMoveDistance:7,counterattackChance:60,counterattackDamage:2,canCaptureDiagonal:0,side:1},
+  {name:'Black Bishop',typeIdx:10,x:5,y:7,z:1,width:70,height:70,health:2,speed:1,damage:1,hue:0,sat:0,lit:20,aiPersonality:2,aiDifficulty:3,movePattern:2,maxMoveDistance:7,counterattackChance:50,counterattackDamage:1,canCaptureDiagonal:0,side:1},
+  {name:'Black Knight',typeIdx:11,x:6,y:7,z:1,width:70,height:70,health:2,speed:1,damage:1,hue:0,sat:0,lit:20,aiPersonality:2,aiDifficulty:3,movePattern:4,maxMoveDistance:1,counterattackChance:40,counterattackDamage:1,canCaptureDiagonal:0,side:1},
+  {name:'Black Pawn',typeIdx:12,x:0,y:6,z:1,width:70,height:70,health:1,speed:1,damage:1,hue:0,sat:0,lit:20,aiPersonality:2,aiDifficulty:3,movePattern:5,maxMoveDistance:1,counterattackChance:30,counterattackDamage:1,canCaptureDiagonal:1,side:1}
 ];
 
 let project=getDefaultProject();
@@ -336,7 +356,8 @@ function getDefaultProject(){
       name:'Level 1',timeLimit:120,enemyCount:5,platformDensity:40,
       par:3,hasBoss:false,entities:[]
     }],
-    physics:{gravity:9.8,friction:.8,airResistance:.02,jumpForce:15,maxSpeed:8}
+    physics:{gravity:9.8,friction:.8,airResistance:.02,jumpForce:15,maxSpeed:8},
+    board:{gridSize:8,cellSize:80,lightColor:'#f0d9b5',darkColor:'#b58863',attackMode:0,friendlyFire:0,regenPerTurn:0,critChance:0,critMultiplier:15,highlightMoves:1}
   };
 }
 
@@ -467,9 +488,10 @@ function renderTab(tab){
 
 function renderProjectPanel(el){
   const t=GAME_NAMES[project.nameIdx];
-  const gt=['Platformer','Puzzle','Shooter','RPG','Racing'];
+  const gt=['Platformer','Puzzle','Shooter','RPG','Racing','Strategy'];
   const ws=WORLD_SIZES[project.worldSize];
   const tc=getThemeColors();
+  const isStrategy=project.gameType===5;
   el.innerHTML=`
   <div class="panel-section">
     <h3>Game Settings</h3>
@@ -480,9 +502,30 @@ function renderProjectPanel(el){
     </div>
     <div class="slider-group">
       <div class="slider-label"><span>Game Type</span><span class="val">${gt[project.gameType]}</span></div>
-      <input type="range" min="0" max="4" value="${project.gameType}"
-        oninput="project.gameType=+this.value;this.previousElementSibling.querySelector('.val').textContent=['Platformer','Puzzle','Shooter','RPG','Racing'][this.value]">
+      <input type="range" min="0" max="5" value="${project.gameType}"
+        oninput="project.gameType=+this.value;this.previousElementSibling.querySelector('.val').textContent=['Platformer','Puzzle','Shooter','RPG','Racing','Strategy'][this.value];renderProjectPanel(document.getElementById('tab-project'))">
     </div>
+    ${isStrategy?`
+    <div class="slider-group">
+      <div class="slider-label"><span>Grid Size</span><span class="val">${project.board.gridSize}x${project.board.gridSize}</span></div>
+      <input type="range" min="4" max="12" value="${project.board.gridSize}"
+        oninput="project.board.gridSize=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value+'x'+this.value">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Cell Size</span><span class="val">${project.board.cellSize}px</span></div>
+      <input type="range" min="40" max="120" step="5" value="${project.board.cellSize}"
+        oninput="project.board.cellSize=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value+'px'">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Attack Mode</span><span class="val">${['Classic (move to target)','Ranged (shoot)'][project.board.attackMode]}</span></div>
+      <input type="range" min="0" max="1" value="${project.board.attackMode}"
+        oninput="project.board.attackMode=+this.value;this.previousElementSibling.querySelector('.val').textContent=['Classic (move to target)','Ranged (shoot)'][this.value]">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Highlight Moves</span><span class="val">${project.board.highlightMoves?'On':'Off'}</span></div>
+      <input type="range" min="0" max="1" value="${project.board.highlightMoves}"
+        oninput="project.board.highlightMoves=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value?'On':'Off'">
+    </div>`:`
     <div class="slider-group">
       <div class="slider-label"><span>World Size</span><span class="val">${ws.label} (${ws.w}x${ws.h})</span></div>
       <input type="range" min="0" max="2" value="${project.worldSize}"
@@ -497,7 +540,7 @@ function renderProjectPanel(el){
       <div class="slider-label"><span>Theme</span><span class="val">${THEMES[project.theme]}</span></div>
       <input type="range" min="0" max="${THEMES.length-1}" value="${project.theme}"
         oninput="project.theme=+this.value;this.previousElementSibling.querySelector('.val').textContent=THEMES[this.value]">
-    </div>
+    </div>`}
   </div>
   <div class="panel-section">
     <h3>Statistics</h3>
@@ -572,7 +615,7 @@ function renderEntitiesPanel(el){
 }
 
 function getEntityEmoji(typeIdx){
-  const emojis=['\u{1F3AE}','\u{1F47E}','\u{25A0}','\u{2B50}','\u{2728}','\u{26A1}','\u{1F6A9}'];
+  const emojis=['\u{1F3AE}','\u{1F47E}','\u25A0','\u2B50','\u2728','\u26A1','\u{1F6A9}','\u{1F451}','\u{1F478}','\u265C','\u265D','\u265E','\u265F'];
   return emojis[typeIdx]||'?';
 }
 
@@ -619,7 +662,9 @@ function deleteEntity(idx){
 }
 
 function addEntity(){
-  const defaults={x:100,y:500,z:0,width:64,height:64,health:100,speed:5,damage:0,hue:120,sat:55,lit:44,typeIdx:0,aiPersonality:2,aiDifficulty:3};
+  const isChess=project.gameType===5;
+  const defaults={x:100,y:500,z:0,width:64,height:64,health:100,speed:5,damage:0,hue:120,sat:55,lit:44,typeIdx:0,aiPersonality:2,aiDifficulty:3,movePattern:0,maxMoveDistance:1,counterattackChance:0,counterattackDamage:0,canCaptureDiagonal:0,side:0};
+  if(isChess){defaults.typeIdx=7;defaults.hue=0;defaults.sat=0;defaults.lit=95;defaults.health=5;defaults.damage=0;defaults.counterattackChance=100;}
   project.entities.push({...defaults});
   selectedEntityIdx=project.entities.length-1;
   renderEntityList();
@@ -733,6 +778,33 @@ function renderRightEntity(){
       <div class="slider-label"><span>AI Difficulty</span><span class="val">${e.aiDifficulty}</span></div>
       <input type="range" min="1" max="5" value="${e.aiDifficulty}" oninput="pushUndoDebounced();project.entities[${idx}].aiDifficulty=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value">
     </div>`:''}
+    ${e.typeIdx>=7?`
+    <div class="section-divider"></div>
+    <h3 style="color:var(--primary);font-size:11px;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;font-weight:700">Chess Settings</h3>
+    <div class="slider-group">
+      <div class="slider-label"><span>Side</span><span class="val">${['Player (White)','Enemy (Black)'][e.side||0]}</span></div>
+      <input type="range" min="0" max="1" value="${e.side||0}" oninput="pushUndoDebounced();project.entities[${idx}].side=+this.value;this.previousElementSibling.querySelector('.val').textContent=['Player (White)','Enemy (Black)'][this.value];renderRightEntity()">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Move Pattern</span><span class="val">${MOVE_PATTERN_LABELS[e.movePattern||0]}</span></div>
+      <input type="range" min="0" max="5" value="${e.movePattern||0}" oninput="pushUndoDebounced();project.entities[${idx}].movePattern=+this.value;this.previousElementSibling.querySelector('.val').textContent=MOVE_PATTERN_LABELS[this.value]">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Max Distance</span><span class="val">${e.maxMoveDistance||1}</span></div>
+      <input type="range" min="1" max="7" value="${e.maxMoveDistance||1}" oninput="pushUndoDebounced();project.entities[${idx}].maxMoveDistance=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Counterattack %</span><span class="val">${e.counterattackChance||0}%</span></div>
+      <input type="range" min="0" max="100" value="${e.counterattackChance||0}" oninput="pushUndoDebounced();project.entities[${idx}].counterattackChance=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value+'%'">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Counter Damage</span><span class="val">${e.counterattackDamage||0}</span></div>
+      <input type="range" min="0" max="5" value="${e.counterattackDamage||0}" oninput="pushUndoDebounced();project.entities[${idx}].counterattackDamage=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Capture Diagonal</span><span class="val">${(e.canCaptureDiagonal||0)?'Yes':'No'}</span></div>
+      <input type="range" min="0" max="1" value="${e.canCaptureDiagonal||0}" oninput="pushUndoDebounced();project.entities[${idx}].canCaptureDiagonal=+this.value;this.previousElementSibling.querySelector('.val').textContent=this.value?'Yes':'No'">
+    </div>`:''}
     <div class="section-divider"></div>
     <h3 style="color:var(--primary);font-size:11px;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;font-weight:700">Components</h3>
     <div style="display:flex;flex-wrap:wrap;gap:4px">
@@ -788,8 +860,9 @@ function resizeEntityCanvas(){
 
 function getEntityCanvasScale(){
   if(!entityCanvas) return{sx:1,sy:1,ox:0,oy:0};
-  const ww=WORLD_SIZES[project.worldSize].w;
-  const wh=WORLD_SIZES[project.worldSize].h;
+  const isChess=project.gameType===5;
+  const ww=isChess?project.board.gridSize*project.board.cellSize:WORLD_SIZES[project.worldSize].w;
+  const wh=isChess?project.board.gridSize*project.board.cellSize:WORLD_SIZES[project.worldSize].h;
   const sx=entityCanvas.width/ww;
   const sy=entityCanvas.height/wh;
   const s=Math.min(sx,sy);
@@ -800,36 +873,35 @@ function renderEntityCanvas(){
   if(!entityCtx) return;
   const c=entityCanvas;
   const ctx=entityCtx;
-  const ww=WORLD_SIZES[project.worldSize].w;
-  const wh=WORLD_SIZES[project.worldSize].h;
+  const isChess=project.gameType===5;
+  const ww=isChess?project.board.gridSize*project.board.cellSize:WORLD_SIZES[project.worldSize].w;
+  const wh=isChess?project.board.gridSize*project.board.cellSize:WORLD_SIZES[project.worldSize].h;
   const{sx,sy,ox,oy}=getEntityCanvasScale();
   ctx.clearRect(0,0,c.width,c.height);
   ctx.fillStyle='#111';
   ctx.fillRect(0,0,c.width,c.height);
-  ctx.strokeStyle='#1a2a1a';
-  ctx.lineWidth=1;
-  for(let x=0;x<=ww;x+=64){
-    ctx.beginPath();
-    ctx.moveTo(ox+x*sx,oy);
-    ctx.lineTo(ox+x*sx,oy+wh*sy);
-    ctx.stroke();
+  if(isChess){
+    const gs=project.board.gridSize;
+    const cs=project.board.cellSize;
+    for(let gy=0;gy<gs;gy++){
+      for(let gx=0;gx<gs;gx++){
+        const isLight=(gx+gy)%2===0;
+        ctx.fillStyle=isLight?project.board.lightColor:project.board.darkColor;
+        ctx.fillRect(ox+gx*cs*sx,oy+gy*cs*sy,cs*sx+1,cs*sy+1);
+      }
+    }
+  } else {
+    ctx.strokeStyle='#1a2a1a';
+    ctx.lineWidth=1;
+    for(let x=0;x<=ww;x+=64){
+      ctx.beginPath();ctx.moveTo(ox+x*sx,oy);ctx.lineTo(ox+x*sx,oy+wh*sy);ctx.stroke();
+    }
+    for(let y=0;y<=wh;y+=64){
+      ctx.beginPath();ctx.moveTo(ox,oy+y*sy);ctx.lineTo(ox+ww*sx,oy+y*sy);ctx.stroke();
+    }
+    ctx.strokeStyle='#2a4a2a';ctx.lineWidth=1;ctx.strokeRect(ox,oy,ww*sx,wh*sy);
+    ctx.strokeStyle='#33691E';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(ox,oy+wh*sy-2);ctx.lineTo(ox+ww*sx,oy+wh*sy-2);ctx.stroke();
   }
-  for(let y=0;y<=wh;y+=64){
-    ctx.beginPath();
-    ctx.moveTo(ox,oy+y*sy);
-    ctx.lineTo(ox+ww*sx,oy+y*sy);
-    ctx.stroke();
-  }
-  ctx.strokeStyle='#2a4a2a';
-  ctx.lineWidth=1;
-  ctx.strokeRect(ox,oy,ww*sx,wh*sy);
-  const groundY=oy+wh*sy-2;
-  ctx.strokeStyle='#33691E';
-  ctx.lineWidth=3;
-  ctx.beginPath();
-  ctx.moveTo(ox,groundY);
-  ctx.lineTo(ox+ww*sx,groundY);
-  ctx.stroke();
   project.entities.forEach((e,i)=>{
     const ex=ox+e.x*sx;
     const ey=oy+e.y*sy;
@@ -852,12 +924,23 @@ function renderEntityCanvas(){
       ctx.fillText(`#${i+1}`,ex+ew+6,ey+10);
     }
     if(ew>24&&eh>14){
-      ctx.fillStyle='rgba(0,0,0,0.7)';
-      ctx.fillRect(ex+2,ey+eh/2-6,ew-4,12);
-      ctx.fillStyle='#fff';
-      ctx.font='9px monospace';
-      ctx.textAlign='center';
-      ctx.fillText(ENTITY_TYPES[e.typeIdx],ex+ew/2,ey+eh/2+3);
+      const pieceSymbols={king:'\u265A',queen:'\u265B',rook:'\u265C',bishop:'\u265D',knight:'\u265E',pawn:'\u265F'};
+      const typeName=ENTITY_TYPES[e.typeIdx];
+      if(isChess&&pieceSymbols[typeName]){
+        ctx.fillStyle='rgba(0,0,0,0.7)';
+        ctx.fillRect(ex+2,ey+eh/2-6,ew-4,12);
+        ctx.fillStyle='#fff';
+        ctx.font='bold 12px serif';
+        ctx.textAlign='center';
+        ctx.fillText(pieceSymbols[typeName],ex+ew/2,ey+eh/2+5);
+      } else {
+        ctx.fillStyle='rgba(0,0,0,0.7)';
+        ctx.fillRect(ex+2,ey+eh/2-6,ew-4,12);
+        ctx.fillStyle='#fff';
+        ctx.font='9px monospace';
+        ctx.textAlign='center';
+        ctx.fillText(typeName,ex+ew/2,ey+eh/2+3);
+      }
     }
   });
   updateViewportInfo();
@@ -1158,7 +1241,7 @@ function renderPreviewPanel(el){
       <div>Gravity: <span style="color:var(--accent)">${project.physics.gravity}</span></div>
       <div>Entities: <span style="color:var(--accent)">${project.entities.length}</span></div>
       <div>Theme: <span style="color:var(--accent)">${THEMES[project.theme]}</span></div>
-      <div>Physics: <span style="color:var(--accent)">${['Platformer','Puzzle','Shooter','RPG','Racing'][project.gameType]}</span></div>
+      <div>Physics: <span style="color:var(--accent)">${['Platformer','Puzzle','Shooter','RPG','Racing','Strategy'][project.gameType]}</span></div>
     </div>
   </div>
   <div class="panel-section">
@@ -1414,53 +1497,98 @@ function showToast(msg){
 }
 
 function buildJSON(){
-  const gameTypes=['platformer','puzzle','shooter','rpg','racing'];
+  const gameTypes=['platformer','puzzle','shooter','rpg','racing','turn-based-strategy'];
   const ws=WORLD_SIZES[project.worldSize];
-  const entities=project.entities.map(e=>{
+  const isChess=project.gameType===5;
+  const boardW=isChess?project.board.gridSize*project.board.cellSize:ws.w;
+  const boardH=isChess?project.board.gridSize*project.board.cellSize:ws.h;
+  const entities=[];
+  if(isChess){
+    entities.push({
+      id:'grid',type:'grid',x:0,y:0,z:0,width:boardW,height:boardH,
+      color:'#2d2d2d',health:-1,speed:0,damage:0,
+      components:['Grid','ChessBoard'],
+      properties:{gridSize:project.board.gridSize,cellSize:project.board.cellSize,lightColor:project.board.lightColor,darkColor:project.board.darkColor}
+    });
+  }
+  project.entities.forEach(e=>{
     const type=ENTITY_TYPES[e.typeIdx];
-    const base={
-      type,
-      x:e.x,y:e.y,z:e.z,
-      width:e.width,height:e.height,
-      color:`hsl(${e.hue},${e.sat}%,${e.lit}%)`,
-      health:e.health,
-      speed:e.speed,
-      damage:e.damage,
-      components:COMPONENT_MAP[type]
-    };
-    if(type==='enemy'){
-      base.ai={
-        personality:AI_PERSONALITIES[e.aiPersonality],
-        difficulty:e.aiDifficulty
+    if(isChess){
+      const side=e.side||0;
+      const comps=side===0?['Piece',type.charAt(0).toUpperCase()+type.slice(1),'PlayerControlled','Counterattack']:['Piece',type.charAt(0).toUpperCase()+type.slice(1),'AIControlled','Counterattack'];
+      entities.push({
+        id:(side===0?'player-':'enemy-')+type+(entities.filter(x=>x.type==='piece').length>0?'-'+entities.filter(x=>x.type==='piece').length:''),
+        type:'piece',x:e.x,y:e.y,z:e.z,width:e.width,height:e.height,
+        color:'hsl('+e.hue+','+e.sat+'%,'+e.lit+'%)',
+        health:e.health,speed:e.speed,damage:e.damage,
+        components:comps,
+        properties:{
+          pieceType:type,
+          movePattern:MOVE_PATTERNS[e.movePattern||0],
+          maxMoveDistance:e.maxMoveDistance||1,
+          counterattackChance:(e.counterattackChance||0)/100,
+          counterattackDamage:e.counterattackDamage||0,
+          canCaptureDiagonal:(e.canCaptureDiagonal||0)===1
+        }
+      });
+    } else {
+      const base={
+        type:type,x:e.x,y:e.y,z:e.z,width:e.width,height:e.height,
+        color:'hsl('+e.hue+','+e.sat+'%,'+e.lit+'%)',
+        health:e.health,speed:e.speed,damage:e.damage,
+        components:COMPONENT_MAP[type]
       };
+      if(type==='enemy'){
+        base.ai={personality:AI_PERSONALITIES[e.aiPersonality],difficulty:e.aiDifficulty};
+      }
+      entities.push(base);
     }
-    return base;
   });
-  return {
-    name:GAME_NAMES[project.nameIdx],
-    version:'1.0.0',
+  const result={
+    name:GAME_NAMES[project.nameIdx],version:'1.0.0',
     type:gameTypes[project.gameType],
     settings:{
-      gravity:project.physics.gravity,
-      friction:project.physics.friction,
-      airResistance:project.physics.airResistance,
-      jumpForce:project.physics.jumpForce,
-      maxSpeed:project.physics.maxSpeed,
-      worldWidth:ws.w,
-      worldHeight:ws.h,
-      theme:THEMES[project.theme].toLowerCase(),
-      difficulty:project.difficulty
+      gravity:isChess?0:project.physics.gravity,
+      friction:isChess?1:project.physics.friction,
+      airResistance:isChess?1:project.physics.airResistance,
+      jumpForce:isChess?0:project.physics.jumpForce,
+      maxSpeed:isChess?1:project.physics.maxSpeed,
+      worldWidth:boardW,worldHeight:boardH,
+      theme:isChess?'chess-board':THEMES[project.theme].toLowerCase(),
+      attackMode:isChess?(project.board.attackMode===0?'classic':'ranged'):undefined,
+      friendlyFire:isChess?false:undefined,
+      regenPerTurn:isChess?project.board.regenPerTurn:undefined,
+      critChance:isChess?(project.board.critChance||0)/100:undefined,
+      critMultiplier:isChess?(project.board.critMultiplier||15)/10:undefined,
+      highlightMoves:isChess?!!project.board.highlightMoves:undefined
     },
-    levels:project.levels.map((l,i)=>({
-      name:'Level '+(i+1),
-      timeLimit:l.timeLimit,
-      par:l.par,
-      enemyCount:l.enemyCount,
-      platformDensity:l.platformDensity,
-      hasBoss:l.hasBoss,
-      entities:i===selectedLevelIdx?entities:[]
-    }))
+    levels:project.levels.map((l,i)=>{
+      const levelObj={name:l.name||(isChess?'Chess Scene '+(i+1):'Level '+(i+1))};
+      if(isChess){
+        levelObj.id='chess-level-'+(i+1);
+        levelObj.worldWidth=boardW;
+        levelObj.worldHeight=boardH;
+        levelObj.entities=i===selectedLevelIdx?entities:[];
+      } else {
+        levelObj.timeLimit=l.timeLimit;
+        levelObj.par=l.par;
+        levelObj.enemyCount=l.enemyCount;
+        levelObj.platformDensity=l.platformDensity;
+        levelObj.hasBoss=l.hasBoss;
+        levelObj.entities=i===selectedLevelIdx?entities:[];
+      }
+      return levelObj;
+    })
   };
+  if(isChess){
+    result.cameras=[{
+      id:'board-camera',type:'fixed',x:0,y:0,
+      width:boardW,height:boardH,target:'grid',
+      smoothFollow:false,smoothing:0,offsetX:0,offsetY:0
+    }];
+    result.ai={aggressive:true,pattern:'chess-ai',spawnRate:0,maxEnemies:0};
+  }
+  return result;
 }
 
 function generateJSON(){
@@ -1481,6 +1609,158 @@ function generateJSON(){
   showToast('JSON generated and copied!');
 }
 
+function generateChessHTML(json,tc){
+  const s=json.settings||{};
+  const lvl=json.levels.find(l=>l.entities&&l.entities.length)||json.levels[0]||{entities:[]};
+  const gridE=lvl.entities.find(e=>e.type==='grid');
+  const gp=gridE&&gridE.properties?gridE.properties:{};
+  const gridSize=gp.gridSize||8;
+  const cellSize=gp.cellSize||80;
+  const boardW=gridSize*cellSize;
+  const lightCol=gp.lightColor||'#f0d9b5';
+  const darkCol=gp.darkColor||'#b58863';
+  const pieces=[];
+  (lvl.entities||[]).forEach(e=>{
+    if(e.type==='piece'){
+      const side=(e.components&&e.components.indexOf('PlayerControlled')>=0)?'player':'enemy';
+      pieces.push({x:Math.round(e.x),y:Math.round(e.y),type:e.properties?e.properties.pieceType:'pawn',side:side,health:e.health||1,maxHealth:e.health||1,damage:e.damage||0,props:e.properties||{},moved:false});
+    }
+  });
+  const symbols={king:'\\u2654',queen:'\\u2655',rook:'\\u2656',bishop:'\\u2657',knight:'\\u2658',pawn:'\\u2659'};
+  const attackMode=(s.attackMode||'classic');
+  const highlightMoves=s.highlightMoves!==false;
+  const critChance=s.critChance||0;
+  const critMult=s.critMultiplier||1.5;
+  const regenPerTurn=s.regenPerTurn||0;
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${esc(json.name)}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a1a;color:#e0e0e0;font-family:monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh}canvas{cursor:pointer;border:2px solid #444;border-radius:4px}#hud{position:fixed;top:10px;font-size:14px;color:${tc[2]||'#8BC34A'};z-index:10;text-shadow:0 0 8px rgba(0,0,0,.8);text-align:center;width:100%}#msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;color:#fff;text-shadow:0 0 20px rgba(0,255,136,0.8);display:none;z-index:20;background:rgba(0,0,0,0.8);padding:20px 40px;border-radius:8px}</style></head><body>
+<div id="hud">${esc(json.name)}</div><div id="msg"></div><canvas id="c"></canvas>
+<script>
+const G=${JSON.stringify(json)};
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+const gs=${gridSize};
+const cs=${cellSize};
+const bw=gs*cs;
+c.width=bw+40;c.height=bw+80;
+const ox=20;const oy=40;
+const pieces=JSON.parse('${JSON.stringify(pieces)}');
+const syms=${JSON.stringify(symbols)};
+const lc='${lightCol}';const dc='${darkCol}';
+let board=[];let turn='player';let sel=null;let validMoves=[];
+let msgTimer=0;let attackMode='${attackMode}';let hlMoves=${highlightMoves?'true':'false'};
+let critChance=${critChance};let critMult=${critMult};let regen=${regenPerTurn};
+function init(){board=[];for(let y=0;y<gs;y++){board[y]=[];for(let x=0;x<gs;x++)board[y][x]=null;}pieces.forEach(p=>{if(p.x>=0&&p.x<gs&&p.y>=0&&p.y<gs)board[p.y][x]=p;});}
+function adj(x,y,dx,dy){return{x:x+dx,y:y+dy};}
+function inBounds(x,y){return x>=0&&x<gs&&y>=0&&y<gs;}
+function getValidMoves(p){const moves=[];const pat=p.props.movePattern||'adjacent';const maxD=p.props.maxMoveDistance||1;
+const dirs=straight_dirs(pat);const dxys=diag_dirs(pat);
+if(pat==='adjacent'||pat==='any-direction'){for(const d of dirs){for(let i=1;i<=maxD;i++){const nx=p.x+d.dx*i,ny=p.y+d.dy*i;if(!inBounds(nx,ny))break;if(board[ny][nx])break;moves.push({x:nx,y:ny,capture:false});if(i===maxD)break;}}for(const d of dxys){for(let i=1;i<=maxD;i++){const nx=p.x+d.dx*i,ny=p.y+d.dy*i;if(!inBounds(nx,ny))break;if(board[ny][nx])break;moves.push({x:nx,y:ny,capture:false});if(i===maxD)break;}}
+if(pat==='straight'){for(const d of dirs){for(let i=1;i<=maxD;i++){const nx=p.x+d.dx*i,ny=p.y+d.dy*i;if(!inBounds(nx,ny))break;if(board[ny][nx])break;moves.push({x:nx,y:ny,capture:false});if(i===maxD)break;}}
+if(pat==='diagonal'){for(const d of dxys){for(let i=1;i<=maxD;i++){const nx=p.x+d.dx*i,ny=p.y+d.dy*i;if(!inBounds(nx,ny))break;if(board[ny][nx])break;moves.push({x:nx,y:ny,capture:false});if(i===maxD)break;}}
+if(pat==='l-shape'){[{dx:2,dy:1},{dx:2,dy:-1},{dx:-2,dy:1},{dx:-2,dy:-1},{dx:1,dy:2},{dx:1,dy:-2},{dx:-1,dy:2},{dx:-1,dy:-2}].forEach(d=>{const nx=p.x+d.dx,ny=p.y+d.dy;if(inBounds(nx,ny)){const t=board[ny][nx];moves.push({x:nx,y:ny,capture:t&&t.side!==p.side});}});}
+if(pat==='forward'){const dir=p.side==='player'?1:-1;for(let i=1;i<=maxD;i++){const ny=p.y+dir*i;if(!inBounds(p.x,ny))break;if(board[ny][p.x])break;moves.push({x:p.x,y:ny,capture:false});if(i===1&&p.moved)break;}if(p.props.canCaptureDiagonal){[-1,1].forEach(dd=>{const nx=p.x+dd,ny=p.y+dir;if(inBounds(nx,ny)&&board[ny][nx]&&board[ny][nx].side!==p.side)moves.push({x:nx,y:ny,capture:true});});}}
+if(hlMoves){const captures=[];if(pat==='straight'||pat==='any-direction'||pat==='diagonal'){for(const d of [].concat(dirs,dxys)){for(let i=1;i<=maxD;i++){const nx=p.x+d.dx*i,ny=p.y+d.dy*i;if(!inBounds(nx,ny))break;if(board[ny][nx]){if(board[ny][nx].side!==p.side)moves.push({x:nx,y:ny,capture:true});break;}if(pat!=='any-direction'&&dxys.indexOf(d)<0&&pat!=='straight')break;if(pat!=='any-direction'&&dirs.indexOf(d)<0&&pat!=='diagonal')break;}}}}
+return moves;}
+function straight_dirs(pat){return[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];}
+function diag_dirs(pat){return[{dx:1,dy:1},{dx:-1,dy:1},{dx:1,dy:-1},{dx:-1,dy:-1}];}
+function movePiece(p,tx,ty){
+const cap=board[ty][tx];
+if(cap&&cap.side!==p.side){
+let dmg=p.damage||1;
+if(critChance>0&&Math.random()*100<critChance)dmg=Math.round(dmg*critMult);
+cap.health-=dmg;
+if(cap.health<=0){const idx=pieces.indexOf(cap);if(idx>=0)pieces.splice(idx,1);board[ty][tx]=null;}
+if(cap.props.counterattackChance&&Math.random()<cap.props.counterattackChance){
+const cDmg=cap.props.counterattackDamage||1;
+p.health-=cDmg;
+if(p.health<=0){const idx2=pieces.indexOf(p);if(idx2>=0)pieces.splice(idx2,1);board[p.y][p.x]=null;}
+}}
+board[p.y][p.x]=null;
+p.x=tx;p.y=ty;p.moved=true;
+board[ty][tx]=p;
+if(p.type==='pawn'&&((p.side==='player'&&ty===gs-1)||(p.side==='enemy'&&ty===0))){p.type='queen';p.damage=3;}
+}
+function endTurn(){
+if(regen>0)pieces.forEach(p=>{if(p.health<p.maxHealth)p.health=Math.min(p.maxHealth,p.health+regen);});
+turn=turn==='player'?'enemy':'player';sel=null;validMoves=[];
+if(turn==='enemy')setTimeout(aiTurn,400);
+}
+function aiTurn(){
+const enemies=pieces.filter(p=>p.side==='enemy');
+if(enemies.length===0){showMsg('Victory!');return;}
+let bestScore=-999,bestP=null,bestMove=null;
+enemies.forEach(p=>{
+const moves=getValidMoves(p);
+moves.forEach(m=>{
+let score=0;
+if(m.capture){const t=board[m.y][m.x];if(t){score+=10+t.health*2;}}
+if(p.type==='pawn')score+=(p.side==='enemy'?gs-1-p.y:p.y)*0.5;
+score+=Math.random()*2;
+if(score>bestScore){bestScore=score;bestP=p;bestMove=m;}
+});});
+if(bestP&&bestMove){movePiece(bestP,bestMove.x,bestMove.y);}
+const players=pieces.filter(p=>p.side==='player');
+if(players.length===0){showMsg('Defeat!');return;}
+endTurn();
+}
+function showMsg(t){const m=document.getElementById('msg');m.textContent=t;m.style.display='block';setTimeout(()=>m.style.display='none',2000);}
+function getPieceAt(x,y){return pieces.find(p=>p.x===x&&p.y===y);}
+c.addEventListener('click',function(e){
+if(turn!=='player')return;
+const r=c.getBoundingClientRect();
+const mx=e.clientX-r.left-ox;
+const my=e.clientY-r.top-oy;
+const gx=Math.floor(mx/cs);
+const gy=Math.floor(my/cs);
+if(!inBounds(gx,gy))return;
+if(sel){
+const move=validMoves.find(m=>m.x===gx&&m.y===gy);
+if(move){movePiece(sel,gx,gy);endTurn();return;}
+sel=null;validMoves=[];
+}
+const p=getPieceAt(gx,gy);
+if(p&&p.side==='player'){sel=p;validMoves=getValidMoves(p);}
+});
+function draw(){
+ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,c.width,c.height);
+for(let y=0;y<gs;y++)for(let x=0;x<gs;x++){
+ctx.fillStyle=(x+y)%2===0?lc:dc;
+ctx.fillRect(ox+x*cs,oy+y*cs,cs-1,cs-1);
+}
+if(sel){ctx.fillStyle='rgba(0,255,0,0.3)';ctx.fillRect(ox+sel.x*cs,oy+sel.y*cs,cs-1,cs-1);}
+validMoves.forEach(m=>{
+ctx.fillStyle=m.capture?'rgba(255,0,0,0.4)':'rgba(0,255,0,0.25)';
+ctx.fillRect(ox+m.x*cs,oy+m.y*cs,cs-1,cs-1);
+});
+pieces.forEach(p=>{
+const px=ox+p.x*cs+cs/2;
+const py=oy+p.y*cs+cs/2;
+ctx.fillStyle=p.side==='player'?'#e8e8e8':'#2a2a2a';
+ctx.strokeStyle=p.side==='player'?'#fff':'#666';
+ctx.lineWidth=2;
+ctx.beginPath();ctx.arc(px,py,cs/2-6,0,Math.PI*2);ctx.fill();ctx.stroke();
+ctx.font='bold '+(cs/2)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.fillStyle=p.side==='player'?'#111':'#ddd';
+ctx.fillText(syms[p.type]||'?',px,py);
+if(p.maxHealth>1){const bw2=cs-16;const bh=4;const bx=px-bw2/2;const by=py+cs/2-12;
+ctx.fillStyle='#333';ctx.fillRect(bx,by,bw2,bh);
+ctx.fillStyle=p.side==='player'?'#0f0':'#f44';
+ctx.fillRect(bx,by,bw2*(p.health/p.maxHealth),bh);
+}
+});
+ctx.fillStyle='#666';ctx.font='12px monospace';ctx.textAlign='center';
+ctx.fillText(turn==='player'?'Your turn - click a piece':'Enemy thinking...',c.width/2,c.height-16);
+}
+function loop(){draw();requestAnimationFrame(loop);}
+init();loop();
+<\/script></body></html>`;
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
 function exportHTML(){
   const json=buildJSON();
   const html=generateStandaloneHTML(json);
@@ -1491,6 +1771,8 @@ function exportHTML(){
 
 function generateStandaloneHTML(json){
   const tc=getThemeColors();
+  const isChess=json.type==='turn-based-strategy';
+  if(isChess) return generateChessHTML(json,tc);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

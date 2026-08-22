@@ -456,6 +456,107 @@ LD.Components = LD.Components || {};
     isFull() { return this.items.length >= this.maxSlots; }
   });
 
+  // ── Cooldown ─────────────────────────────────────────────────────
+  LD.Components.Cooldown = _register('Cooldown', class Cooldown extends LD.Component {
+    constructor(data) {
+      super(data);
+      this.abilities = data.abilities || {};
+      this._timers = {};
+    }
+    start(abilityId, duration) {
+      this._timers[abilityId] = duration;
+    }
+    isReady(abilityId) {
+      return !this._timers[abilityId] || this._timers[abilityId] <= 0;
+    }
+    getRemaining(abilityId) {
+      return Math.max(0, this._timers[abilityId] || 0);
+    }
+    getRatio(abilityId) {
+      const dur = this.abilities[abilityId] || 1;
+      return this.getRemaining(abilityId) / dur;
+    }
+    cancel(abilityId) {
+      delete this._timers[abilityId];
+    }
+    update(dt) {
+      for (const k in this._timers) {
+        if (!this._timers.hasOwnProperty(k)) continue;
+        this._timers[k] -= dt;
+        if (this._timers[k] <= 0) {
+          delete this._timers[k];
+          LD.emit('cooldown:ready', { ability: k, entity: this.entity });
+        }
+      }
+    }
+  });
+
+  // ── Trail ────────────────────────────────────────────────────────
+  LD.Components.Trail = _register('Trail', class Trail extends LD.Component {
+    constructor(data) {
+      super(data);
+      this.points = [];
+      this.maxPoints = data.maxPoints || 20;
+      this.interval = data.interval || 0.03;
+      this.timer = 0;
+      this.lifeTime = data.lifeTime || 0.5;
+      this.width = data.width || 8;
+      this.color = data.color || null;
+      this.endColor = data.endColor || null;
+      this.opacity = data.opacity !== undefined ? data.opacity : 0.6;
+      this.active = true;
+      this._lastX = 0;
+      this._lastY = 0;
+    }
+    update(dt, x, y) {
+      this.timer += dt;
+      if (this.timer >= this.interval) {
+        this.timer = 0;
+        this.points.push({ x: x, y: y, life: this.lifeTime, maxLife: this.lifeTime });
+        if (this.points.length > this.maxPoints) this.points.shift();
+      }
+      for (let i = this.points.length - 1; i >= 0; i--) {
+        this.points[i].life -= dt;
+        if (this.points[i].life <= 0) this.points.splice(i, 1);
+      }
+    }
+  });
+
+  // ── DelayedAction ────────────────────────────────────────────────
+  LD.Components.DelayedAction = _register('DelayedAction', class DelayedAction extends LD.Component {
+    constructor(data) {
+      super(data);
+      this.actions = data.actions || [];
+      this._queue = [];
+    }
+    add(delay, callback) {
+      this._queue.push({ delay: delay, elapsed: 0, fn: callback, fired: false });
+    }
+    addEvent(delay, eventName, eventData) {
+      const self = this;
+      this.add(delay, function () {
+        LD.emit(eventName, Object.assign({ entity: self.entity }, eventData || {}));
+      });
+    }
+    delaySeconds(sec, fn) {
+      this.add(sec, fn);
+    }
+    clear() {
+      this._queue = [];
+    }
+    update(dt) {
+      for (let i = this._queue.length - 1; i >= 0; i--) {
+        const a = this._queue[i];
+        if (a.fired) { this._queue.splice(i, 1); continue; }
+        a.elapsed += dt;
+        if (a.elapsed >= a.delay) {
+          a.fired = true;
+          if (a.fn) a.fn();
+        }
+      }
+    }
+  });
+
   // ── Dialogue ─────────────────────────────────────────────────────
   LD.Components.Dialogue = _register('Dialogue', class Dialogue extends LD.Component {
     constructor(data) {
