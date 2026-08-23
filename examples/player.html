@@ -30,6 +30,42 @@ let prevKeys = {};
 window.addEventListener("keydown", e => { keys[e.code] = true; e.preventDefault(); });
 window.addEventListener("keyup", e => { keys[e.code] = false; e.preventDefault(); });
 
+// ---------- touch controls (mobile) ----------
+(function initTouch() {
+  if (!("ontouchstart" in window) && !(navigator.maxTouchPoints > 0)) return;
+  const style = document.createElement("style");
+  style.textContent = `
+  #touchUI{position:fixed;inset:0;pointer-events:none;z-index:10;font-family:monospace}
+  .tbtn{position:absolute;bottom:4vh;width:15vw;height:15vw;max-width:96px;max-height:96px;
+    border-radius:50%;background:rgba(255,255,255,0.10);border:2px solid rgba(255,255,255,0.25);
+    color:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;
+    font-size:6vw;pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none}
+  .tbtn:active{background:rgba(0,255,136,0.25)}
+  #tLeft{left:4vw} #tRight{left:23vw} #tJump{right:23vw} #tAct{right:4vw}
+  `;
+  document.head.appendChild(style);
+  const ui = document.createElement("div");
+  ui.id = "touchUI";
+  const mk = (id, label, codes) => {
+    const b = document.createElement("div");
+    b.className = "tbtn"; b.id = id; b.textContent = label;
+    const on = ev => { ev.preventDefault(); codes.forEach(c => { keys[c] = true; }); };
+    const off = ev => { ev.preventDefault(); codes.forEach(c => { keys[c] = false; }); };
+    b.addEventListener("touchstart", on, { passive: false });
+    b.addEventListener("touchend", off, { passive: false });
+    b.addEventListener("touchcancel", off, { passive: false });
+    b.addEventListener("mousedown", on);
+    b.addEventListener("mouseup", off);
+    b.addEventListener("mouseleave", off);
+    ui.appendChild(b);
+  };
+  mk("tLeft", "◀", ["ArrowLeft"]);
+  mk("tRight", "▶", ["ArrowRight"]);
+  mk("tJump", "▲", ["Space", "ArrowUp"]);
+  mk("tAct", "✦", ["Enter"]);
+  document.body.appendChild(ui);
+})();
+
 function isLeft() { return keys.ArrowLeft || keys.KeyA; }
 function isRight() { return keys.ArrowRight || keys.KeyD; }
 function isDown() { return keys.ArrowDown || keys.KeyS; }
@@ -173,6 +209,13 @@ let raceSlipZone = false;
 let raceHazardCd = 0;
 let raceAi = [];
 let raceFinish = null;
+
+let rpgMode = false;
+let rpgKeys = new Set();
+let rpgAtkCd = 0;
+let rpgMsg = "";
+let rpgMsgTimer = 0;
+let rpgSwing = 0;
 let chessPromoPending = null;
 let chessRangedMode = false;
 
@@ -248,6 +291,10 @@ function loadLevel(idx) {
   runnerMode = gameData.type === "endless-runner";
   shooterMode = gameData.type === "shooter" && !tdMode;
   raceMode = gameData.type === "racing";
+  rpgMode = gameData.type === "rpg";
+  rpgKeys = new Set();
+  rpgAtkCd = 0;
+  rpgSwing = 0;
   if (gameData.type !== "puzzle" && gameData.type !== "turn-based-strategy") {
     const defs0 = levelData.entities || [];
     for (let i = 0; i < defs0.length; i++) {
@@ -317,7 +364,7 @@ function loadLevel(idx) {
 
   const s = getSettings();
   const wh = s.worldHeight || 1080;
-  if (!raceMode && !shooterMode) {
+  if (!raceMode && !shooterMode && !rpgMode) {
     let groundY = wh - 100;
     for (let i = 0; i < entities.length; i++) {
       const pl = entities[i];
@@ -457,6 +504,11 @@ function update(dt) {
 
   if (raceMode) {
     updateRacing(dt);
+    return;
+  }
+
+  if (rpgMode) {
+    updateRpg(dt);
     return;
   }
 
@@ -681,7 +733,12 @@ function resolveHeroCollisions() {
         e.active = false;
         collectedPickups.add(e.id || (e.originX + "_" + e.originY));
         const val = (e.properties && e.properties.value) || (e.properties && e.properties.scoreValue) || 10;
-        if (e.properties && e.properties.pickupType === "health") {
+        if (e.properties && e.properties.pickupType === "key") {
+          rpgKeys.add((e.properties && e.properties.keyId) || "key");
+          rpgMsg = "Ключ: " + ((e.properties && e.properties.keyId) || "key");
+          rpgMsgTimer = 1.6;
+          spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#FFD700", 12, "collect");
+        } else if (e.properties && e.properties.pickupType === "health") {
           hero.health = Math.min(hero.maxHealth, hero.health + val);
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#ff4466", 8, "collect");
         } else {
@@ -2631,6 +2688,145 @@ function renderRacing() {
 }
 // ---------- END RACING MODE ----------
 
+// ---------- RPG MODE (top-down action) ----------
+function updateRpg(dt) {
+  updateFade(dt);
+  updateParticles(dt);
+  updateMovingPlatforms(dt);
+  updateHazards(dt);
+  updateEnemies(dt);
+  updateBosses(dt);
+  if (rpgMsgTimer > 0) rpgMsgTimer -= dt;
+  rpgAtkCd = Math.max(0, rpgAtkCd - dt);
+  rpgSwing = Math.max(0, rpgSwing - dt);
+  if (fadeDir !== 0 || levelTransitioning || paused) return;
+  if (!hero || !hero.alive) return;
+
+  const s = getSettings();
+  const spd = (s.maxSpeed || 5) * 60 * dt;
+  let dx = 0, dy = 0;
+  if (isLeft()) dx -= 1;
+  if (isRight()) dx += 1;
+  if (keys.ArrowUp || keys.KeyW) dy -= 1;
+  if (keys.ArrowDown || keys.KeyS) dy += 1;
+  if (dx && dy) { dx *= 0.7071; dy *= 0.7071; }
+  if (dx !== 0) hero.facing = dx;
+  hero.x += dx * spd;
+  hero.y += dy * spd;
+  rpgResolveWalls();
+
+  // melee attack
+  if ((justPressed.Space || justPressed.Enter) && rpgAtkCd <= 0) {
+    const p = hero.properties || {};
+    const range = p.attackRange || 60;
+    const dmg = p.attackDamage || 10;
+    rpgAtkCd = p.attackCooldown || 0.5;
+    rpgSwing = 0.16;
+    const hx = hero.x + hero.width / 2, hy = hero.y + hero.height / 2;
+    let hitAny = false;
+    for (const e of entities) {
+      if (!(e.type === "enemy" || e.type === "boss") || e.health <= 0) continue;
+      const ex = e.x + e.width / 2, ey = e.y + e.height / 2;
+      if (Math.hypot(ex - hx, ey - hy) < range + (e.width + e.height) / 4) {
+        e.health -= dmg;
+        e.flashTimer = 0.12;
+        hitAny = true;
+        spawnParticles(ex, ey, "#ffdd44", 6, "stomp");
+        if (e.health <= 0) {
+          score += (e.properties && e.properties.scoreValue) || 25;
+          totalEnemiesKilled++;
+          shakeCamera(3, 0.15);
+        }
+      }
+    }
+    if (hitAny) shakeCamera(2, 0.1);
+  }
+
+  resolveHeroCollisions();
+  updateCamera(dt);
+}
+
+function rpgResolveWalls() {
+  for (let pass = 0; pass < 2; pass++) {
+    for (const w of entities) {
+      if (!w.alive || !w.active || w === hero) continue;
+      let solid = false;
+      if (w.type === "platform" || w.type === "moving_platform" || w.type === "boundary") solid = true;
+      else if (w.type === "trigger" && w.properties && w.properties.locked) {
+        const need = w.properties.requiredKey;
+        if (need && rpgKeys.has(need)) {
+          w.properties.locked = false;
+          w.alive = false;
+          score += 50;
+          rpgMsg = "Дверь открыта!";
+          rpgMsgTimer = 1.6;
+          spawnParticles(w.x + w.width / 2, w.y + w.height / 2, "#FFD700", 14, "collect");
+          continue;
+        }
+        solid = true;
+        if (rectOverlap(hero, w) && rpgMsgTimer <= 0) {
+          rpgMsg = "Нужен ключ: " + (need || "?");
+          rpgMsgTimer = 1.6;
+        }
+      }
+      if (!solid || !rectOverlap(hero, w)) continue;
+      const pr = hero.x + hero.width - w.x;
+      const pl = (w.x + w.width) - hero.x;
+      const pt = hero.y + hero.height - w.y;
+      const pb = (w.y + w.height) - hero.y;
+      const m = Math.min(pr, pl, pt, pb);
+      if (m === pt) hero.y = w.y - hero.height;
+      else if (m === pb) hero.y = w.y + w.height;
+      else if (m === pr) hero.x = w.x - hero.width;
+      else hero.x = w.x + w.width;
+    }
+  }
+}
+
+function renderRpgOverlay(camX, camY) {
+  // swing arc
+  if (rpgSwing > 0 && hero) {
+    const hx = hero.x + hero.width / 2 - camX;
+    const hy = hero.y + hero.height / 2 - camY;
+    const range = (hero.properties && hero.properties.attackRange) || 60;
+    const dir = hero.facing >= 0 ? 0 : Math.PI;
+    ctx.strokeStyle = "rgba(255,235,120," + (rpgSwing / 0.16) + ")";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(hx, hy, range * 0.8, dir - 1.1, dir + 1.1);
+    ctx.stroke();
+  }
+
+  // keys HUD
+  if (rpgKeys.size > 0) {
+    ctx.textAlign = "right";
+    ctx.font = "bold 16px monospace";
+    ctx.fillStyle = "#FFD700";
+    let ky = 36;
+    for (const k of rpgKeys) {
+      ctx.fillText("🔑 " + k, W - 24, ky);
+      ky += 24;
+    }
+  }
+
+  // message
+  if (rpgMsgTimer > 0) {
+    ctx.globalAlpha = Math.min(1, rpgMsgTimer);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 18px monospace";
+    ctx.fillText(rpgMsg, W / 2, H - 64);
+    ctx.globalAlpha = 1;
+  }
+
+  // hint
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#777777";
+  ctx.font = "13px monospace";
+  ctx.fillText("Arrows/WASD move | SPACE/ENTER attack", W / 2, H - 10);
+}
+// ---------- END RPG MODE ----------
+
 function rectOverlap(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x &&
          a.y < b.y + b.height && a.y + a.height > b.y;
@@ -2677,6 +2873,10 @@ function render() {
   ctx.restore();
   drawGroundLine(camY);
   drawHUD();
+
+  if (rpgMode) {
+    renderRpgOverlay(camX, camY);
+  }
 
   if (damageFlash > 0) {
     ctx.fillStyle = "rgba(255,0,0," + (damageFlash * 0.35) + ")";
@@ -3400,12 +3600,16 @@ function gameLoop(now) {
 requestAnimationFrame(gameLoop);
 loadFromURL();
 
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("../sw.js").catch(() => {});
+}
+
 window.LimeDriveDebug = function () {
   return {
     gameState: gameState,
     score: score,
     level: currentLevelIdx,
-    mode: chessMode ? "chess" : (puzzleMode ? "puzzle" : (tdMode ? "td" : (shooterMode ? "shooter" : (raceMode ? "racing" : (runnerMode ? "runner" : "platformer"))))),
+    mode: chessMode ? "chess" : (puzzleMode ? "puzzle" : (tdMode ? "td" : (shooterMode ? "shooter" : (raceMode ? "racing" : (rpgMode ? "rpg" : (runnerMode ? "runner" : "platformer")))))),
     movesLeft: puzzleMovesLeft,
     entityCount: entities.length,
     heroPos: hero ? { x: hero.x, y: hero.y } : null,
@@ -3413,6 +3617,8 @@ window.LimeDriveDebug = function () {
       speed: Math.round(raceSpeed * 10) / 10, nextCp: raceNextCp,
       cpsTotal: raceCps.length, lap: raceLap, lapsReq: raceLapsReq,
       aiCount: raceAi.length } : null,
+    rpg: rpgMode ? { keys: [...rpgKeys], atkCd: Math.round(rpgAtkCd * 100) / 100,
+      enemiesAlive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length } : null,
     sh: shooterMode ? { dbg: shDbg, bullets: shBullets.length, ebullets: shEnemyBullets.length,
       alive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length,
       eps: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0)
