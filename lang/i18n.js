@@ -97,6 +97,38 @@
       init({ base: base }).then(function (api) {
         var sub = document.querySelector(".sub");
         if (sub && !sub.hasAttribute("data-i18n")) sub.textContent = api.t("sub.tagline");
+        var grid = document.querySelector(".grid");
+        if (grid && !document.getElementById("impCard")) {
+          var card = document.createElement("a");
+          card.className = "card";
+          card.id = "impCard";
+          card.style.borderColor = "#00ff88";
+          card.innerHTML = '<span class="t">' + api.t("imp.title") + '</span><span class="m">' + api.t("imp.hint") + '</span>';
+          var inp = document.createElement("input");
+          inp.type = "file";
+          inp.accept = ".json,application/json";
+          inp.style.display = "none";
+          inp.id = "impInput";
+          card.addEventListener("click", function () { inp.click(); });
+          inp.addEventListener("change", function () {
+            var f = inp.files && inp.files[0];
+            if (!f) return;
+            var r = new FileReader();
+            r.onload = function () {
+              try {
+                var data = JSON.parse(r.result);
+                if (!data || !Array.isArray(data.levels)) throw new Error("not a LimeDrive game JSON");
+                localStorage.setItem("currentGame", r.result);
+                location.href = "examples/player.html";
+              } catch (e) {
+                alert((api.t("imp.error") || "Import error") + ": " + e.message);
+              }
+            };
+            r.readAsText(f, "utf-8");
+          });
+          grid.insertBefore(card, grid.firstChild);
+          document.body.appendChild(inp);
+        }
         if (!document.getElementById("langSwitch")) {
           var hint = document.querySelector(".hint") || document.body;
           var wrap = document.createElement("span");

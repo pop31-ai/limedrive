@@ -41,5 +41,8 @@
   "ui.congrats": "¡Felicidades!",
   "ui.pressRMenu": "Pulsa R para reiniciar o elige otro juego",
   "ui.fps": "FPS: ",
-  "ui.capital": "CAPITAL"
+  "ui.capital": "CAPITAL",
+  "imp.title": "+ Juego propio",
+  "imp.hint": "importar desde archivo (Descargas)",
+  "imp.error": "Error de importación"
 }

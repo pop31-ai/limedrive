@@ -40,6 +40,7 @@ srv.listen(0, "127.0.0.1", async () => {
   check("forced locale is en", await page.evaluate("window.LimeI18n.locale") === "en");
   check("tagline translated (auto-boot .sub)", (await page.evaluate("document.querySelector('.sub').textContent")) === "Playable offline · games from JSON");
   check("license footer injected", await page.evaluate("document.body.innerHTML.indexOf('LICENSE-NC.md') >= 0"));
+  check("import card injected", await page.evaluate("!!document.getElementById('impCard') && document.getElementById('impInput')"));
 
   await page.evaluate("localStorage.setItem('limedrive-lang','ru')");
   await page.reload({ waitUntil: "networkidle2" });

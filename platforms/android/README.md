@@ -40,3 +40,31 @@ adb install -r platforms/android/dist/LimeDrive.apk
   обеспечен локальными ассетами.
 - Обновление контента = пересборка APK; «живой» клон через Termux/Syncthing —
   следующий шаг (см. `docs/architecture/serverless-git.md`).
+
+## Живой контент без пересборки
+
+При старте приложение проверяет каталог:
+
+```
+/storage/emulated/0/Android/data/com.limedrive.app/files/www/
+```
+
+Если там есть свой `index.html` — грузится он, а не встроенный. Так клон
+LimeDrive можно обновлять без пересборки APK:
+
+**Termux (ручной sync):**
+```bash
+pkg install git
+git clone <URL репозитория> limedrive
+mkdir -p /storage/emulated/0/Android/data/com.limedrive.app/files
+cp -r limedrive /storage/emulated/0/Android/data/com.limedrive.app/files/www
+```
+
+**Syncthing (автосинк):** расшарьте папку клона на ПК и подключите как
+папку `/storage/emulated/0/Android/data/com.limedrive.app/files/www`
+(на Android 11+ доступ к этой папке сторонним файловым менеджерам ограничен —
+надёжнее копировать из Termux, у которого есть доступ к своей data-папке).
+
+Включены флаги `AllowFileAccessFromFileURLs` / `AllowUniversalAccessFromFileURLs`,
+поэтому fetch() игровых JSON из override-каталога работает так же, как из ассетов.
+

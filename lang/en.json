@@ -41,5 +41,8 @@
   "ui.congrats": "Congratulations!",
   "ui.pressRMenu": "Press R to restart or choose another game",
   "ui.fps": "FPS: ",
-  "ui.capital": "CAPITAL"
+  "ui.capital": "CAPITAL",
+  "imp.title": "+ Custom game",
+  "imp.hint": "import from file (Downloads)",
+  "imp.error": "Import error"
 }

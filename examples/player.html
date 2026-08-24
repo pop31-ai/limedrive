@@ -304,14 +304,28 @@ function saveProgress(patch) {
 function loadFromURL() {
   const p = new URLSearchParams(window.location.search);
   const g = p.get("game");
-  if (!g) { showError("No game specified. Add ?game=filename.json to the URL."); return; }
+  if (!g) {
+    try {
+      const ls = localStorage.getItem("currentGame");
+      if (ls) { gameData = JSON.parse(ls); startGame(); return; }
+    } catch (e) {}
+    showError("No game specified. Add ?game=filename.json to the URL.");
+    return;
+  }
+  const fromLS = function (fallbackMsg) {
+    try {
+      const ls = localStorage.getItem("currentGame");
+      if (ls) { gameData = JSON.parse(ls); startGame(); return; }
+    } catch (e) {}
+    showError(fallbackMsg);
+  };
   fetch(g).then(r => {
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.json();
   }).then(data => {
     gameData = data;
     startGame();
-  }).catch(e => { showError("Failed to load: " + e.message); });
+  }).catch(e => { fromLS("Failed to load: " + e.message); });
 }
 
 function showError(msg) {

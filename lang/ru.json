@@ -41,5 +41,8 @@
   "ui.congrats": "Поздравляем!",
   "ui.pressRMenu": "R — заново или выберите другую игру",
   "ui.fps": "FPS: ",
-  "ui.capital": "КАПИТАЛ"
+  "ui.capital": "КАПИТАЛ",
+  "imp.title": "+ Своя игра",
+  "imp.hint": "импорт из файла (Downloads)",
+  "imp.error": "Ошибка импорта"
 }

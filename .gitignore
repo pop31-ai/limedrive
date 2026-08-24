@@ -1,2 +1,5 @@
 node_modules/
 reports/
+platforms/android/obj/
+platforms/android/debug.keystore
+*.idsig
