@@ -85,7 +85,8 @@ if (-not (Test-Path $ks)) {
 
 Write-Host "-- apksigner --"
 $outApk = Join-Path $distDir "LimeDrive.apk"
-& "$btPath\apksigner.bat" sign --ks $ks --ks-pass pass:android --key-pass pass:android --out $outApk $aligned
+& "$btPath\apksigner.bat" sign --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true `
+  --ks $ks --ks-pass pass:android --key-pass pass:android --out $outApk $aligned
 if ($LASTEXITCODE -ne 0) { throw "apksigner failed" }
 
 & "$btPath\apksigner.bat" verify --print-certs $outApk | Select-Object -First 3
