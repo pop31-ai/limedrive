@@ -1,0 +1,799 @@
+{
+  "name": "Зеркальный Шах",
+  "version": "1.0.0",
+  "type": "turn-based-strategy",
+  "description": "Захватишь фигуру — её призрак контратакует с зеркальной клетки. Закрой зеркало своей фигурой или бей вне досягаемости. HP у фигур.",
+  "author": "LimeDrive",
+  "settings": {
+    "gravity": 0,
+    "friction": 1,
+    "airResistance": 1,
+    "jumpForce": 0,
+    "maxSpeed": 1,
+    "worldWidth": 640,
+    "worldHeight": 640,
+    "theme": "chess-board",
+    "variant": "mirror",
+    "gridSize": 8,
+    "cellSize": 80,
+    "lightColor": "#243047",
+    "darkColor": "#16202f",
+    "highlightMoves": true,
+    "seed": 19
+  },
+  "levels": [
+    {
+      "id": "mirror-1",
+      "name": "Зеркальная партия",
+      "worldWidth": 640,
+      "worldHeight": 640,
+      "entities": [
+        {
+          "id": "grid",
+          "type": "grid",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 640,
+          "height": 640,
+          "components": [
+            "Grid",
+            "ChessBoard"
+          ],
+          "properties": {
+            "gridSize": 8,
+            "cellSize": 80,
+            "lightColor": "#243047",
+            "darkColor": "#16202f"
+          }
+        },
+        {
+          "id": "p_rook_0_x0",
+          "side": "x",
+          "type": "piece",
+          "x": 0,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_pawn_0_x0",
+          "side": "x",
+          "type": "piece",
+          "x": 0,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_0_x0",
+          "side": "x",
+          "type": "piece",
+          "x": 0,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_rook_7_x0",
+          "side": "x",
+          "type": "piece",
+          "x": 0,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_knight_0_x1",
+          "side": "x",
+          "type": "piece",
+          "x": 1,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Knight",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "knight",
+            "movePattern": "l-shape",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p_pawn_1_x1",
+          "side": "x",
+          "type": "piece",
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_1_x1",
+          "side": "x",
+          "type": "piece",
+          "x": 1,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_knight_7_x1",
+          "side": "x",
+          "type": "piece",
+          "x": 1,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Knight",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "knight",
+            "movePattern": "l-shape",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p_bishop_0_x2",
+          "side": "x",
+          "type": "piece",
+          "x": 2,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Bishop",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "bishop",
+            "movePattern": "diagonal",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_pawn_2_x2",
+          "side": "x",
+          "type": "piece",
+          "x": 2,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_2_x2",
+          "side": "x",
+          "type": "piece",
+          "x": 2,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_bishop_7_x2",
+          "side": "x",
+          "type": "piece",
+          "x": 2,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Bishop",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "bishop",
+            "movePattern": "diagonal",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_queen_0_x3",
+          "side": "x",
+          "type": "piece",
+          "x": 3,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Queen",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "queen",
+            "movePattern": "any-direction",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_pawn_3_x3",
+          "side": "x",
+          "type": "piece",
+          "x": 3,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_3_x3",
+          "side": "x",
+          "type": "piece",
+          "x": 3,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_queen_7_x3",
+          "side": "x",
+          "type": "piece",
+          "x": 3,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Queen",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "queen",
+            "movePattern": "any-direction",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_king_0_x4",
+          "side": "x",
+          "type": "piece",
+          "x": 4,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#00ff88",
+          "health": 3,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "King",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "king",
+            "movePattern": "adjacent",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p_pawn_4_x4",
+          "side": "x",
+          "type": "piece",
+          "x": 4,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_4_x4",
+          "side": "x",
+          "type": "piece",
+          "x": 4,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_king_7_x4",
+          "side": "x",
+          "type": "piece",
+          "x": 4,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ff2222",
+          "health": 3,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "King",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "king",
+            "movePattern": "adjacent",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p_bishop_0_x5",
+          "side": "x",
+          "type": "piece",
+          "x": 5,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Bishop",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "bishop",
+            "movePattern": "diagonal",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_pawn_5_x5",
+          "side": "x",
+          "type": "piece",
+          "x": 5,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_5_x5",
+          "side": "x",
+          "type": "piece",
+          "x": 5,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_bishop_7_x5",
+          "side": "x",
+          "type": "piece",
+          "x": 5,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Bishop",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "bishop",
+            "movePattern": "diagonal",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_knight_0_x6",
+          "side": "x",
+          "type": "piece",
+          "x": 6,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Knight",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "knight",
+            "movePattern": "l-shape",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p_pawn_6_x6",
+          "side": "x",
+          "type": "piece",
+          "x": 6,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_6_x6",
+          "side": "x",
+          "type": "piece",
+          "x": 6,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_knight_7_x6",
+          "side": "x",
+          "type": "piece",
+          "x": 6,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Knight",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "knight",
+            "movePattern": "l-shape",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p_rook_0_x7",
+          "side": "x",
+          "type": "piece",
+          "x": 7,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_pawn_7_x7",
+          "side": "x",
+          "type": "piece",
+          "x": 7,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_pawn_7_x7",
+          "side": "x",
+          "type": "piece",
+          "x": 7,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_rook_7_x7",
+          "side": "x",
+          "type": "piece",
+          "x": 7,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        }
+      ],
+      "cameras": [
+        {
+          "type": "fixed",
+          "target": "grid"
+        }
+      ]
+    }
+  ],
+  "ai": {
+    "pattern": "chess-ai",
+    "globalDifficulty": "medium"
+  }
+}
