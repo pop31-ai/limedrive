@@ -1,0 +1,49 @@
+{
+  "name": "Fixture Race",
+  "version": "1.0.0",
+  "type": "racing",
+  "description": "Минимальная гонка для mode-race.test.js: прямая, два чекпоинта, один круг",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 0,
+    "friction": 1,
+    "airResistance": 0,
+    "jumpForce": 0,
+    "maxSpeed": 10,
+    "worldWidth": 2200,
+    "worldHeight": 800,
+    "theme": "city"
+  },
+  "levels": [
+    {
+      "name": "Прямой трек",
+      "timeLimit": 120,
+      "background": { "type": "gradient", "colors": ["#1a1a2e", "#16213e", "#0f3460"] },
+      "entities": [
+        { "id": "hero_car", "type": "hero", "x": 100, "y": 297, "z": 1, "width": 44, "height": 26,
+          "color": "#FFD700", "health": 100, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": { "acceleration": 0.3, "topSpeed": 10, "turnSpeed": 4 } },
+
+        { "id": "checkpoint_1", "type": "checkpoint", "x": 600, "y": 240, "z": 0, "width": 10, "height": 140,
+          "color": "#ffffff", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Checkpoint"],
+          "properties": { "lapCheckpoint": true } },
+        { "id": "checkpoint_2", "type": "checkpoint", "x": 1300, "y": 240, "z": 0, "width": 10, "height": 140,
+          "color": "#ffffff", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Checkpoint"],
+          "properties": { "lapCheckpoint": true } },
+
+        { "id": "finish_1", "type": "finish", "x": 1900, "y": 230, "z": 0, "width": 60, "height": 160,
+          "color": "#00ff88", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "lapsRequired": 1, "nextLevel": -1 } },
+
+        { "id": "deco_road_1", "type": "decoration", "x": 0, "y": 260, "z": -1, "width": 2200, "height": 100,
+          "color": "#2b2b3a", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": {} }
+      ]
+    }
+  ]
+}

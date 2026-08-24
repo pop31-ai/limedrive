@@ -1,0 +1,275 @@
+{
+  "name": "_fixture-mirror",
+  "type": "turn-based-strategy",
+  "settings": {
+    "gravity": 0,
+    "friction": 1,
+    "airResistance": 1,
+    "jumpForce": 0,
+    "maxSpeed": 1,
+    "worldWidth": 640,
+    "worldHeight": 640,
+    "theme": "chess-board",
+    "variant": "mirror",
+    "gridSize": 8,
+    "cellSize": 80,
+    "lightColor": "#243047",
+    "darkColor": "#16202f",
+    "seed": 7
+  },
+  "levels": [
+    {
+      "id": "mirror-fixture",
+      "name": "Mirror Fixture",
+      "worldWidth": 640,
+      "worldHeight": 640,
+      "entities": [
+        {
+          "id": "grid",
+          "type": "grid",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 640,
+          "height": 640,
+          "components": [
+            "Grid",
+            "ChessBoard"
+          ],
+          "properties": {
+            "gridSize": 8,
+            "cellSize": 80,
+            "lightColor": "#243047",
+            "darkColor": "#16202f"
+          }
+        },
+        {
+          "id": "p_rook_a",
+          "type": "piece",
+          "x": 6,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 3,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_rook_b",
+          "type": "piece",
+          "x": 5,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 3,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_rook_c",
+          "type": "piece",
+          "x": 4,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 3,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_knight_block",
+          "type": "piece",
+          "x": 5,
+          "y": 2,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#b0bec5",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Knight",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "knight",
+            "movePattern": "l-shape",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_queen_a",
+          "type": "piece",
+          "x": 6,
+          "y": 5,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Queen",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "queen",
+            "movePattern": "any-direction",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "e_queen_b",
+          "type": "piece",
+          "x": 5,
+          "y": 4,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Queen",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "queen",
+            "movePattern": "any-direction",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "e_king",
+          "type": "piece",
+          "x": 4,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ff2222",
+          "health": 3,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "King",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "king",
+            "movePattern": "adjacent",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p_king",
+          "type": "piece",
+          "x": 4,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#00ff88",
+          "health": 3,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "King",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "king",
+            "movePattern": "adjacent",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e_rook_t",
+          "type": "piece",
+          "x": 3,
+          "y": 3,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Rook",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "rook",
+            "movePattern": "straight",
+            "maxMoveDistance": 7
+          }
+        },
+        {
+          "id": "p_pawn_block",
+          "type": "piece",
+          "x": 4,
+          "y": 3,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#d7ccc8",
+          "health": 1,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Pawn",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "pawn",
+            "movePattern": "forward",
+            "maxMoveDistance": 1
+          }
+        }
+      ],
+      "cameras": [
+        {
+          "type": "fixed",
+          "target": "grid"
+        }
+      ]
+    }
+  ]
+}

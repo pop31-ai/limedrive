@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LimeDrive Games</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #00ff88;
+      font-size: 3rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #88aacc;
+      font-size: 1.2rem;
+      margin-bottom: 50px;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .game-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .game-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .game-thumbnail {
+      width: 100%;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-thumbnail::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
+    }
+
+    .game-thumbnail span {
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+
+    .game-info {
+      padding: 20px;
+    }
+
+    .game-title {
+      color: #ffffff;
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .game-type {
+      color: #00ff88;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .game-description {
+      color: #aabbcc;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .play-button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+      border: none;
+      border-radius: 8px;
+      color: #1a1a2e;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .play-button:hover {
+      background: linear-gradient(135deg, #00ffaa 0%, #00dd77 100%);
+      transform: scale(1.02);
+      box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+    }
+
+    .play-button:active {
+      transform: scale(0.98);
+    }
+
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(0, 255, 136, 0.2);
+      border-top-color: #00ff88;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    .loading-text {
+      color: #00ff88;
+      font-size: 1.2rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff4444;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 8px;
+      z-index: 1001;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      color: #667788;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      .games-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>LimeDrive Games</h1>
+  <p class="subtitle" data-i18n="ex.subtitle">15 complete game examples built with the LimeDrive engine</p>
+
+  <div class="games-grid" id="gamesGrid"></div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" data-i18n="ex.loading">Loading game...</div>
+  </div>
+
+  <div class="error-message" id="errorMessage"></div>
+
+  <footer data-i18n="ex.footer">
+    Powered by LimeDrive Engine • Built with JSON Game Format
+  </footer>
+
+  <script>
+    const games = [
+      { file: "01-lime-platformer.json", icon: "🏃", type: "Platformer", name: "Lime Platformer", description: "Classic platformer adventure through forests, caves and a final castle." },
+      { file: "02-space-invaders.json", icon: "🚀", type: "Shooter / TD", name: "Space Drift", description: "Retro space defense against waves of invaders." },
+      { file: "03-dungeon-crawler.json", icon: "⚔️", type: "RPG", name: "Lime Dungeon", description: "Explore dark dungeons, fight monsters and find treasure." },
+      { file: "04-puzzle-cubes.json", icon: "🧩", type: "Puzzle", name: "Cube Shift", description: "Shift cubes and solve spatial puzzles step by step." },
+      { file: "05-race-lime.json", icon: "🏎️", type: "Racing", name: "Lime Circuit", description: "High-speed races on winding tracks." },
+      { file: "06-ghost-mansion.json", icon: "👻", type: "Platformer", name: "Ghost Mansion", description: "A haunted mansion platformer full of secrets." },
+      { file: "07-ocean-diver.json", icon: "🤿", type: "Platformer", name: "Deep Lime", description: "Dive deep, avoid hazards and collect gems." },
+      { file: "08-tower-defense.json", icon: "🗼", type: "Shooter / TD", name: "Lime Towers", description: "Build towers and stop enemy waves." },
+      { file: "09-neon-runner.json", icon: "⚡", type: "Runner", name: "Neon Dash", description: "Fast neon runner about pure speed." },
+      { file: "10-chess-battle.json", icon: "♟️", type: "Tactics", name: "Chess Clash", description: "Turn-based tactical battles on a chess board." },
+      { file: "11-finance-tycoon.json", icon: "💰", type: "Platformer", name: "Финансовый Тайкун", description: "Платформер о бизнесе и управлении деньгами." },
+      { file: "12-cyber-heist.json", icon: "🕶️", type: "Platformer", name: "Кибер-Грабёж", description: "Киберпанк-ограбление сквозь системы безопасности." },
+      { file: "13-quantum-puzzle.json", icon: "⚛️", type: "Puzzle", name: "Квантовые Головоломки", description: "Квантовые логические головоломки." },
+      { file: "15-dungeon-crawl.json", icon: "🗡️", type: "Platformer", name: "Shadow Labyrinth", description: "Лабиринт теней со скрытыми путями." }
+    ];
+
+    function createGameCard(game) {
+      const play = window.LimeI18n ? LimeI18n.t("ex.play") : "Play Game";
+      return `
+        <div class="game-card">
+          <div class="game-thumbnail">
+            <span>${game.icon}</span>
+          </div>
+          <div class="game-info">
+            <div class="game-type">${game.type}</div>
+            <h3 class="game-title">${game.name}</h3>
+            <p class="game-description">${game.description}</p>
+            <button class="play-button" onclick="loadGame('${game.file}')">
+              ${play}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGames() {
+      const grid = document.getElementById('gamesGrid');
+      grid.innerHTML = games.map(createGameCard).join('');
+    }
+
+    async function loadGame(filename) {
+      const overlay = document.getElementById('loadingOverlay');
+      const errorDiv = document.getElementById('errorMessage');
+
+      overlay.classList.add('active');
+      errorDiv.style.display = 'none';
+
+      try {
+        const response = await fetch(filename);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const gameData = await response.json();
+        console.log('Game loaded:', gameData);
+
+        localStorage.setItem('currentGame', JSON.stringify(gameData));
+
+        overlay.classList.remove('active');
+        window.location.href = 'player.html?game=' + encodeURIComponent(filename);
+
+      } catch (error) {
+        console.error('Error loading game:', error);
+        overlay.classList.remove('active');
+
+        errorDiv.textContent = `Failed to load game: ${error.message}`;
+        errorDiv.style.display = 'block';
+
+        setTimeout(() => {
+          errorDiv.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    renderGames();
+   </script>
+   <script>
+    window.LimeI18nNoAutoBoot = true;
+  </script>
+  <script src="../lang/i18n.js"></script>
+  <script>
+    if (window.LimeI18nCore) {
+      LimeI18nCore.init({ base: "../lang/" }).then(() => renderGames());
+    }
+  </script>
+</body>
+</html>

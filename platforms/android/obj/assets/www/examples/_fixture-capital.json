@@ -1,0 +1,53 @@
+{
+  "name": "Fixture Capital",
+  "version": "1.0.0",
+  "type": "platformer",
+  "description": "Минимальная фиксура для mode-capital.test.js: финиш закрыт до capitalGoal",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 9.8,
+    "friction": 0.85,
+    "airResistance": 0.02,
+    "jumpForce": 15,
+    "maxSpeed": 6,
+    "worldWidth": 960,
+    "worldHeight": 720,
+    "theme": "city"
+  },
+  "levels": [
+    {
+      "name": "Капитал",
+      "timeLimit": 180,
+      "background": { "type": "gradient", "colors": ["#1a1a2e", "#2a2a40", "#3a3a52"] },
+      "entities": [
+        { "id": "hero_1", "type": "hero", "x": 80, "y": 576, "z": 1, "width": 40, "height": 44,
+          "color": "#8BC34A", "health": 100, "speed": 6, "damage": 0,
+          "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlayerControl", "Platformer"],
+          "properties": {} },
+
+        { "id": "finish_gate", "type": "finish", "x": 140, "y": 560, "z": 0, "width": 44, "height": 60,
+          "color": "#FFD700", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "capitalGoal": 100, "nextLevel": -1 } },
+
+        { "id": "coin_1", "type": "pickup", "x": 280, "y": 585, "z": 1, "width": 28, "height": 28,
+          "color": "#FFD700", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "value": 40 } },
+        { "id": "coin_2", "type": "pickup", "x": 360, "y": 585, "z": 1, "width": 28, "height": 28,
+          "color": "#FFD700", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "value": 40 } },
+        { "id": "coin_3", "type": "pickup", "x": 440, "y": 585, "z": 1, "width": 28, "height": 28,
+          "color": "#FFD700", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "value": 40 } },
+
+        { "id": "ground", "type": "platform", "x": 0, "y": 620, "z": 0, "width": 960, "height": 100,
+          "color": "#3a3a55", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} }
+      ]
+    }
+  ]
+}

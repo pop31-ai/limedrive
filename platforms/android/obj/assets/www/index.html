@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#00ff88">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<title>LimeDrive Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a14;color:#e8e8f0;font-family:monospace;padding:16px;touch-action:manipulation}
+h1{color:#00ff88;font-size:22px;margin-bottom:4px}
+p.sub{color:#888;font-size:12px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.card{display:flex;flex-direction:column;gap:4px;background:#141424;border:1px solid #262640;
+ border-radius:10px;padding:12px;text-decoration:none;color:#e8e8f0}
+.card:active{background:#1c1c34}
+.card .t{font-weight:bold;font-size:14px}
+.card .m{color:#7799;font-size:11px}
+.hint{margin-top:14px;color:#556;font-size:11px}
+</style></head><body>
+<h1>◆ LimeDrive</h1>
+<p class="sub">17 игр · работает офлайн</p>
+<div class="grid">
+<a class="card" href="examples/player.html?game=01-lime-platformer.json">
+    <span class="t">Lime Platformer</span><span class="m">Платформер · 4 ур.</span></a>
+<a class="card" href="examples/player.html?game=02-space-invaders.json">
+    <span class="t">Space Drift</span><span class="m">Шутер/TD · 5 ур.</span></a>
+<a class="card" href="examples/player.html?game=03-dungeon-crawler.json">
+    <span class="t">Lime Dungeon</span><span class="m">RPG · 3 ур.</span></a>
+<a class="card" href="examples/player.html?game=04-puzzle-cubes.json">
+    <span class="t">Cube Shift</span><span class="m">Головоломка · 5 ур.</span></a>
+<a class="card" href="examples/player.html?game=05-race-lime.json">
+    <span class="t">Lime Circuit</span><span class="m">Гонки · 3 ур.</span></a>
+<a class="card" href="examples/player.html?game=06-ghost-mansion.json">
+    <span class="t">Ghost Mansion</span><span class="m">Платформер · 3 ур.</span></a>
+<a class="card" href="examples/player.html?game=07-ocean-diver.json">
+    <span class="t">Deep Lime</span><span class="m">Платформер · 4 ур.</span></a>
+<a class="card" href="examples/player.html?game=08-tower-defense.json">
+    <span class="t">Lime Towers</span><span class="m">Шутер/TD · 4 ур.</span></a>
+<a class="card" href="examples/player.html?game=09-neon-runner.json">
+    <span class="t">Neon Dash</span><span class="m">Раннер · 1 ур.</span></a>
+<a class="card" href="examples/player.html?game=10-chess-battle.json">
+    <span class="t">Chess Clash</span><span class="m">Тактика · 3 ур.</span></a>
+<a class="card" href="examples/player.html?game=11-finance-tycoon.json">
+    <span class="t">Финансовый Тайкун</span><span class="m">Платформер · 3 ур.</span></a>
+<a class="card" href="examples/player.html?game=12-cyber-heist.json">
+    <span class="t">Кибер-Грабёж</span><span class="m">Платформер · 4 ур.</span></a>
+<a class="card" href="examples/player.html?game=13-quantum-puzzle.json">
+    <span class="t">Квантовые Головоломки</span><span class="m">Головоломка · 3 ур.</span></a>
+<a class="card" href="examples/player.html?game=15-dungeon-crawl.json">
+    <span class="t">Shadow Labyrinth</span><span class="m">Платформер · 3 ур.</span></a>
+<a class="card" href="examples/player.html?game=16-checkers-rivalry.json">
+    <span class="t">Шашки: Контратака</span><span class="m">Тактика · 1 ур.</span></a>
+<a class="card" href="examples/player.html?game=17-qi-duel.json">
+    <span class="t">Ци-Шах: Дуэль</span><span class="m">Тактика · 2 ур.</span></a>
+<a class="card" href="examples/player.html?game=18-elimintali.json">
+    <span class="t">Элиминтали: Слияние</span><span class="m">Тактика · 1 ур.</span></a>
+</div>
+<p class="hint">Android: меню браузера → «Добавить на главный экран»</p>
+<script src="lang/i18n.js"></script>
+<script>
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body></html>

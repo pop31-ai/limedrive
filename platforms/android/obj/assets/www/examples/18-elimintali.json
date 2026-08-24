@@ -1,0 +1,61 @@
+{
+  "name": "Элиминтали: Слияние",
+  "version": "1.0.0",
+  "type": "turn-based-strategy",
+  "description": "Стихийные шахматы: огонь→воздух→земля→вода→огонь. Сливай соседей в гибриды, бери ядро. T1=шаг, T2=конь, T3=слайд до 3.",
+  "author": "LimeDrive",
+  "settings": {
+    "gravity": 0, "friction": 1, "airResistance": 1, "jumpForce": 0, "maxSpeed": 1,
+    "worldWidth": 640, "worldHeight": 640, "theme": "chess-board",
+    "variant": "elem", "gridSize": 8, "cellSize": 80,
+    "lightColor": "#1e2a32", "darkColor": "#141c24", "highlightMoves": true
+  },
+  "levels": [
+    {
+      "id": "elem-1",
+      "name": "Круг стихий",
+      "worldWidth": 640, "worldHeight": 640,
+      "entities": [
+        { "id": "grid", "type": "grid", "x": 0, "y": 0, "z": 0, "width": 640, "height": 640,
+          "components": ["Grid", "ChessBoard"],
+          "properties": { "gridSize": 8, "cellSize": 80, "lightColor": "#1e2a32", "darkColor": "#141c24" } },
+        { "id": "ecore", "type": "piece", "x": 4, "y": 1, "z": 1, "width": 70, "height": 70, "color": "#7ef0ff", "health": 1, "damage": 0,
+          "components": ["Piece", "Core", "AIControlled"], "properties": { "pieceType": "core", "movePattern": "none", "elem": null, "tier": 0 } },
+        { "id": "pcore", "type": "piece", "x": 4, "y": 6, "z": 1, "width": 70, "height": 70, "color": "#00ff88", "health": 1, "damage": 0,
+          "components": ["Piece", "Core", "PlayerControlled"], "properties": { "pieceType": "core", "movePattern": "none", "elem": null, "tier": 0 } },
+
+        { "id": "e_f1", "type": "piece", "x": 0, "y": 0, "z": 1, "width": 70, "height": 70, "color": "#ff7043", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "fire", "tier": 1 } },
+        { "id": "e_w1", "type": "piece", "x": 1, "y": 0, "z": 1, "width": 70, "height": 70, "color": "#42a5f5", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "water", "tier": 1 } },
+        { "id": "e_a1", "type": "piece", "x": 2, "y": 0, "z": 1, "width": 70, "height": 70, "color": "#bdbdbd", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "air", "tier": 1 } },
+        { "id": "e_e1", "type": "piece", "x": 3, "y": 0, "z": 1, "width": 70, "height": 70, "color": "#8d6e63", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "earth", "tier": 1 } },
+        { "id": "e_f2", "type": "piece", "x": 5, "y": 0, "z": 1, "width": 70, "height": 70, "color": "#ff7043", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "fire", "tier": 1 } },
+        { "id": "e_w2", "type": "piece", "x": 6, "y": 0, "z": 1, "width": 70, "height": 70, "color": "#42a5f5", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "water", "tier": 1 } },
+        { "id": "e_a2", "type": "piece", "x": 7, "y": 0, "z": 1, "width": 70, "height": 70, "color": "#bdbdbd", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "air", "tier": 1 } },
+
+        { "id": "p_f1", "type": "piece", "x": 0, "y": 7, "z": 1, "width": 70, "height": 70, "color": "#ff7043", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "fire", "tier": 1 } },
+        { "id": "p_w1", "type": "piece", "x": 1, "y": 7, "z": 1, "width": 70, "height": 70, "color": "#42a5f5", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "water", "tier": 1 } },
+        { "id": "p_a1", "type": "piece", "x": 2, "y": 7, "z": 1, "width": 70, "height": 70, "color": "#bdbdbd", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "air", "tier": 1 } },
+        { "id": "p_e1", "type": "piece", "x": 3, "y": 7, "z": 1, "width": 70, "height": 70, "color": "#8d6e63", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "earth", "tier": 1 } },
+        { "id": "p_f2", "type": "piece", "x": 5, "y": 7, "z": 1, "width": 70, "height": 70, "color": "#ff7043", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "fire", "tier": 1 } },
+        { "id": "p_w2", "type": "piece", "x": 6, "y": 7, "z": 1, "width": 70, "height": 70, "color": "#42a5f5", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "water", "tier": 1 } },
+        { "id": "p_a2", "type": "piece", "x": 7, "y": 7, "z": 1, "width": 70, "height": 70, "color": "#bdbdbd", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"], "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1, "elem": "air", "tier": 1 } }
+      ],
+      "cameras": [{ "type": "fixed", "target": "grid" }]
+    }
+  ],
+  "ai": { "pattern": "chess-ai", "globalDifficulty": "medium" }
+}

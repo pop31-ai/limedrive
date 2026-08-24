@@ -1,0 +1,909 @@
+{
+  "name": "Neon Dash",
+  "version": "1.0.0",
+  "type": "endless-runner",
+  "description": "Cyberpunk endless runner with procedurally generated neon obstacles. Collect orbs, avoid hazards, and push for the highest score!",
+  "author": "LimeDrive Examples",
+  "settings": {
+    "gravity": 0.8,
+    "friction": 0.98,
+    "airResistance": 0.99,
+    "jumpForce": 16,
+    "maxSpeed": 12,
+    "worldWidth": 800,
+    "worldHeight": 600,
+    "theme": "neon-cyber"
+  },
+  "levels": [
+    {
+      "id": "endless-run",
+      "name": "Neon Highway",
+      "worldWidth": 10000,
+      "worldHeight": 600,
+      "difficulty": 1,
+      "entities": [
+        {
+          "id": "player",
+          "type": "player",
+          "x": 100,
+          "y": 300,
+          "z": 1,
+          "width": 40,
+          "height": 40,
+          "color": "#00ffff",
+          "health": 3,
+          "speed": 6,
+          "damage": 0,
+          "components": [
+            "PlayerController",
+            "NeonTrail",
+            "InvincibilityFlash"
+          ],
+          "properties": {
+            "jumpHeight": 180,
+            "doubleJump": true,
+            "dashDistance": 100,
+            "trailColor": "#00ffff",
+            "invincibilityFrames": 60
+          }
+        },
+        {
+          "id": "ground",
+          "type": "platform",
+          "x": 0,
+          "y": 560,
+          "z": 0,
+          "width": 10000,
+          "height": 40,
+          "color": "#1a1a2e",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "NeonBorder"
+          ],
+          "properties": {
+            "borderColor": "#ff00ff",
+            "borderWidth": 2
+          }
+        },
+        {
+          "id": "wall-left",
+          "type": "boundary",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 10,
+          "height": 600,
+          "color": "#ff00ff",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "NeonBorder"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "ceiling",
+          "type": "boundary",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 10000,
+          "height": 10,
+          "color": "#ff00ff",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "NeonBorder"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "neon-orb-1",
+          "type": "collectible",
+          "x": 300,
+          "y": 400,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "neon-orb-2",
+          "type": "collectible",
+          "x": 400,
+          "y": 350,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "neon-orb-3",
+          "type": "collectible",
+          "x": 500,
+          "y": 300,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "laser-gate-1",
+          "type": "hazard",
+          "x": 800,
+          "y": 200,
+          "z": 1,
+          "width": 10,
+          "height": 360,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 0,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "LaserGate",
+            "Flicker"
+          ],
+          "properties": {
+            "onDuration": 60,
+            "offDuration": 60,
+            "pattern": "alternating"
+          }
+        },
+        {
+          "id": "spike-row-1",
+          "type": "hazard",
+          "x": 1200,
+          "y": 530,
+          "z": 1,
+          "width": 200,
+          "height": 30,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 0,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "SpikeRow"
+          ],
+          "properties": {
+            "spikeCount": 10,
+            "spikeWidth": 20,
+            "spikeHeight": 30
+          }
+        },
+        {
+          "id": "moving-platform-1",
+          "type": "platform",
+          "x": 1500,
+          "y": 400,
+          "z": 1,
+          "width": 120,
+          "height": 20,
+          "color": "#00ff00",
+          "health": -1,
+          "speed": 2,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "Mover",
+            "NeonBorder"
+          ],
+          "properties": {
+            "moveX": 200,
+            "moveY": 0,
+            "speed": 2,
+            "borderColor": "#00ff00"
+          }
+        },
+        {
+          "id": "energy-shield-1",
+          "type": "powerup",
+          "x": 1800,
+          "y": 300,
+          "z": 1,
+          "width": 30,
+          "height": 30,
+          "color": "#00ffff",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Powerup",
+            "Shield",
+            "Pulse"
+          ],
+          "properties": {
+            "duration": 300,
+            "shieldColor": "#00ffff"
+          }
+        },
+        {
+          "id": "drone-enemy-1",
+          "type": "enemy",
+          "x": 2200,
+          "y": 200,
+          "z": 1,
+          "width": 40,
+          "height": 40,
+          "color": "#ff00ff",
+          "health": 2,
+          "speed": 3,
+          "damage": 1,
+          "components": [
+            "Enemy",
+            "Flyer",
+            "Patrol",
+            "NeonGlow"
+          ],
+          "properties": {
+            "patrolDistance": 150,
+            "patrolSpeed": 2,
+            "glowColor": "#ff00ff",
+            "dropScore": 200
+          }
+        },
+        {
+          "id": "drone-enemy-2",
+          "type": "enemy",
+          "x": 2400,
+          "y": 250,
+          "z": 1,
+          "width": 40,
+          "height": 40,
+          "color": "#ff00ff",
+          "health": 2,
+          "speed": 3,
+          "damage": 1,
+          "components": [
+            "Enemy",
+            "Flyer",
+            "Patrol",
+            "NeonGlow"
+          ],
+          "properties": {
+            "patrolDistance": 100,
+            "patrolSpeed": 2.5,
+            "glowColor": "#ff00ff",
+            "dropScore": 200
+          }
+        },
+        {
+          "id": "gravity-zone-1",
+          "type": "zone",
+          "x": 2800,
+          "y": 0,
+          "z": 0,
+          "width": 400,
+          "height": 560,
+          "color": "rgba(255,0,255,0.1)",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Zone",
+            "GravityModifier"
+          ],
+          "properties": {
+            "gravityMultiplier": 0.3,
+            "zoneColor": "rgba(255,0,255,0.1)"
+          }
+        },
+        {
+          "id": "laser-gate-2",
+          "type": "hazard",
+          "x": 3300,
+          "y": 150,
+          "z": 1,
+          "width": 10,
+          "height": 410,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 0,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "LaserGate",
+            "Flicker"
+          ],
+          "properties": {
+            "onDuration": 45,
+            "offDuration": 45,
+            "pattern": "synchronized"
+          }
+        },
+        {
+          "id": "spike-row-2",
+          "type": "hazard",
+          "x": 3700,
+          "y": 530,
+          "z": 1,
+          "width": 150,
+          "height": 30,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 0,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "SpikeRow"
+          ],
+          "properties": {
+            "spikeCount": 7,
+            "spikeWidth": 20,
+            "spikeHeight": 30
+          }
+        },
+        {
+          "id": "speed-boost-1",
+          "type": "powerup",
+          "x": 4000,
+          "y": 400,
+          "z": 1,
+          "width": 30,
+          "height": 30,
+          "color": "#ffaa00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Powerup",
+            "SpeedBoost",
+            "Pulse"
+          ],
+          "properties": {
+            "duration": 300,
+            "speedMultiplier": 1.5
+          }
+        },
+        {
+          "id": "rotating-blade-1",
+          "type": "hazard",
+          "x": 4400,
+          "y": 300,
+          "z": 1,
+          "width": 60,
+          "height": 60,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 4,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "Rotator",
+            "NeonGlow"
+          ],
+          "properties": {
+            "rotateSpeed": 4,
+            "bladeCount": 4,
+            "glowColor": "#ff0000"
+          }
+        },
+        {
+          "id": "platform-cluster-1",
+          "type": "platform",
+          "x": 4800,
+          "y": 450,
+          "z": 1,
+          "width": 80,
+          "height": 20,
+          "color": "#00ff00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "NeonBorder"
+          ],
+          "properties": {
+            "borderColor": "#00ff00"
+          }
+        },
+        {
+          "id": "platform-cluster-2",
+          "type": "platform",
+          "x": 4950,
+          "y": 380,
+          "z": 1,
+          "width": 80,
+          "height": 20,
+          "color": "#00ff00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "NeonBorder"
+          ],
+          "properties": {
+            "borderColor": "#00ff00"
+          }
+        },
+        {
+          "id": "platform-cluster-3",
+          "type": "platform",
+          "x": 5100,
+          "y": 310,
+          "z": 1,
+          "width": 80,
+          "height": 20,
+          "color": "#00ff00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "NeonBorder"
+          ],
+          "properties": {
+            "borderColor": "#00ff00"
+          }
+        },
+        {
+          "id": "coin-bonus-1",
+          "type": "collectible",
+          "x": 5150,
+          "y": 250,
+          "z": 1,
+          "width": 25,
+          "height": 25,
+          "color": "#ffaa00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate",
+            "Bonus"
+          ],
+          "properties": {
+            "scoreValue": 500,
+            "pulseSpeed": 3,
+            "pulseMin": 0.9,
+            "pulseMax": 1.1
+          }
+        },
+        {
+          "id": "laser-gate-3",
+          "type": "hazard",
+          "x": 5500,
+          "y": 100,
+          "z": 1,
+          "width": 10,
+          "height": 460,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 0,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "LaserGate",
+            "Flicker"
+          ],
+          "properties": {
+            "onDuration": 30,
+            "offDuration": 30,
+            "pattern": "alternating"
+          }
+        },
+        {
+          "id": "drone-enemy-3",
+          "type": "enemy",
+          "x": 5800,
+          "y": 180,
+          "z": 1,
+          "width": 40,
+          "height": 40,
+          "color": "#ff00ff",
+          "health": 3,
+          "speed": 4,
+          "damage": 1,
+          "components": [
+            "Enemy",
+            "Flyer",
+            "Chaser",
+            "NeonGlow"
+          ],
+          "properties": {
+            "chaseSpeed": 3,
+            "detectionRange": 200,
+            "glowColor": "#ff00ff",
+            "dropScore": 300
+          }
+        },
+        {
+          "id": "speed-boost-2",
+          "type": "powerup",
+          "x": 6200,
+          "y": 400,
+          "z": 1,
+          "width": 30,
+          "height": 30,
+          "color": "#ffaa00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Powerup",
+            "SpeedBoost",
+            "Pulse"
+          ],
+          "properties": {
+            "duration": 300,
+            "speedMultiplier": 1.5
+          }
+        },
+        {
+          "id": "spike-row-3",
+          "type": "hazard",
+          "x": 6600,
+          "y": 530,
+          "z": 1,
+          "width": 250,
+          "height": 30,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 0,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "SpikeRow"
+          ],
+          "properties": {
+            "spikeCount": 12,
+            "spikeWidth": 20,
+            "spikeHeight": 30
+          }
+        },
+        {
+          "id": "rotating-blade-2",
+          "type": "hazard",
+          "x": 7000,
+          "y": 280,
+          "z": 1,
+          "width": 60,
+          "height": 60,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 5,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "Rotator",
+            "NeonGlow"
+          ],
+          "properties": {
+            "rotateSpeed": 5,
+            "bladeCount": 4,
+            "glowColor": "#ff0000"
+          }
+        },
+        {
+          "id": "moving-platform-2",
+          "type": "platform",
+          "x": 7400,
+          "y": 350,
+          "z": 1,
+          "width": 120,
+          "height": 20,
+          "color": "#00ff00",
+          "health": -1,
+          "speed": 2,
+          "damage": 0,
+          "components": [
+            "Solid",
+            "Mover",
+            "NeonBorder"
+          ],
+          "properties": {
+            "moveX": 0,
+            "moveY": 150,
+            "speed": 2,
+            "borderColor": "#00ff00"
+          }
+        },
+        {
+          "id": "gravity-zone-2",
+          "type": "zone",
+          "x": 7800,
+          "y": 0,
+          "z": 0,
+          "width": 400,
+          "height": 560,
+          "color": "rgba(0,255,255,0.1)",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Zone",
+            "GravityModifier"
+          ],
+          "properties": {
+            "gravityMultiplier": 2,
+            "zoneColor": "rgba(0,255,255,0.1)"
+          }
+        },
+        {
+          "id": "neon-orb-4",
+          "type": "collectible",
+          "x": 8300,
+          "y": 400,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "neon-orb-5",
+          "type": "collectible",
+          "x": 8400,
+          "y": 350,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "laser-gate-4",
+          "type": "hazard",
+          "x": 8800,
+          "y": 80,
+          "z": 1,
+          "width": 10,
+          "height": 480,
+          "color": "#ff0000",
+          "health": -1,
+          "speed": 0,
+          "damage": 1,
+          "components": [
+            "Hazard",
+            "LaserGate",
+            "Flicker"
+          ],
+          "properties": {
+            "onDuration": 20,
+            "offDuration": 20,
+            "pattern": "synchronized"
+          }
+        },
+        {
+          "id": "final-orb-burst-1",
+          "type": "collectible",
+          "x": 9200,
+          "y": 400,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "final-orb-burst-2",
+          "type": "collectible",
+          "x": 9300,
+          "y": 350,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "final-orb-burst-3",
+          "type": "collectible",
+          "x": 9400,
+          "y": 300,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "final-orb-burst-4",
+          "type": "collectible",
+          "x": 9500,
+          "y": 250,
+          "z": 1,
+          "width": 20,
+          "height": 20,
+          "color": "#ffff00",
+          "health": 1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Collectible",
+            "Pulse",
+            "Rotate"
+          ],
+          "properties": {
+            "scoreValue": 100,
+            "pulseSpeed": 2,
+            "pulseMin": 0.8,
+            "pulseMax": 1.2
+          }
+        },
+        {
+          "id": "checkpoint-1",
+          "type": "checkpoint",
+          "x": 5000,
+          "y": 500,
+          "z": 1,
+          "width": 40,
+          "height": 60,
+          "color": "#00ff00",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Checkpoint",
+            "NeonBorder"
+          ],
+          "properties": {
+            "activatedColor": "#00ff00",
+            "inactiveColor": "#333333"
+          }
+        },
+        {
+          "id": "score-display",
+          "type": "ui",
+          "x": 0,
+          "y": 0,
+          "z": 10,
+          "width": 180,
+          "height": 36,
+          "color": "#ffffff",
+          "health": -1,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "ScoreDisplay"
+          ],
+          "properties": {
+            "font": "24px 'Press Start 2P', monospace",
+            "position": "top-left"
+          }
+        }
+      ]
+    }
+  ],
+  "cameras": [
+    {
+      "id": "main-camera",
+      "type": "follow",
+      "x": 0,
+      "y": 0,
+      "width": 800,
+      "height": 600,
+      "target": "player",
+      "smoothFollow": true,
+      "smoothing": 0.1,
+      "offsetX": 0,
+      "offsetY": 0
+    }
+  ],
+  "ai": {
+    "aggressive": false,
+    "pattern": "procedural",
+    "difficultyScaling": true,
+    "spawnRate": 120,
+    "maxEnemies": 3
+  }
+}

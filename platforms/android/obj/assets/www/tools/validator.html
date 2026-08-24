@@ -1,0 +1,372 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LimeDrive — Валидатор Проходимости</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e0e0e0;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:20px 32px;border-bottom:1px solid #2a2a4a;display:flex;align-items:center;gap:20px}
+.header h1{font-size:22px;color:#8BC34A}
+.header p{color:#888;font-size:13px}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.drop-zone{border:2px dashed #3a3a5a;border-radius:12px;padding:60px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:24px}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#8BC34A;background:rgba(139,195,74,.05)}
+.drop-zone h2{color:#8BC34A;margin-bottom:8px}
+.drop-zone p{color:#666;font-size:14px}
+.drop-zone input{display:none}
+.file-info{background:#1a1a2e;border-radius:8px;padding:16px;margin-bottom:24px;display:none}
+.file-info.active{display:block}
+.file-info h3{color:#8BC34A;margin-bottom:8px;font-size:16px}
+.file-info .meta{display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:#aaa}
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid #2a2a4a}
+.tab{padding:10px 20px;cursor:pointer;color:#666;border-bottom:2px solid transparent;transition:all .2s;font-size:14px}
+.tab:hover{color:#aaa}
+.tab.active{color:#8BC34A;border-bottom-color:#8BC34A}
+.tab .badge{background:#8BC34A;color:#000;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:6px;font-weight:700}
+.panels .panel{display:none}
+.panels .panel.active{display:block}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat{background:#1a1a2e;border-radius:10px;padding:16px;text-align:center}
+.stat .num{font-size:28px;font-weight:700}
+.stat .lbl{font-size:12px;color:#888;margin-top:4px}
+.stat.ok .num{color:#4CAF50}
+.stat.warn .num{color:#FF9800}
+.stat.err .num{color:#f44336}
+.stat.info .num{color:#2196F3}
+.results{list-style:none}
+.results li{padding:12px 16px;border-radius:8px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.5}
+.results li.pass{background:rgba(76,175,80,.08);border-left:3px solid #4CAF50}
+.results li.warn{background:rgba(255,152,0,.08);border-left:3px solid #FF9800}
+.results li.fail{background:rgba(244,67,54,.08);border-left:3px solid #f44336}
+.results li.info{background:rgba(33,150,243,.08);border-left:3px solid #2196F3}
+.results .icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.results .msg strong{display:block;margin-bottom:2px}
+.results .msg .detail{color:#888;font-size:12px}
+.level-canvas{background:#111;border-radius:10px;overflow:hidden;margin-bottom:16px}
+.level-canvas canvas{width:100%;height:auto;display:block}
+.level-selector{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.level-btn{padding:8px 16px;border:1px solid #3a3a5a;background:#1a1a2e;color:#aaa;border-radius:6px;cursor:pointer;font-size:13px;transition:all .2s}
+.level-btn:hover{border-color:#8BC34A;color:#fff}
+.level-btn.active{background:#8BC34A;color:#000;border-color:#8BC34A}
+.btn-row{display:flex;gap:12px;margin-top:24px}
+.btn{padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.btn-primary{background:#8BC34A;color:#000}.btn-primary:hover{background:#9CCC65}
+.btn-secondary{background:#2a2a4a;color:#aaa}.btn-secondary:hover{background:#3a3a5a;color:#fff}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>LimeDrive Validator</h1>
+  <p>Проверка JSON-игр на проходимость и целостность</p>
+</div>
+<div class="container">
+<div class="drop-zone" id="dropZone">
+  <h2>Перетащи JSON-файл сюда</h2>
+  <p>или кликни чтобы выбрать</p>
+  <input type="file" id="fileInput" accept=".json,.ldproject">
+</div>
+<div class="file-info" id="fileInfo">
+  <h3 id="gameName"></h3>
+  <div class="meta" id="gameMeta"></div>
+</div>
+<div class="tabs" id="tabs" style="display:none">
+  <div class="tab active" data-tab="summary">Сводка</div>
+  <div class="tab" data-tab="levels">Уровни <span class="badge" id="levelCount">0</span></div>
+  <div class="tab" data-tab="structure">Структура</div>
+  <div class="tab" data-tab="visual">Визуал</div>
+</div>
+<div class="panels">
+  <div class="panel active" id="panel-summary">
+    <div class="summary" id="summaryGrid"></div>
+    <ul class="results" id="summaryResults"></ul>
+  </div>
+  <div class="panel" id="panel-levels">
+    <div class="level-selector" id="levelSelector"></div>
+    <ul class="results" id="levelResults"></ul>
+  </div>
+  <div class="panel" id="panel-structure">
+    <ul class="results" id="structureResults"></ul>
+  </div>
+  <div class="panel" id="panel-visual">
+    <div class="level-selector" id="visualLevelSelector"></div>
+    <div class="level-canvas"><canvas id="visCanvas" width="1200" height="300"></canvas></div>
+    <p style="color:#666;font-size:12px;margin-top:8px">Зелёный=платформы, Красный=враги, Синий=герой, Жёлтый=подбор, Фиолетовый=финиш</p>
+  </div>
+</div>
+<div class="btn-row" style="display:none" id="btnRow">
+  <button class="btn btn-primary" onclick="exportReport()">Экспорт отчёта</button>
+  <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Другой файл</button>
+</div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const $$=s=>document.querySelectorAll(s);
+let gameData=null, currentLevel=0, allIssues=[];
+
+$$('.tab').forEach(t=>t.addEventListener('click',()=>{
+  $$('.tab').forEach(x=>x.classList.remove('active'));
+  $$('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  $(`#panel-${t.dataset.tab}`).classList.add('active');
+  if(t.dataset.tab==='visual') drawLevel(currentLevel);
+}));
+
+const dz=$('#dropZone'),fi=$('#fileInput');
+dz.addEventListener('click',()=>fi.click());
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');handleFile(e.dataTransfer.files[0])});
+fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0])});
+
+function handleFile(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{gameData=JSON.parse(e.target.result);validate();render()}
+    catch(err){alert('Ошибка парсинга JSON:\n'+err.message)}
+  };
+  r.readAsText(file);
+}
+
+function validate(){
+  const g=gameData;
+  allIssues=[];
+  const pass=(c,m,d)=>allIssues.push({cat:c,lv:'pass',msg:m,detail:d||''});
+  const warn=(c,m,d)=>allIssues.push({cat:c,lv:'warn',msg:m,detail:d||''});
+  const fail=(c,m,d)=>allIssues.push({cat:c,lv:'fail',msg:m,detail:d||''});
+  const info=(c,m,d)=>allIssues.push({cat:c,lv:'info',msg:m,detail:d||''});
+
+  if(!g.name) warn('struct','Нет имени игры');
+  else pass('struct','Игра: "'+g.name+'"');
+  if(!g.version) info('struct','Нет версии','Рекомендуется "version"');
+  if(!g.type) warn('struct','Нет типа игры','platformer|puzzle|rpg|racing|shooter');
+
+  if(!g.settings) fail('struct','Нет секции settings','Обязательно: gravity, worldWidth, worldHeight');
+  else{
+    const s=g.settings;
+    if(!s.worldWidth||!s.worldHeight) fail('struct','Нет worldWidth/worldHeight');
+    else pass('struct','Мир: '+s.worldWidth+'x'+s.worldHeight);
+    if(s.gravity===undefined) warn('struct','Gravity не задана','По умолчанию 18');
+    if(s.jumpForce===undefined) warn('struct','jumpForce не задана','По умолчанию 16');
+  }
+
+  if(!g.levels||!Array.isArray(g.levels)||g.levels.length===0)
+    return fail('struct','Нет уровней','Массив "levels" пуст');
+
+  pass('struct','Уровней: '+g.levels.length);
+
+  let totalE=0,totalEn=0,totalP=0,totalPl=0;
+
+  g.levels.forEach((lvl,li)=>{
+    const px='[Ур.'+(li+1)+'] ';
+    if(!lvl.name) warn('struct',px+'Без имени');
+    const ents=lvl.entities||[];
+    totalE+=ents.length;
+
+    if(ents.length===0){fail('pass',px+'Нет сущностей','Уровень пустой');return}
+
+    let hero=null,finish=null,platforms=[],enemies=[],pickups=[],hazards=[];
+    ents.forEach(e=>{
+      if(e.type==='hero') hero=e;
+      if(e.type==='finish') finish=e;
+      if(e.type==='platform'||e.type==='moving_platform') platforms.push(e);
+      if(e.type==='enemy'||e.type==='boss'){enemies.push(e);totalEn++}
+      if(e.type==='pickup'){pickups.push(e);totalP++}
+      if(e.type==='hazard') hazards.push(e);
+    });
+
+    if(!hero) fail('pass',px+'Нет героя','Обязательно хотя бы 1 hero');
+    else pass('pass',px+'Герой есть');
+
+    if(!finish) fail('pass',px+'Нет финиша','Обязательно хотя бы 1 finish');
+    else pass('pass',px+'Финиш есть');
+
+    totalPl+=platforms.length;
+    if(platforms.length===0) warn('pass',px+'Нет платформ','Нечего на что прыгать');
+
+    if(hero&&finish){
+      const hx=hero.x,hw=hero.width||64;
+      const fx=finish.x,fw=finish.width||64;
+      const dist=fx-(hx+hw);
+      if(dist<=0) pass('pass',px+'Финиш правее героя');
+      else{
+        const maxJump=(g.settings&&g.settings.jumpForce||16)*18;
+        const horizontalNeeded=dist;
+        const maxRun=(g.settings&&g.settings.maxSpeed||7)*60*(lvl.timeLimit||120);
+        if(horizontalNeeded>maxRun*2) warn('pass',px+'Далёкий финиш','Расстояние '+Math.round(dist)+'px. За '+((lvl.timeLimit||120))+'с может не хватить');
+        else pass('pass',px+'Финиш достижим по расстоянию');
+      }
+
+      if(hero.y<=0||hero.y>=(g.settings&&g.settings.worldHeight||1080))
+        fail('pass',px+'Герой за пределами мира','y='+hero.y);
+    }
+
+    const wid=g.settings&&g.settings.worldWidth||3840;
+    const hid=g.settings&&g.settings.worldHeight||1080;
+    ents.forEach(e=>{
+      if(e.x<0||e.y<0) warn('struct',px+'Отрицательные координаты: '+(e.type||'?')+' ('+e.x+','+e.y+')');
+      if(e.x>e.width+wid||e.y>e.height+hid)
+        warn('struct',px+'За пределами мира: '+(e.type||'?')+' ('+e.x+','+e.y+')');
+    });
+
+    if(hazards.length>0){
+      const groundY=hid-100;
+      let allBelowGround=true;
+      hazards.forEach(h=>{
+        if(h.y<groundY-200) allBelowGround=false;
+      });
+      if(allBelowGround&&hazards.length>2)
+        info('pass',px+'Все ловушки на земле',hazards.length+' штук');
+    }
+
+    if(enemies.length===0) info('pass',px+'Нет врагов','Тихий уровень');
+    else pass('pass',px+'Враги: '+enemies.length);
+
+    if(pickups.length===0) info('pass',px+'Нет подбора');
+    else pass('pass',px+'Подбор: '+pickups.length);
+  });
+
+  pass('struct','Всего сущностей: '+totalE);
+  if(totalPl===0) warn('struct','Нет платформ во всей игре');
+  else pass('struct','Платформ: '+totalPl);
+}
+function render(){
+  const g=gameData;
+  $('#dropZone').style.display='none';
+  $('#tabs').style.display='flex';
+  $('#btnRow').style.display='flex';
+  $('#fileInfo').classList.add('active');
+  $('#gameName').textContent=g.name||'Без имени';
+  $('#levelCount').textContent=g.levels.length;
+
+  let meta='';
+  meta+='<span>Тип: '+(g.type||'?')+'</span>';
+  meta+='<span>Версия: '+(g.version||'-')+'</span>';
+  meta+='<span>Автор: '+(g.author||'-')+'</span>';
+  if(g.settings){
+    meta+='<span>Мир: '+g.settings.worldWidth+'x'+g.settings.worldHeight+'</span>';
+    meta+='<span>g='+g.settings.gravity+'</span>';
+    meta+='<span>jmp='+(g.settings.jumpForce||16)+'</span>';
+  }
+  $('#gameMeta').innerHTML=meta;
+
+  // Summary
+  const counts={pass:0,warn:0,fail:0,info:0};
+  allIssues.forEach(i=>counts[i.lv]++);
+  $('#summaryGrid').innerHTML=
+    '<div class="stat ok"><div class="num">'+counts.pass+'</div><div class="lbl">Проверок пройдено</div></div>'+
+    '<div class="stat err"><div class="num">'+counts.fail+'</div><div class="lbl">Критических ошибок</div></div>'+
+    '<div class="stat warn"><div class="num">'+counts.warn+'</div><div class="lbl">Предупреждений</div></div>'+
+    '<div class="stat info"><div class="num">'+counts.info+'</div><div class="lbl">Информация</div></div>';
+
+  $('#summaryResults').innerHTML=allIssues.filter(i=>i.lv==='fail'||i.lv==='warn')
+    .map(i=>'<li class="'+i.lv+'"><span class="icon">'+(i.lv==='fail'?'✕':'⚠')+'</span><div class="msg"><strong>'+i.msg+'</strong><div class="detail">'+i.detail+'</div></div></li>').join('');
+
+  // Structure
+  $('#structureResults').innerHTML=allIssues.filter(i=>i.cat==='struct')
+    .map(i=>'<li class="'+i.lv+'"><span class="icon">'+({pass:'✓',warn:'⚠',fail:'✕',info:'ℹ'}[i.lv])+'</span><div class="msg"><strong>'+i.msg+'</strong><div class="detail">'+i.detail+'</div></div></li>').join('');
+
+  // Level selector
+  let selHtml='';
+  g.levels.forEach((l,i)=>{
+    const lIssues=allIssues.filter(x=>x.msg.startsWith('[Ур.'+(i+1)+']'));
+    const hasFail=lIssues.some(x=>x.lv==='fail');
+    const hasWarn=lIssues.some(x=>x.lv==='warn');
+    const status=hasFail?'❌':hasWarn?'⚠️':'✓';
+    selHtml+='<div class="level-btn'+(i===0?' active':'')+'" onclick="selectLevel('+i+')">'+(l.name||'Ур.'+(i+1))+' <span style="opacity:.6">'+status+'</span></div>';
+  });
+  $('#levelSelector').innerHTML=selHtml;
+  $('#visualLevelSelector').innerHTML=selHtml;
+  selectLevel(0);
+}
+
+function selectLevel(idx){
+  currentLevel=idx;
+  $$('#levelSelector .level-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  $$('#visualLevelSelector .level-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+
+  const lvl=gameData.levels[idx];
+  const lvlIssues=allIssues.filter(i=>i.msg.startsWith('[Ур.'+(idx+1)+']'));
+  $('#levelResults').innerHTML=lvlIssues.length?lvlIssues
+    .map(i=>'<li class="'+i.lv+'"><span class="icon">'+({pass:'✓',warn:'⚠',fail:'✕',info:'ℹ'}[i.lv])+'</span><div class="msg"><strong>'+i.msg+'</strong><div class="detail">'+i.detail+'</div></div></li>').join('')
+    :'<li class="info"><span class="icon">ℹ</span><div class="msg"><strong>Уровень OK</strong></div></li>';
+
+  drawLevel(idx);
+}
+
+function drawLevel(idx){
+  const canvas=$('#visCanvas');
+  const ctx=canvas.getContext('2d');
+  const g=gameData;
+  const lvl=g.levels[idx];
+  const ww=g.settings.worldWidth||3840;
+  const wh=g.settings.worldHeight||1080;
+
+  canvas.width=1200;
+  canvas.height=Math.round(300*(wh/ww)*2);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const sx=canvas.width/ww;
+  const sy=canvas.height/wh;
+
+  // bg
+  const bg=lvl.background;
+  if(bg&&bg.colors&&bg.colors.length>=2){
+    const grd=ctx.createLinearGradient(0,0,0,canvas.height);
+    grd.addColorStop(0,bg.colors[0]);
+    grd.addColorStop(1,bg.colors[bg.colors.length-1]);
+    ctx.fillStyle=grd;
+  } else {
+    ctx.fillStyle='#111';
+  }
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  const ents=lvl.entities||[];
+  const colorMap={
+    hero:'#2196F3',platform:'#4CAF50',moving_platform:'#4CAF50',
+    enemy:'#f44336',boss:'#d32f2f',pickup:'#FFEB3B',
+    finish:'#9C27B0',checkpoint:'#FF9800',hazard:'#f44336',
+    trigger:'#795548',decoration:'#555',spawn_point:'#2196F3',portal:'#E040FB'
+  };
+
+  ents.forEach(e=>{
+    const x=e.x*sx,y=e.y*sy;
+    const w=Math.max((e.width||32)*sx,2),h=Math.max((e.height||32)*sy,1);
+    ctx.fillStyle=colorMap[e.type]||'#888';
+    ctx.globalAlpha=e.type==='decoration'?0.4:0.85;
+    ctx.fillRect(x,y,w,h);
+    if(e.type==='hero'){
+      ctx.strokeStyle='#fff';ctx.lineWidth=1;
+      ctx.strokeRect(x,y,w,h);
+    }
+  });
+  ctx.globalAlpha=1;
+
+  // ground line
+  const groundY=(wh-100)*sy;
+  ctx.strokeStyle='rgba(255,255,255,0.15)';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(canvas.width,groundY);ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function exportReport(){
+  const g=gameData;
+  let txt='=== LIMEDRIVE VALIDATION REPORT ===\n';
+  txt+='Game: '+(g.name||'?')+'\n';
+  txt+='Type: '+(g.type||'?')+'\n';
+  txt+='Levels: '+(g.levels?g.levels.length:0)+'\n\n';
+  allIssues.forEach(i=>{
+    txt+='['+i.lv.toUpperCase()+'] '+i.msg+(i.detail?' — '+i.detail:'')+'\n';
+  });
+  txt+='\n=== END ===\n';
+  const blob=new Blob([txt],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(g.name||'report').toLowerCase().replace(/\s+/g,'_')+'_validation.txt';
+  a.click();
+}
+</script>
+</body>
+</html>

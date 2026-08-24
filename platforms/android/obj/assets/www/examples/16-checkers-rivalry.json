@@ -1,0 +1,626 @@
+{
+  "name": "Шашки: Контратака",
+  "version": "1.0.0",
+  "type": "turn-based-strategy",
+  "description": "Классические шашки с обязательным боем, цепочками прыжков и дамками. ИИ-соперник.",
+  "author": "LimeDrive",
+  "settings": {
+    "gravity": 0,
+    "friction": 1,
+    "airResistance": 1,
+    "jumpForce": 0,
+    "maxSpeed": 1,
+    "worldWidth": 640,
+    "worldHeight": 640,
+    "theme": "chess-board",
+    "variant": "checkers",
+    "attackMode": "classic",
+    "friendlyFire": false,
+    "regenPerTurn": 0,
+    "critChance": 0,
+    "highlightMoves": true,
+    "gridSize": 8,
+    "cellSize": 80,
+    "lightColor": "#f0d9b5",
+    "darkColor": "#b58863"
+  },
+  "levels": [
+    {
+      "id": "checkers-classic",
+      "name": "Классические шашки",
+      "worldWidth": 640,
+      "worldHeight": 640,
+      "entities": [
+        {
+          "id": "grid",
+          "type": "grid",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "width": 640,
+          "height": 640,
+          "components": [
+            "Grid",
+            "ChessBoard"
+          ],
+          "properties": {
+            "gridSize": 8,
+            "cellSize": 80,
+            "lightColor": "#f0d9b5",
+            "darkColor": "#b58863"
+          }
+        },
+        {
+          "id": "hl_player",
+          "type": "highlight",
+          "x": 0,
+          "y": 0,
+          "z": 3,
+          "width": 80,
+          "height": 80,
+          "color": "rgba(0,255,0,0.3)",
+          "components": [
+            "Highlight"
+          ],
+          "properties": {
+            "highlightColor": "rgba(0,255,0,0.3)"
+          }
+        },
+        {
+          "id": "hl_attack",
+          "type": "highlight",
+          "x": 0,
+          "y": 0,
+          "z": 3,
+          "width": 80,
+          "height": 80,
+          "color": "rgba(255,60,60,0.35)",
+          "components": [
+            "Highlight"
+          ],
+          "properties": {
+            "attackColor": "rgba(255,60,60,0.35)"
+          }
+        },
+        {
+          "id": "e1",
+          "type": "piece",
+          "x": 0,
+          "y": 5,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e2",
+          "type": "piece",
+          "x": 2,
+          "y": 5,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e3",
+          "type": "piece",
+          "x": 4,
+          "y": 5,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e4",
+          "type": "piece",
+          "x": 6,
+          "y": 5,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e5",
+          "type": "piece",
+          "x": 1,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e6",
+          "type": "piece",
+          "x": 3,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e7",
+          "type": "piece",
+          "x": 5,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e8",
+          "type": "piece",
+          "x": 7,
+          "y": 6,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e9",
+          "type": "piece",
+          "x": 0,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e10",
+          "type": "piece",
+          "x": 2,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e11",
+          "type": "piece",
+          "x": 4,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "e12",
+          "type": "piece",
+          "x": 6,
+          "y": 7,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#e74c3c",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "AIControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p1",
+          "type": "piece",
+          "x": 1,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p2",
+          "type": "piece",
+          "x": 3,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p3",
+          "type": "piece",
+          "x": 5,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p4",
+          "type": "piece",
+          "x": 7,
+          "y": 0,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p5",
+          "type": "piece",
+          "x": 0,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p6",
+          "type": "piece",
+          "x": 2,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p7",
+          "type": "piece",
+          "x": 4,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p8",
+          "type": "piece",
+          "x": 6,
+          "y": 1,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p9",
+          "type": "piece",
+          "x": 1,
+          "y": 2,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p10",
+          "type": "piece",
+          "x": 3,
+          "y": 2,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p11",
+          "type": "piece",
+          "x": 5,
+          "y": 2,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        },
+        {
+          "id": "p12",
+          "type": "piece",
+          "x": 7,
+          "y": 2,
+          "z": 1,
+          "width": 70,
+          "height": 70,
+          "color": "#ecf0f1",
+          "health": 2,
+          "damage": 1,
+          "components": [
+            "Piece",
+            "Checker",
+            "PlayerControlled"
+          ],
+          "properties": {
+            "pieceType": "checker",
+            "movePattern": "checkers",
+            "maxMoveDistance": 1
+          }
+        }
+      ],
+      "cameras": [
+        {
+          "type": "fixed",
+          "target": "grid"
+        }
+      ]
+    }
+  ],
+  "ai": {
+    "pattern": "chess-ai",
+    "globalDifficulty": "medium"
+  }
+}

@@ -14,8 +14,7 @@
     "test": "node tests/i18n.test.js && node tests/jsonl.test.js && node tests/collection.test.js && node tests/patent-docs.test.js",
     "test:browser": "node tests/smoke-i18n.test.js && node tests/smoke-generator.test.js",
     "registry:verify": "node tools/registry-export.js verify",
-    "patent": "node tools/patent-package.js",
-    "apk": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-apk.ps1"
+    "patent": "node tools/patent-package.js"
   },
   "repository": {
     "type": "git",

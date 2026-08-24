@@ -1,0 +1,67 @@
+{
+  "name": "Fixture RPG",
+  "version": "1.0.0",
+  "type": "rpg",
+  "description": "Минимальное подземелье для mode-rpg.test.js: ключ, скелет, дверь, финиш",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 0,
+    "friction": 1,
+    "airResistance": 0,
+    "jumpForce": 0,
+    "maxSpeed": 5,
+    "worldWidth": 800,
+    "worldHeight": 480,
+    "theme": "ancient"
+  },
+  "levels": [
+    {
+      "name": "Зал ключа",
+      "timeLimit": 120,
+      "background": { "type": "gradient", "colors": ["#1b1006", "#2a1a0a", "#3a2410"] },
+      "entities": [
+        { "id": "hero_1", "type": "hero", "x": 80, "y": 205, "z": 1, "width": 40, "height": 48,
+          "color": "#8BC34A", "health": 100, "speed": 5, "damage": 10,
+          "components": ["Transform", "Sprite", "Collider", "Health"],
+          "properties": { "attackRange": 70, "attackDamage": 10, "attackCooldown": 0.4 } },
+
+        { "id": "key_test", "type": "pickup", "x": 185, "y": 225, "z": 1, "width": 26, "height": 26,
+          "color": "#FFD700", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "pickupType": "key", "keyId": "test" } },
+
+        { "id": "skeleton_1", "type": "enemy", "x": 330, "y": 215, "z": 1, "width": 44, "height": 52,
+          "color": "#dddddd", "health": 30, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider", "Health"],
+          "properties": { "patrolRange": 0, "scoreValue": 50 } },
+
+        { "id": "door_test", "type": "trigger", "x": 430, "y": 60, "z": 0, "width": 26, "height": 360,
+          "color": "#996633", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": { "locked": true, "requiredKey": "test" } },
+
+        { "id": "finish_1", "type": "finish", "x": 600, "y": 215, "z": 0, "width": 48, "height": 90,
+          "color": "#00ff88", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "nextLevel": -1 } },
+
+        { "id": "wall_top", "type": "platform", "x": 0, "y": 0, "z": 0, "width": 800, "height": 60,
+          "color": "#5a4632", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} },
+        { "id": "wall_bottom", "type": "platform", "x": 0, "y": 420, "z": 0, "width": 800, "height": 60,
+          "color": "#5a4632", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} },
+        { "id": "wall_left", "type": "platform", "x": 0, "y": 60, "z": 0, "width": 40, "height": 360,
+          "color": "#5a4632", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} },
+        { "id": "wall_right", "type": "platform", "x": 760, "y": 60, "z": 0, "width": 40, "height": 360,
+          "color": "#5a4632", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} }
+      ]
+    }
+  ]
+}

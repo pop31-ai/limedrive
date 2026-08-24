@@ -1,0 +1,64 @@
+{
+  "name": "Fixture Puzzle",
+  "version": "1.0.0",
+  "type": "puzzle",
+  "description": "Минимальный сокобан для mode-puzzle.test.js: блок на рубильник, дверь, финиш",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 0,
+    "friction": 1,
+    "airResistance": 0,
+    "jumpForce": 0,
+    "maxSpeed": 4,
+    "worldWidth": 512,
+    "worldHeight": 288,
+    "theme": "neon"
+  },
+  "levels": [
+    {
+      "name": "Один толчок",
+      "timeLimit": 90,
+      "background": { "type": "gradient", "colors": ["#0a0a2e", "#141452", "#1e1e6e"] },
+      "entities": [
+        { "id": "hero_1", "type": "hero", "x": 96, "y": 96, "z": 1, "width": 32, "height": 32,
+          "color": "#8BC34A", "health": 100, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": { "gridSize": 32, "moveLimit": 20 } },
+
+        { "id": "block_red_1", "type": "enemy", "x": 128, "y": 96, "z": 1, "width": 32, "height": 32,
+          "color": "#e74c3c", "health": 9999, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": { "pushable": true } },
+
+        { "id": "switch_red_1", "type": "trigger", "x": 160, "y": 96, "z": 0, "width": 32, "height": 32,
+          "color": "#FFD700", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "switchColor": "red", "activated": false, "activatesDoor": "door_1" } },
+
+        { "id": "door_1", "type": "trigger", "x": 256, "y": 96, "z": 0, "width": 32, "height": 32,
+          "color": "#8899aa", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": { "locked": true, "requiredSwitches": ["switch_red_1"] } },
+
+        { "id": "wall_stop_1", "type": "platform", "x": 160, "y": 128, "z": 0, "width": 32, "height": 32,
+          "color": "#666677", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} },
+
+        { "id": "floor_a", "type": "platform", "x": 64, "y": 192, "z": 0, "width": 128, "height": 32,
+          "color": "#3a3a55", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} },
+        { "id": "floor_b", "type": "platform", "x": 256, "y": 192, "z": 0, "width": 96, "height": 32,
+          "color": "#3a3a55", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} },
+
+        { "id": "finish_1", "type": "finish", "x": 256, "y": 64, "z": 0, "width": 32, "height": 32,
+          "color": "#00ff88", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": {} }
+      ]
+    }
+  ]
+}

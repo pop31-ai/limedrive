@@ -1,0 +1,400 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ФИНАНСОВЫЕ ИГРЫ — Журнал игровых финансов</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--gd:#1B5E20;--gm:#2E7D32;--gl:#4CAF50;--gp:#E8F5E9;--gold:#FFD700;--goldd:#C5A000;--ba:#0D47A1;--bl:#1976D2;--bg:#FAFAFA;--t:#212121;--tl:#616161;--w:#FFF;--bdr:#C8E6C9;--sh:0 2px 12px rgba(27,94,32,0.12)}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;background:var(--bg);color:var(--t);line-height:1.65;-webkit-font-smoothing:antialiased}
+.page{position:relative;width:100%;max-width:1100px;min-height:100vh;margin:0 auto 40px;background:var(--w);box-shadow:var(--sh);overflow:hidden;page-break-after:always}
+.page-inner{position:relative;z-index:2;padding:80px 60px 60px}
+.page-header{position:absolute;top:0;left:0;right:0;height:56px;background:linear-gradient(135deg,var(--gd),var(--gm));display:flex;align-items:center;justify-content:space-between;padding:0 40px;z-index:10}
+.page-header .jn{color:var(--gold);font-size:1.15rem;font-weight:800;letter-spacing:3px;text-transform:uppercase}
+.page-header .pn{color:var(--w);font-size:0.9rem;opacity:.85}
+.wmh{position:absolute;right:-60px;bottom:-40px;width:520px;height:700px;opacity:.06;z-index:1;pointer-events:none}
+.page-cover .wmh{opacity:0}
+.aw{position:absolute;z-index:3;opacity:.18;pointer-events:none}
+.aw.tl{top:70px;left:10px;width:120px}.aw.tr{top:70px;right:10px;width:120px}
+.aw.bl{bottom:20px;left:15px;width:110px}.aw.br{bottom:20px;right:15px;width:110px}
+.page-cover .page-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:40px}
+.cbgp{position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(27,94,32,0.03) 40px,rgba(27,94,32,0.03) 80px),repeating-linear-gradient(-45deg,transparent,transparent 40px,rgba(255,215,0,0.02) 40px,rgba(255,215,0,0.02) 80px);z-index:0}
+.cbd{position:absolute;inset:12px;border:3px solid var(--gold);border-radius:4px;z-index:1;pointer-events:none}
+.cbi{position:absolute;inset:18px;border:1px solid var(--gl);border-radius:2px;z-index:1;pointer-events:none}
+.ct{font-size:4rem;font-weight:900;color:var(--gd);letter-spacing:6px;text-transform:uppercase;line-height:1.1;margin-bottom:8px;text-shadow:2px 2px 0 rgba(255,215,0,0.2)}
+.cs{font-size:1.3rem;color:var(--gm);font-weight:400;letter-spacing:2px;margin-bottom:30px}
+.ci{display:inline-block;background:var(--gd);color:var(--gold);padding:6px 24px;font-size:.85rem;font-weight:700;letter-spacing:2px;border-radius:2px;margin-bottom:40px}
+.chs{width:320px;height:430px;margin:20px 0 30px;filter:drop-shadow(0 4px 20px rgba(27,94,32,0.15))}
+.cts{display:grid;grid-template-columns:1fr 1fr;gap:10px 30px;max-width:700px;text-align:left;margin-top:10px}
+.cta{font-size:.82rem;color:var(--tl);padding:4px 0;border-bottom:1px dotted var(--bdr)}
+.cta strong{color:var(--gd)}
+.toc{column-count:2;column-gap:40px;margin:30px 0}
+.toci{break-inside:avoid;display:flex;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:.92rem}
+.tocn{font-weight:800;color:var(--gd);min-width:28px;margin-right:10px}
+.toct{flex:1;color:var(--t)}
+.ac{display:inline-block;background:var(--gd);color:var(--gold);font-size:.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 12px;border-radius:2px;margin-bottom:12px}
+.at{font-size:2rem;font-weight:800;color:var(--gd);line-height:1.2;margin-bottom:6px}
+.asub{font-size:1.05rem;color:var(--gm);font-style:italic;margin-bottom:24px}
+.am{display:flex;gap:20px;font-size:.78rem;color:var(--tl);margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--gold)}
+.acol{column-count:2;column-gap:36px;column-rule:1px solid var(--bdr)}
+.acol p{margin-bottom:14px;text-align:justify;font-size:.93rem;line-height:1.7}
+.acol p:first-of-type::first-letter{font-size:2.4em;float:left;line-height:.85;padding:4px 8px 0 0;color:var(--gd);font-weight:800}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0;break-inside:avoid}
+.ib{background:var(--gp);border-left:4px solid var(--gm);padding:14px 16px;border-radius:0 4px 4px 0}
+.ib.gd{background:#FFFDE7;border-left-color:var(--goldd)}
+.ib h4{font-size:.75rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gd);margin-bottom:6px}
+.ib.gd h4{color:var(--goldd)}
+.ib p,.ib ul{font-size:.85rem;line-height:1.5;color:var(--t)}
+.ib ul{padding-left:16px}.ib li{margin-bottom:2px}
+.stars{color:var(--gold);font-size:1rem;letter-spacing:2px}
+.sbox{background:linear-gradient(135deg,var(--gd),#0D3B0F);color:var(--w);padding:20px;border-radius:6px;margin:20px 0;break-inside:avoid}
+.sbox h4{color:var(--gold);font-size:.85rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px}
+.sbox p,.sbox li{font-size:.85rem;opacity:.9;line-height:1.6}
+.sbox ul{padding-left:18px}
+.sdiv{display:flex;align-items:center;gap:16px;margin:30px 0 20px}
+.sdiv::before,.sdiv::after{content:'';flex:1;height:2px;background:linear-gradient(to right,var(--gold),transparent)}
+.sdiv::after{background:linear-gradient(to left,var(--gold),transparent)}
+.sdiv span{color:var(--gd);font-weight:700;font-size:.8rem;letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+.ml{list-style:none;padding:0;margin:14px 0;break-inside:avoid}
+.ml li{position:relative;padding:6px 0 6px 24px;font-size:.9rem;border-bottom:1px dashed var(--bdr)}
+.ml li::before{content:'◆';position:absolute;left:0;color:var(--goldd);font-size:.7rem;top:9px}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0}
+.pc{background:var(--gp);border:1px solid var(--bdr);border-radius:6px;padding:16px;text-align:center}
+.pc h4{color:var(--gd);font-size:.85rem;margin-bottom:6px}
+.pc p{font-size:.78rem;color:var(--tl);line-height:1.5}
+.ctabox{background:linear-gradient(135deg,var(--gd),#0D3B0F);color:var(--w);text-align:center;padding:40px;border-radius:8px;margin:30px 0}
+.ctabox h3{color:var(--gold);font-size:1.4rem;margin-bottom:12px}
+.ctabox p{font-size:.95rem;opacity:.9;max-width:600px;margin:0 auto;line-height:1.7}
+.pf{position:absolute;bottom:0;left:0;right:0;height:36px;background:var(--gd);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:.72rem;letter-spacing:2px;z-index:10}
+@media print{body{background:#fff}.page{box-shadow:none;margin:0;page-break-after:always;min-height:auto}.wmh{opacity:.04!important}.aw{opacity:.1!important}}
+@media(max-width:800px){.page-inner{padding:70px 24px 50px}.ct{font-size:2.4rem}.acol,.toc{column-count:1}.ig,.cts{grid-template-columns:1fr}.pg{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- COVER HOST SVG DEFINITION -->
+<svg style="position:absolute;width:0;height:0" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2C2C2C"/><stop offset="100%" stop-color="#1A1A1A"/></linearGradient>
+<linearGradient id="shg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFF"/><stop offset="100%" stop-color="#E8E8E8"/></linearGradient>
+<linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFD700"/><stop offset="100%" stop-color="#C5A000"/></linearGradient>
+<linearGradient id="fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F5D6B8"/><stop offset="100%" stop-color="#E8C4A0"/></linearGradient>
+<g id="hostsuit">
+<polygon points="120,430 140,310 155,310 135,430" fill="url(#sg)" stroke="#111" stroke-width=".5"/>
+<polygon points="165,310 180,310 200,430 180,430" fill="url(#sg)" stroke="#111" stroke-width=".5"/>
+<polygon points="115,430 135,430 140,420 110,420" fill="#111"/>
+<polygon points="175,430 195,430 200,420 170,420" fill="#111"/>
+<polygon points="105,310 130,200 160,190 160,310" fill="url(#sg)" stroke="#222" stroke-width=".3"/>
+<polygon points="160,190 190,200 215,310 160,310" fill="url(#sg)" stroke="#222" stroke-width=".3"/>
+<polygon points="130,200 145,215 160,190" fill="#333" stroke="#222" stroke-width=".3"/>
+<polygon points="190,200 175,215 160,190" fill="#333" stroke="#222" stroke-width=".3"/>
+<polygon points="145,215 160,190 175,215 168,280 152,280" fill="url(#shg)" stroke="#ddd" stroke-width=".3"/>
+<polygon points="157,205 163,205 166,240 160,290 154,240" fill="url(#tg)" stroke="#B8960A" stroke-width=".5"/>
+<polygon points="157,205 163,205 160,200" fill="#FFE44D"/>
+<circle cx="160" cy="260" r="2.5" fill="#555" stroke="#333" stroke-width=".5"/>
+<circle cx="160" cy="285" r="2.5" fill="#555" stroke="#333" stroke-width=".5"/>
+<polygon points="105,310 95,260 100,200 130,200 125,260 115,310" fill="url(#sg)" stroke="#222" stroke-width=".3"/>
+<polygon points="93,195 100,188 108,193 106,205 95,205" fill="url(#fg)" stroke="#C9A882" stroke-width=".5"/>
+<polygon points="215,310 225,260 220,210 190,200 195,255 205,310" fill="url(#sg)" stroke="#222" stroke-width=".3"/>
+<polygon points="218,205 226,192 234,195 236,208 228,214" fill="url(#fg)" stroke="#C9A882" stroke-width=".5"/>
+<polygon points="226,192 230,184 236,188 234,195" fill="url(#fg)" stroke="#C9A882" stroke-width=".4"/>
+<polygon points="230,184 235,180 240,186 236,188" fill="url(#fg)" stroke="#C9A882" stroke-width=".4"/>
+<polygon points="150,190 170,190 168,170 152,170" fill="url(#fg)"/>
+<polygon points="160,80 190,100 195,135 180,165 140,165 125,135 130,100" fill="url(#fg)" stroke="#C9A882" stroke-width=".5"/>
+<polygon points="160,80 190,100 165,110" fill="#F0D0B0"/>
+<polygon points="160,80 130,100 155,110" fill="#E8C0A0"/>
+<polygon points="190,100 195,135 175,120 165,110" fill="#F2D8BC"/>
+<polygon points="130,100 125,135 145,120 155,110" fill="#E0B898"/>
+<polygon points="195,135 180,165 165,145 175,120" fill="#ECC8A8"/>
+<polygon points="125,135 140,165 155,145 145,120" fill="#D8B090"/>
+<polygon points="140,165 180,165 165,145 155,145" fill="#E4BC98"/>
+<polygon points="130,100 160,80 140,85 125,95" fill="#333"/>
+<polygon points="190,100 160,80 180,85 195,95" fill="#2A2A2A"/>
+<polygon points="125,115 130,100 120,105" fill="#333"/>
+<polygon points="195,115 190,100 200,105" fill="#2A2A2A"/>
+<polygon points="125,135 125,115 118,125" fill="#303030"/>
+<polygon points="195,135 195,115 202,125" fill="#282828"/>
+<polygon points="145,120 150,116 155,120 150,124" fill="#FFF" stroke="#444" stroke-width=".5"/>
+<polygon points="165,120 170,116 175,120 170,124" fill="#FFF" stroke="#444" stroke-width=".5"/>
+<circle cx="150" cy="120" r="2" fill="#333"/>
+<circle cx="170" cy="120" r="2" fill="#333"/>
+<line x1="142" y1="113" x2="156" y2="112" stroke="#444" stroke-width="1.5" stroke-linecap="round"/>
+<line x1="164" y1="112" x2="178" y2="113" stroke="#444" stroke-width="1.5" stroke-linecap="round"/>
+<polygon points="160,122 157,136 163,136" fill="none" stroke="#C9A882" stroke-width=".8"/>
+<path d="M150,144 Q160,150 170,144" fill="none" stroke="#B8846A" stroke-width="1" stroke-linecap="round"/>
+<polygon points="140,165 160,172 180,165" fill="none" stroke="#C9A882" stroke-width=".3"/>
+<polygon points="130,230 140,225 145,230 135,235" fill="#FFD700" stroke="#C5A000" stroke-width=".3"/>
+<polygon points="105,200 130,200 115,195" fill="#3A3A3A"/>
+<polygon points="215,200 190,200 205,195" fill="#3A3A3A"/>
+<polygon points="148,192 160,200 155,192" fill="#FFF" stroke="#ddd" stroke-width=".3"/>
+<polygon points="172,192 160,200 165,192" fill="#FFF" stroke="#ddd" stroke-width=".3"/>
+</g>
+</defs>
+</svg>
+
+<!-- ============================================================ -->
+<!-- PAGE 1: COVER                                                -->
+<!-- ============================================================ -->
+<div class="page page-cover" id="page1">
+<div class="cbgp"></div>
+<div class="cbd"></div>
+<div class="cbi"></div>
+<div class="page-header"><span class="jn">ФИНАНСОВЫЕ ИГРЫ</span><span class="pn">Выпуск №1 — 2026</span></div>
+<div class="page-inner">
+<div class="ci">ВЫПУСК №1&ensp;|&ensp;2026</div>
+<h1 class="ct">ФИНАНСОВЫЕ<br>ИГРЫ</h1>
+<p class="cs">Журнал игровых финансов</p>
+<svg class="chs" viewBox="0 0 320 430" xmlns="http://www.w3.org/2000/svg"><use href="#hostsuit"/></svg>
+<div class="cts">
+<div class="cta"><strong>Тайкун Заводов</strong> — Управление промышленной империей</div>
+<div class="cta"><strong>Банкир</strong> — Стратегия финансовой империи</div>
+<div class="cta"><strong>Финансовый Детектив</strong> — Охота на мошенников</div>
+<div class="cta"><strong>Бухгалтер-Мастер</strong> — Игра точных расчётов</div>
+<div class="cta"><strong>Крипто-Майнер</strong> — Добыча цифрового золота</div>
+<div class="cta"><strong>Кибер-Стража</strong> — Защита цифровых активов</div>
+<div class="cta"><strong>Потоки Капитала</strong> — Менеджмент денежных масс</div>
+<div class="cta"><strong>Финансовый Щит</strong> — Защита от киберугроз</div>
+<div class="cta"><strong>Биржевой Игрок</strong> — Покорение рынка</div>
+<div class="cta"><strong>Налоговый Инспектор</strong> — Правила игры с государством</div>
+</div>
+</div>
+<div class="pf">ФИНАНСОВЫЕ ИГРЫ © 2026 — ВСЕ ПРАВА ЗАЩИЩЕНЫ</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAGE 2: TABLE OF CONTENTS                                    -->
+<!-- ============================================================ -->
+<div class="page" id="page2">
+<svg class="wmh" viewBox="0 0 320 430" xmlns="http://www.w3.org/2000/svg"><use href="#hostsuit"/></svg>
+<div class="aw tr"><svg viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+<polygon points="50,180 55,120 65,120 70,180" fill="#1565C0"/>
+<polygon points="30,120 50,90 60,85 60,120" fill="#1565C0"/>
+<polygon points="60,85 70,90 90,120 60,120" fill="#1565C0"/>
+<polygon points="42,93 55,88 60,85 50,90" fill="#1E88E5"/>
+<polygon points="60,85 68,88 78,93 70,90" fill="#1E88E5"/>
+<polygon points="50,93 60,85 70,93 66,110 54,110" fill="#BBDEFB"/>
+<polygon points="57,90 63,90 64,105 56,105" fill="#FFD700"/>
+<polygon points="60,75 72,82 70,70 60,65 50,70 48,82" fill="#F5D6B8"/>
+<polygon points="50,70 44,65 42,58 48,52" fill="#333"/>
+<polygon points="70,70 76,65 78,58 72,52" fill="#333"/>
+<polygon points="48,82 42,80 44,65 50,70" fill="#F5D6B8"/>
+<polygon points="72,82 78,80 76,65 70,70" fill="#F5D6B8"/>
+<polygon points="55,78 57,76 59,78" fill="#333"/>
+<polygon points="61,78 63,76 65,78" fill="#333"/>
+<path d="M54,84 Q60,87 66,84" fill="none" stroke="#B8846A" stroke-width=".8"/>
+<polygon points="30,120 20,100 25,88 50,90" fill="#1565C0"/>
+<polygon points="90,120 100,100 95,88 70,90" fill="#1565C0"/>
+<polygon points="100,100 112,85 115,92 105,108" fill="#1565C0"/>
+<polygon points="115,85 120,78 122,88 115,92" fill="#F5D6B8"/>
+<polygon points="22,86 30,82 28,92" fill="#F5D6B8"/>
+<polygon points="98,86 90,82 92,92" fill="#F5D6B8"/>
+</svg></div>
+<div class="page-header"><span class="jn">ФИНАНСОВЫЕ ИГРЫ</span><span class="pn">02</span></div>
+<div class="page-inner">
+<div class="ac">СОДЕРЖАНИЕ</div>
+<h2 class="at">Содержание Выпуска №1</h2>
+<p class="asub">Десять уникальных концепций финансовых игр — от заводов до криптовалют</p>
+<div class="sdiv"><span>ИГРОВЫЕ КОНЦЕПЦИИ</span></div>
+<div class="toc">
+<div class="toci"><span class="tocn">03</span><span class="toct">Тайкун Заводов: Управление промышленной империей</span></div>
+<div class="toci"><span class="tocn">04</span><span class="toct">Банкир: Стратегия финансовой империи</span></div>
+<div class="toci"><span class="tocn">05</span><span class="toct">Финансовый Детектив: Охота на мошенников</span></div>
+<div class="toci"><span class="tocn">06</span><span class="toct">Бухгалтер-Мастер: Игра точных расчётов</span></div>
+<div class="toci"><span class="tocn">07</span><span class="toct">Крипто-Майнер: Добыча цифрового золота</span></div>
+<div class="toci"><span class="tocn">08</span><span class="toct">Кибер-Стража: Защита цифровых активов</span></div>
+<div class="toci"><span class="tocn">09</span><span class="toct">Потоки Капитала: Менеджмент денежных масс</span></div>
+<div class="toci"><span class="tocn">10</span><span class="toct">Финансовый Щит: Защита от киберугроз</span></div>
+<div class="toci"><span class="tocn">11</span><span class="toct">Биржевой Игрок: Покорение рынка</span></div>
+<div class="toci"><span class="tocn">12</span><span class="toct">Налоговый Инспектор: Правила игры с государством</span></div>
+</div>
+<div class="sdiv"><span>О ЖУРНАЛЕ</span></div>
+<div class="acol">
+<p>Добро пожаловать в первый выпуск журнала «Финансовые Игры» — уникального издания, посвящённого игровым концепциям в сфере финансов. В каждом выпуске мы представляем детально проработанные идеи игр, которые не только развлекают, но и обучают реальным финансовым механикам.</p>
+<p>В этом номере — десять полностью разработанных концепций финансовых игр. Каждая статья содержит описание игрового процесса, конкретные механики, рекомендации по технологическому стеку, целевую аудиторию и модель монетизации. Все концепции сбалансированы между развлекательной и образовательной составляющими.</p>
+<p>Наша редакция состоит из профессионалов игровой индустрии и финансовых аналитиков. Мы верим, что игры — это самый эффективный способ обучения сложным системам. Финансовые игры позволяют игрокам безопасно экспериментировать с экономическими решениями, понимать последствия и развивать аналитическое мышление.</p>
+<p>Впереди вас ждёт увлекательное путешествие по миру финансовых игр — от промышленных тайкунов до криптовалютных бирж, от бухгалтерских расчётов до кибербезопасности. Приятного чтения!</p>
+</div>
+<div class="sbox">
+<h4>От редакции</h4>
+<p>Каждая концепция в этом журнале — готовая основа для разработки. Мы указываем сложность разработки от 1 до 5 звёзд, рекомендуем стек технологий и предлагаем модели монетизации. Используйте эти идеи как стартовую точку для собственных проектов.</p>
+</div>
+</div>
+<div class="pf">ФИНАНСОВЫЕ ИГРЫ © 2026 — СТРАНИЦА 02</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAGE 3: ЗАВОДЫ И ФАБРИКИ                                     -->
+<!-- ============================================================ -->
+<div class="page" id="page3">
+<svg class="wmh" viewBox="0 0 320 430" xmlns="http://www.w3.org/2000/svg"><use href="#hostsuit"/></svg>
+<div class="aw bl"><svg viewBox="0 0 120 170" xmlns="http://www.w3.org/2000/svg">
+<polygon points="50,170 55,115 65,115 70,170" fill="#1565C0"/>
+<polygon points="30,115 50,85 60,80 60,115" fill="#1565C0"/>
+<polygon points="60,80 70,85 90,115 60,115" fill="#1565C0"/>
+<polygon points="50,88 60,80 70,88 66,105 54,105" fill="#BBDEFB"/>
+<polygon points="57,85 63,85 64,100 56,100" fill="#FFD700"/>
+<polygon points="60,70 72,77 70,65 60,60 50,65 48,77" fill="#F5D6B8"/>
+<polygon points="50,65 44,60 42,53 48,47" fill="#333"/>
+<polygon points="70,65 76,60 78,53 72,47" fill="#333"/>
+<polygon points="55,73 57,71 59,73" fill="#333"/>
+<polygon points="61,73 63,71 65,73" fill="#333"/>
+<path d="M54,79 Q60,82 66,79" fill="none" stroke="#B8846A" stroke-width=".8"/>
+<polygon points="30,115 15,95 12,82 40,85" fill="#1565C0"/>
+<polygon points="90,115 105,95 108,82 80,85" fill="#1565C0"/>
+<polygon points="10,80 18,74 22,84" fill="#F5D6B8"/>
+<polygon points="108,80 100,74 104,84" fill="#F5D6B8"/>
+<rect x="8" y="62" width="18" height="14" rx="1" fill="#FFF" stroke="#CCC" stroke-width=".5"/>
+<line x1="11" y1="66" x2="23" y2="66" stroke="#999" stroke-width=".5"/>
+<line x1="11" y1="70" x2="20" y2="70" stroke="#999" stroke-width=".5"/>
+<line x1="11" y1="74" x2="22" y2="74" stroke="#999" stroke-width=".5"/>
+</svg></div>
+<div class="page-header"><span class="jn">ФИНАНСОВЫЕ ИГРЫ</span><span class="pn">03</span></div>
+<div class="page-inner">
+<div class="ac">ПРОМЫШЛЕННАЯ СИМУЛЯЦИЯ</div>
+<h2 class="at">Тайкун Заводов: Управление промышленной империей</h2>
+<p class="asub">Постройте промышленную империю с нуля — от шахты до розничного магазина</p>
+<div class="am"><span>Жанр: Экономическая стратегия</span><span>Сложность: <span class="stars">★★★★☆</span></span><span>Платформа: PC / Mobile</span></div>
+<div class="acol">
+<p>«Тайкун Заводов» — это экономическая стратегия, в которой игрок берёт на себя роль промышленного магната. Начиная с небольшой шахты по добыче железной руды, игрок должен построить полноценную производственную цепочку, охватывающую все этапы от первичной добычи сырья до доставки готовой продукции потребителю. Игра основана на реальных экономических моделях и предлагает глубокую симуляцию промышленных процессов.</p>
+<p>Ядро игрового процесса строится вокруг пяти ключевых этапов: добыча сырья, первичная переработка, производство, дистрибуция и продажа. Каждый этап требует отдельных инвестиций, персонала и инфраструктуры. Добыча железной руды, угля и известняка — это лишь начало. Переработка руды в сталь требует доменной печи, а производство автокомпонентов — точного станочного оборудования. Каждое звено цепочки имеет свою стоимость, пропускную способность и уровень качества.</p>
+<p>Система рыночных цен работает в реальном времени. Стоимость сырья колеблется в зависимости от глобальных событий — природных катастроф, политических кризисов, сезонных колебаний спроса. Игрок должен учитывать эти факторы при планировании закупок и продаж. Долгосрочные контракты гарантируют стабильность, но ограничивают гибкость. Спотовые закупки дешевле, но несут риски.</p>
+<p>Управление персоналом — отдельная механика. Работники имеют квалификацию, мораль и зарплатные ожидания. Низкие зарплаты экономят бюджет, но снижают производительность и повышают текучесть. Профсоюзы могут организовать забастовку, если условия не соответствуют нормам. Обучение сотрудников повышает их эффективность, но требует времени и денег.</p>
+<p>Конкурентный AI управляющий другими корпорациями создаёт рыночное давление. Он может демпинговать цены, скупать поставщиков или запускать маркетинговые кампании. Игроку необходимо найти свою нишу — через качество, инновации или的成本领先. Технологическое древо позволяет исследовать новые производственные процессы, автоматизацию и экологически чистые технологии.</p>
+<p>Система качества влияет на репутацию бренда. Высокое качество привлекает премиум-сегмент, но требует строгого контроля на каждом этапе. Брак снижает прибыль и портит репутацию. Игрок может инвестировать в R&D для повышения качества или в автоматизацию для снижения себестоимости.</p>
+</div>
+<div class="sdiv"><span>МЕХАНИКИ ИГРЫ</span></div>
+<ul class="ml">
+<li><strong>Цепочка поставок:</strong> Добыча → Переработка → Производство → Дистрибуция → Продажа</li>
+<li><strong>Динамическое ценообразование:</strong> Рыночные цены формируются спросом и предложением, внешними событиями</li>
+<li><strong>Управление персоналом:</strong> Квалификация, мораль, зарплата, профсоюзы, обучение</li>
+<li><strong>Технологическое древо:</strong> Автоматизация, зелёные технологии, новые материалы</li>
+<li><strong>Конкурентный AI:</strong> Динамическое поведение, демпинг, скупка поставщиков</li>
+<li><strong>Контроль качества:</strong> Брак, репутация, сертификация, аудит</li>
+<li><strong>Логистика:</strong> Транспортные маршруты, склады, простои, оптимизация</li>
+</ul>
+<div class="ig">
+<div class="ib"><h4>Целевая аудитория</h4><p>Фанаты Factorio, Satisfactory, Transport Tycoon. Возраст 18–45. Интерес к экономике, логистике, оптимизации процессов. Около 5–7 млн потенциальных игроков на PC.</p></div>
+<div class="ib gd"><h4>Модель монетизации</h4><p>Premium ($29.99) + DLC пакеты расширений (новые отрасли, карты, сценарии). Бесплатные обновления с новыми механиками каждые 3 месяца. Никаких микротранзакций.</p></div>
+<div class="ib"><h4>Стек технологий</h4><p>Unity 2D/3D, C#, Procedural Generation. Для серверной части — Go или Rust для экономического симулятора. База данных — PostgreSQL для состояния мира.</p></div>
+<div class="ib gd"><h4>Ключевые метрики</h4><p>Среднее время сессии: 45–90 мин. Retention D30: 25%+. Конверсия в покупку DLC: 15%. Целевой LTV: $45–60.</p></div>
+</div>
+</div>
+<div class="pf">ФИНАНСОВЫЕ ИГРЫ © 2026 — СТРАНИЦА 03</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAGE 4: БАНКОВСКАЯ СИСТЕМА                                   -->
+<!-- ============================================================ -->
+<div class="page" id="page4">
+<svg class="wmh" viewBox="0 0 320 430" xmlns="http://www.w3.org/2000/svg"><use href="#hostsuit"/></svg>
+<div class="aw tl"><svg viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+<polygon points="50,180 55,120 65,120 70,180" fill="#1565C0"/>
+<polygon points="30,120 50,90 60,85 60,120" fill="#1565C0"/>
+<polygon points="60,85 70,90 90,120 60,120" fill="#1565C0"/>
+<polygon points="50,93 60,85 70,93 66,110 54,110" fill="#BBDEFB"/>
+<polygon points="57,90 63,90 64,105 56,105" fill="#FFD700"/>
+<polygon points="60,75 72,82 70,70 60,65 50,70 48,82" fill="#F5D6B8"/>
+<polygon points="50,70 44,65 42,58 48,52" fill="#333"/>
+<polygon points="70,70 76,65 78,58 72,52" fill="#333"/>
+<polygon points="55,78 57,76 59,78" fill="#333"/>
+<polygon points="61,78 63,76 65,78" fill="#333"/>
+<path d="M54,84 Q60,87 66,84" fill="none" stroke="#B8846A" stroke-width=".8"/>
+<polygon points="30,120 20,130 10,145 15,160" fill="#1565C0"/>
+<polygon points="90,120 100,110 110,95 105,82" fill="#1565C0"/>
+<polygon points="108,80 115,75 118,85" fill="#F5D6B8"/>
+<polygon points="13,82 8,75 5,85" fill="#F5D6B8"/>
+<circle cx="8" cy="65" r="8" fill="#FFD700" stroke="#C5A000" stroke-width=".5"/>
+<text x="8" y="68" text-anchor="middle" font-size="8" fill="#1B5E20" font-weight="bold">$</text>
+</svg></div>
+<div class="page-header"><span class="jn">ФИНАНСОВЫЕ ИГРЫ</span><span class="pn">04</span></div>
+<div class="page-inner">
+<div class="ac">БАНКОВСКАЯ СТРАТЕГИЯ</div>
+<h2 class="at">Банкир: Стратегия финансовой империи</h2>
+<p class="asub">Постройте банковскую империю от небольшой кассы до мирового финансового центра</p>
+<div class="am"><span>Жанр: Бизнес-симуляция</span><span>Сложность: <span class="stars">★★★★★</span></span><span>Платформа: PC / Browser</span></div>
+<div class="acol">
+<p>«Банкир» — это глубокая банковская симуляция, в которой игрок создаёт и управляет финансовой империей. Начав с небольшой сберкассы в провинциальном городке, игрок должен превратить её в многомиллиардную корпорацию с глобальным присутствием. Каждое финансовое решение имеет последствия, а баланс между риском и прибылью — ключевая механика игры.</p>
+<p>Основа геймплея — управление процентными ставками. Игрок устанавливает ставки по депозитам и кредитам. Высокие ставки по депозитам привлекают вкладчиков, но увеличивают стоимость привлечённых средств. Низкие ставки по кредитам стимулируют заёмщиков, но снижают маржу. Находка оптимального баланса — искусство банковского дела.</p>
+<p>Система кредитного скоринга автоматически оценивает риски каждого заёмщика. Кредитная история, доход, залог, целевое назначение кредита — всё влияет на рейтинг. Игрок может настраивать пороговые значения: строгий скоринг снижает просрочку, но уменьшает объём выдачи. Мягкий скоринг увеличивает кредитование, но повышает риски дефолта.</p>
+<p>Ипотечное кредитование выделено в отдельную подсистему. Игрок предлагает различные ипотечные продукты — фиксированные и плавающие ставки, различные сроки, программы с государственной поддержкой. Рынок недвижимости динамичен: формирование泡沫 и обвал влияют на портфель ипотек. Контроль ликвидности критически важен.</p>
+<p>Межбанковское кредитование позволяет зарабатывать на избытке ликвидности или покрывать дефицит. Игрок торгует на межбанковском рынке, устанавливает ставки overnight. Финансовые кризисы — ключевые игровые события. Во время кризисов ликвидность исчезает, заёмщики дефолтят, регулятор требует увеличения капитала. Выживание зависит от качества резервов и стратегии хеджирования.</p>
+<p>Мини-игры регуляторного комплаенса добавляют разнообразия: проверки от ЦБ, антиотмывочное законодательство (AML), проверка клиентов (KYC). Каждое нарушение — штраф и репутационный урон. Успешный комплаенс даёт бонусы и открывает новые возможности.</p>
+</div>
+<div class="sdiv"><span>МЕХАНИКИ ИГРЫ</span></div>
+<ul class="ml">
+<li><strong>Процентные ставки:</strong> Управление спредом между депозитами и кредитами</li>
+<li><strong>Кредитный скоринг:</strong> Автоматическая оценка рисков по 20+ параметрам</li>
+<li><strong>Ипотека:</strong> Отдельная подсистема с рыночными циклами недвижимости</li>
+<li><strong>Межбанковский рынок:</strong> Торговля ликвидностью, overnight-ставки</li>
+<li><strong>Финансовые кризисы:</strong> Рандомные события, требующие быстрых решений</li>
+<li><strong>Комплаенс:</strong> KYC/AML мини-игры, проверки регулятора</li>
+<li><strong>Инвестиционный банкинг:</strong> Андеррайтинг IPO, слияния и поглощения</li>
+</ul>
+<div class="ig">
+<div class="ib"><h4>Целевая аудитория</h4><p>Фанаты Capitalism, Offworld Trading Company, Big Ambitions. Возраст 25–55. Финансовые профессионалы, студенты экономических факультетов. Нишевая, но очень вовлечённая аудитория.</p></div>
+<div class="ib gd"><h4>Модель монетизации</h4><p>Premium ($39.99) — полная версия. Расширения: «Ипотечный кризис», «Криптовалютный банк», «Международные финансы». Подписка на обновления экономических данных — $4.99/мес.</p></div>
+<div class="ib"><h4>Стек технологий</h4><p>C++/Rust для экономического движка. Qt или Electron для UI. WebSocket для мультиплеера. AI — дерево решений с поведенческими паттернами клиентов.</p></div>
+<div class="ib gd"><h4>Ключевые метрики</h4><p>Среднее время сессии: 60–120 мин. Retention D30: 30%+. Средний прогресс до завершения кампании: 40 часов. Целевой LTV: $55–70.</p></div>
+</div>
+</div>
+<div class="pf">ФИНАНСОВЫЕ ИГРЫ © 2026 — СТРАНИЦА 04</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAGE 5: ФИНАНСОВЫЙ ДЕТЕКТИВ                                  -->
+<!-- ============================================================ -->
+<div class="page" id="page5">
+<svg class="wmh" viewBox="0 0 320 430" xmlns="http://www.w3.org/2000/svg"><use href="#hostsuit"/></svg>
+<div class="aw br"><svg viewBox="0 0 120 170" xmlns="http://www.w3.org/2000/svg">
+<polygon points="50,170 55,115 65,115 70,170" fill="#1565C0"/>
+<polygon points="30,115 50,85 60,80 60,115" fill="#1565C0"/>
+<polygon points="60,80 70,85 90,115 60,115" fill="#1565C0"/>
+<polygon points="50,88 60,80 70,88 66,105 54,105" fill="#BBDEFB"/>
+<polygon points="57,85 63,85 64,100 56,100" fill="#FFD700"/>
+<polygon points="60,70 72,77 70,65 60,60 50,65 48,77" fill="#F5D6B8"/>
+<polygon points="50,65 44,60 42,53 48,47" fill="#333"/>
+<polygon points="70,65 76,60 78,53 72,47" fill="#333"/>
+<polygon points="55,73 57,71 59,73" fill="#333"/>
+<polygon points="61,73 63,71 65,73" fill="#333"/>
+<path d="M54,79 Q60,82 66,79" fill="none" stroke="#B8846A" stroke-width=".8"/>
+<polygon points="30,115 22,105 15,90 20,78" fill="#1565C0"/>
+<polygon points="90,115 98,105 105,90 100,78" fill="#1565C0"/>
+<polygon points="18,76 24,70 28,80" fill="#F5D6B8"/>
+<polygon points="102,76 96,70 100,80" fill="#F5D6B8"/>
+<circle cx="110" cy="65" r="6" fill="none" stroke="#888" stroke-width="1"/>
+<line x1="114" y1="69" x2="120" y2="75" stroke="#888" stroke-width="1.5"/>
+</svg></div>
+<div class="page-header"><span class="jn">ФИНАНСОВЫЕ ИГРЫ</span><span class="pn">05</span></div>
+<div class="page-inner">
+<div class="ac">ДЕТЕКТИВНАЯ СТРАТЕГИЯ</div>
+<h2 class="at">Финансовый Детектив: Охота на мошенников</h2>
+<p class="asub">Раскройте финансовые преступления через анализ потоков данных и сети подозреваемых</p>
+<div class="am"><span>Жанр: Детектив / Пазл-стратегия</span><span>Сложность: <span class="stars">★★★★☆</span></span><span>Платформа: PC / Mobile</span></div>
+<div class="acol">
+<p>«Финансовый Детектив» — это уникальная игра, совмещающая детективный жанр с реальными финансовыми аналитическими инструментами. Игрок выступает в роли регулятора финансового рынка, расследующего схемы мошенничества, отмывания денег и инсайдерской торговли. Каждое дело — головоломка, требующая внимательного анализа данных и логических умозаключений.</p>
+<p>Основной инструмент игрока — карта финансовых потоков. Каждая транзакция отображается как узел в графе, а переводы — как рёбра. Мошеннические схемы оставляют характерные паттерны: круговые переводы, резкое увеличение объёмов, транзакции через оффшоры, структурирование сумм для обхода пороговых значений. Игрок должен научиться распознавать эти паттерны.</p>
+<p>Пирамиды (Понци-схемы) — отдельный тип расследования. Игрок получает жалобы вкладчиков, аналитические отчёты и финансовые данные компании. Задача — доказать, что компания выплачивает старым вкладчикам деньги новых, а не генерирует реальную прибыль. Индикаторы: обещания аномально высоких доходов, отсутствие реальной деятельности, давление на инвесторов.</p>
+<p>Отмывание денег расследуется через три этапа: размещение, расслоение и интеграция. Игрок отслеживает деньги от момента поступления в финансовую систему через цепочку подставных компаний до момента «отмывки». Сеть подозреваемых отображается графически, и игрок должен найти связующие звенья.</p>
+<p>Судебные процессы — финальный этап каждого дела. Игрок собирает улики, допрашивает свидетелей, представляет доказательства. Судья и присяжные оценивают убедительность аргументов. Качество улик зависит от глубины расследования. Недостаточно доказательств — подозреваемый оправдан. Слишком много времени — свидетели «забывают» показания.</p>
+<p>Мультиплеерный режим позволяет двум игрокам: один строит мошенническую схему, другой её расследует. Это соревновательная игра с полной асимметрией информации, требующая реальных знаний финансовых схем.</p>
+</div>
+<div class="sdiv"><span>МЕХАНИКИ ИГРЫ</span></div>
+<ul class="ml">
+<li><strong>Анализ графов:</strong> Визуализация и поиск паттернов в финансовых потоках</li>
+<li><strong>Детекция Понци:</strong> Распознавание пирамид по финансовым показателям</li>
+<li><strong>AML-трассировка:</strong> Три этапа отмывания денег</li>
+<li><strong>Инсайдерская торговля:</strong> Корреляция сделок с инсайдерской информацией</li>
+<li><strong>Сбор улик:</strong> Документы, показания, финансовые отчёты</li>
+<li><strong>Судебные процессы:</strong> Построение аргументации, представление улик</li>
+<li><strong>Мультиплеер:</strong> Асимметрическая игра мошенник vs детектив</li>
+</ul>
+<div class="ig">
+<div class="ib"><h4>Целевая аудитория</h4><p>Фанаты Return of the Obra Dinn, Papers Please, Her Story. Возраст 20–40. Любители логических пазлов, криминалистики, финансовой аналитики.</p></div>
+<div class="ib gd"><h4>Модель монетизации</h4><p>Premium ($24.99). Бесплатные обновления с новыми делами. Премиум-расследования — $9.99. Корпоративные лицензии для обучения — $500/год.</p></div>
+<div class="ib"><h4>Стек технологий</h4><p>Godot 4, GDScript. Визуализация графов — D3.js (web) или собственный engine. Генерация данных — Python, Pandas. NLP — spaCy.</p></div>
+<div class="ib gd"><h4>Ключевые метрики</h4><p>Среднее время сессии: 30–60 мин. Retention D30: 22%+. Конверсия в премиум: 20%. Целевой LTV: $35–50.</p></div>
+</div>
+</div>
+<div class="pf">ФИНАНСОВЫЕ ИГРЫ © 2026 — СТРАНИЦА 05</div>
+</div>
