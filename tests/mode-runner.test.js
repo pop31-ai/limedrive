@@ -30,7 +30,9 @@ srv.listen(0, "127.0.0.1", async () => {
   await sleep(1500);
 
   let dbg = await page.evaluate(() => LimeDriveDebug());
-  check("mode is platformer-with-runner (auto)", dbg.mode === "platformer");
+  check("mode is runner", dbg.mode === "runner");
+  check("rival runners spawned", dbg.runner && dbg.runner.rivals === 2);
+  check("POS computed", dbg.runner && dbg.runner.pos >= 1 && dbg.runner.pos <= dbg.runner.rivals + 1);
   const x0 = dbg.heroPos.x;
   const s0 = dbg.score;
 

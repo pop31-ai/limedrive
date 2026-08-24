@@ -187,6 +187,7 @@ const TD_TOWER_STATS = {
 
 let runnerMode = false;
 let runnerWorldRight = 0;
+let runnerRivals = [];
 
 let shooterMode = false;
 let shBullets = [];
@@ -400,6 +401,31 @@ function loadLevel(idx) {
     }
     runnerWorldRight = rx + 400;
     hero.maxJumps = Math.max(hero.maxJumps || 1, (hero.properties && hero.properties.doubleJump) ? 2 : hero.maxJumps || 1);
+
+    // rival runners (competitors)
+    runnerRivals = entities.filter(e => e.properties && e.properties.rival);
+    if (runnerRivals.length === 0) {
+      const ms = getSettings().maxSpeed || 7;
+      const roster = [
+        ["Кибер-Рекс", 0.96, "#ff44dd"],
+        ["Неон-Призрак", 1.04, "#44ddff"]
+      ];
+      for (const [nm, mult, col] of roster) {
+        const rv = createEntity({
+          id: "rival_" + nm, type: "enemy",
+          x: hero.x + 250 + Math.random() * 300, y: hero.y,
+          width: 36, height: 44, color: col,
+          health: 9999, damage: 0,
+          properties: { rival: true, rivalName: nm, rivalSpeed: ms * mult }
+        });
+        entities.push(rv);
+        runnerRivals.push(rv);
+      }
+    } else {
+      for (const rv of runnerRivals) {
+        rv.rivalSpeed = (rv.properties && rv.properties.rivalSpeed) || (getSettings().maxSpeed || 7);
+      }
+    }
   }
 
   if (shooterMode) {
@@ -593,6 +619,14 @@ function updateHero(dt) {
     hero.vx = moveX * Math.abs(runSpeed);
     hero.facing = 1;
     score = Math.max(score, Math.floor(hero.x / 10));
+
+    // rival runners: keep pace, rubber-band the race
+    for (const rv of runnerRivals) {
+      rv.y = hero.y;
+      rv.x += (rv.rivalSpeed || runSpeed) * 60 * dt;
+      if (rv.x - hero.x < -700) rv.x = hero.x + 500 + Math.random() * 250;
+      if (rv.x - hero.x > 1000) rv.x = hero.x + 750;
+    }
   } else {
     if (moveX !== 0) {
       hero.vx += moveX * accel * dt * 60;
@@ -695,6 +729,7 @@ function resolveHeroCollisions() {
     }
 
     if (et === "enemy" && e.health > 0) {
+      if (e.properties && e.properties.rival) continue;
       if (rectOverlap(hero, e)) {
         const heroBottom = hero.y + hero.height;
         const enemyTop = e.y;
@@ -926,6 +961,7 @@ function updateEnemies(dt) {
   for (let i = 0; i < entities.length; i++) {
     const e = entities[i];
     if (!e.alive || !e.active) continue;
+    if (e.properties && e.properties.rival) continue;
     if (e.type === "enemy" && e.health > 0) {
       e.animTimer += dt;
       e.flashTimer = Math.max(0, e.flashTimer - dt);
@@ -3424,6 +3460,15 @@ function drawHUD() {
   const hudPad = 24;
   const hudY = 24;
 
+  if (runnerMode && runnerRivals.length > 0 && hero) {
+    let pos = 1;
+    for (const rv of runnerRivals) if (rv.x > hero.x) pos++;
+    ctx.textAlign = "center";
+    ctx.font = "bold 20px monospace";
+    ctx.fillStyle = pos === 1 ? "#FFD700" : "#ffffff";
+    ctx.fillText("POS " + pos + "/" + (runnerRivals.length + 1), W / 2, 36);
+  }
+
   if (hero) {
     const barW = Math.min(220, W * 0.2);
     const barH = 18;
@@ -3619,6 +3664,9 @@ window.LimeDriveDebug = function () {
       aiCount: raceAi.length } : null,
     rpg: rpgMode ? { keys: [...rpgKeys], atkCd: Math.round(rpgAtkCd * 100) / 100,
       enemiesAlive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length } : null,
+    runner: runnerMode ? { rivals: runnerRivals.length,
+      pos: 1 + runnerRivals.filter(rv => rv.x > hero.x).length,
+      worldRight: Math.round(runnerWorldRight) } : null,
     sh: shooterMode ? { dbg: shDbg, bullets: shBullets.length, ebullets: shEnemyBullets.length,
       alive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length,
       eps: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0)
