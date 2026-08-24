@@ -12,7 +12,8 @@
     "maxSpeed": 11,
     "worldWidth": 3840,
     "worldHeight": 1080,
-    "theme": "city"
+    "theme": "city",
+    "capitalGoal": 1500
   },
   "levels": [
     {
@@ -1640,7 +1641,8 @@
             "Goal"
           ],
           "properties": {
-            "nextLevel": 1
+            "nextLevel": 1,
+            "capitalGoal": 400
           }
         },
         {
@@ -3313,7 +3315,8 @@
             "Goal"
           ],
           "properties": {
-            "nextLevel": 2
+            "nextLevel": 2,
+            "capitalGoal": 500
           }
         },
         {
@@ -5004,7 +5007,8 @@
           ],
           "properties": {
             "nextLevel": -1,
-            "victoryScreen": true
+            "victoryScreen": true,
+            "capitalGoal": 600
           }
         }
       ],

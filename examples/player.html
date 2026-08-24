@@ -537,6 +537,7 @@ function update(dt) {
     timeLeft -= dt;
     if (timeLeft <= 0) { timeLeft = 0; if (fadeCallback === null && !levelTransitioning) heroDie(); }
   }
+  if (rpgMsgTimer > 0) rpgMsgTimer -= dt;
 
   if (shooterMode) {
     updateShooter(dt);
@@ -783,7 +784,15 @@ function resolveHeroCollisions() {
 
     if (et === "platform" || et === "moving_platform") {
       if (rectOverlap(hero, e)) {
-        if (diverMode) {
+  const capGoal = getSettings().capitalGoal;
+  if (capGoal != null) {
+    ctx.textAlign = "center";
+    ctx.font = "bold 18px monospace";
+    ctx.fillStyle = score >= capGoal ? "#FFD700" : "#7ef0a0";
+    ctx.fillText("КАПИТАЛ " + score + " / " + capGoal + (score >= capGoal ? " ✓" : ""), W / 2, 64);
+  }
+
+  if (diverMode) {
           const pr = hero.x + hero.width - e.x;
           const pl = (e.x + e.width) - hero.x;
           const pt = hero.y + hero.height - e.y;
@@ -881,6 +890,16 @@ function resolveHeroCollisions() {
 
     if (et === "finish") {
       if (rectOverlap(hero, e) && !levelTransitioning) {
+        const goal = (e.properties && e.properties.capitalGoal != null)
+          ? e.properties.capitalGoal
+          : (getSettings().capitalGoal != null ? getSettings().capitalGoal : null);
+        if (goal != null && score < goal) {
+          if (rpgMsgTimer <= 0) {
+            rpgMsg = "Нужен капитал: " + score + " / " + goal;
+            rpgMsgTimer = 1.6;
+          }
+          continue;
+        }
         levelTransitioning = true;
         const next = (e.properties && e.properties.nextLevel != null) ? e.properties.nextLevel : null;
         if (next === null || next === undefined || next === -1 || next >= gameData.levels.length) {
@@ -2829,7 +2848,6 @@ function updateRpg(dt) {
   updateHazards(dt);
   updateEnemies(dt);
   updateBosses(dt);
-  if (rpgMsgTimer > 0) rpgMsgTimer -= dt;
   rpgAtkCd = Math.max(0, rpgAtkCd - dt);
   rpgSwing = Math.max(0, rpgSwing - dt);
   if (fadeDir !== 0 || levelTransitioning || paused) return;
@@ -3581,8 +3599,7 @@ function drawHUD() {
   }
 
   if (diverMode) {
-    const bw = 150, bh = 14, bx = W - bw - 24, by = 24;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    const bw = 150, bh = 14, bx = W - bw - 24, by = 24;    ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
     const r = Math.max(0, diverO2 / (diverO2Max || 1));
     const blink = r < 0.25 && Math.floor(Date.now() / 220) % 2 === 0;
