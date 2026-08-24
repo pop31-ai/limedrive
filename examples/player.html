@@ -222,6 +222,8 @@ let diverMode = false;
 let diverO2 = 0;
 let diverO2Max = 0;
 let diverSuffT = 0;
+
+let darkMode = false;
 let chessPromoPending = null;
 let chessRangedMode = false;
 
@@ -460,6 +462,8 @@ function loadLevel(idx) {
   diverO2Max = diverMode ? hero.properties.maxOxygen : 0;
   diverO2 = diverO2Max;
   diverSuffT = 0;
+
+  darkMode = !!(hero && hero.properties && hero.properties.lanternRadius != null);
 
   fadeAlpha = 1;
   fadeDir = -1;
@@ -803,6 +807,8 @@ function resolveHeroCollisions() {
 
     if (et === "enemy" && e.health > 0) {
       if (e.properties && e.properties.rival) continue;
+      if (darkMode && e.properties && (e.properties.visibleInLight || e.properties.phaseInWalls) &&
+          heroLitDist(e) > darkRadius()) continue;
       if (rectOverlap(hero, e)) {
         const heroBottom = hero.y + hero.height;
         const enemyTop = e.y;
@@ -2803,6 +2809,18 @@ function renderRacing() {
 }
 // ---------- END RACING MODE ----------
 
+function darkRadius() {
+  if (!darkMode || !hero) return 0;
+  const base = (hero.properties && hero.properties.lanternRadius) || 160;
+  const fl = (hero.properties && hero.properties.lanternFlicker != null) ? hero.properties.lanternFlicker : 0.08;
+  return base * (1 + Math.sin(Date.now() * 0.013) * fl);
+}
+
+function heroLitDist(e) {
+  return Math.hypot((e.x + e.width / 2) - (hero.x + hero.width / 2),
+                    (e.y + e.height / 2) - (hero.y + hero.height / 2));
+}
+
 // ---------- RPG MODE (top-down action) ----------
 function updateRpg(dt) {
   updateFade(dt);
@@ -2993,6 +3011,17 @@ function render() {
     renderRpgOverlay(camX, camY);
   }
 
+  if (darkMode && hero) {
+    const r = darkRadius();
+    const hx = hero.x + hero.width / 2 - camX;
+    const hy = hero.y + hero.height / 2 - camY;
+    const g = ctx.createRadialGradient(hx, hy, r * 0.45, hx, hy, r * 1.12);
+    g.addColorStop(0, "rgba(3,3,10,0)");
+    g.addColorStop(1, "rgba(3,3,10,0.95)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
   if (damageFlash > 0) {
     ctx.fillStyle = "rgba(255,0,0," + (damageFlash * 0.35) + ")";
     ctx.fillRect(0, 0, W, H);
@@ -3059,6 +3088,9 @@ function drawEntities(camX, camY) {
     const e = sorted[i];
     if (!e.alive && e.type !== "decoration" && e.type !== "spawn_point") continue;
     if (e.type === "spawn_point") continue;
+    if (darkMode && hero && e.health > 0 && (e.type === "enemy" || e.type === "boss") &&
+        e.properties && (e.properties.visibleInLight || e.properties.phaseInWalls) &&
+        heroLitDist(e) > darkRadius()) continue;
 
     const sx = e.x;
     const sy = e.y;
@@ -3763,6 +3795,10 @@ window.LimeDriveDebug = function () {
     diver: diverMode ? { o2: Math.round(diverO2 * 10) / 10, o2Max: diverO2Max,
       hp: hero ? hero.health : 0 } : null,
     grav: hero && hero._gravField ? hero._gravField : null,
+    dark: darkMode && hero ? { r: Math.round(darkRadius()),
+      ghostsVisible: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0 &&
+        e.properties && (e.properties.visibleInLight || e.properties.phaseInWalls) &&
+        heroLitDist(e) <= darkRadius()).length } : null,
     sh: shooterMode ? { dbg: shDbg, bullets: shBullets.length, ebullets: shEnemyBullets.length,
       alive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length,
       eps: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0)
