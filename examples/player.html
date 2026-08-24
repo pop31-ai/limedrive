@@ -217,6 +217,11 @@ let rpgAtkCd = 0;
 let rpgMsg = "";
 let rpgMsgTimer = 0;
 let rpgSwing = 0;
+
+let diverMode = false;
+let diverO2 = 0;
+let diverO2Max = 0;
+let diverSuffT = 0;
 let chessPromoPending = null;
 let chessRangedMode = false;
 
@@ -450,6 +455,12 @@ function loadLevel(idx) {
     initRacing();
   }
 
+  diverMode = !!(hero && hero.properties && hero.properties.maxOxygen != null) &&
+    !raceMode && !shooterMode && !rpgMode && !tdMode && !puzzleMode;
+  diverO2Max = diverMode ? hero.properties.maxOxygen : 0;
+  diverO2 = diverO2Max;
+  diverSuffT = 0;
+
   fadeAlpha = 1;
   fadeDir = -1;
   fadeSpeed = 3;
@@ -654,6 +665,14 @@ function updateHero(dt) {
       break;
     }
   }
+  if (diverMode) {
+    const dp = hero.properties || {};
+    if (keys.ArrowUp || keys.KeyW) hero.vy -= (dp.swimForce || 6) * dt * 26;
+    if (keys.ArrowDown || keys.KeyS) hero.vy += (dp.diveSpeed || 4) * dt * 26;
+    if (hero.vy < -6) hero.vy = -6;
+    if (hero.vy > 7) hero.vy = 7;
+    effectiveGravity *= 0.35;
+  }
   hero.vy += effectiveGravity * dt * 60;
 
   if (!hero.onGround) {
@@ -664,7 +683,7 @@ function updateHero(dt) {
 
   const jumpsLeft = hero.maxJumps || 1;
   let jumpUsed = false;
-  if (isJump() && hero.jumpCooldown <= 0) {
+  if (!diverMode && isJump() && hero.jumpCooldown <= 0) {
     if (hero.coyoteTimer > 0 || hero.onGround) {
       hero.vy = -jumpForce;
       hero.onGround = false;
@@ -683,6 +702,20 @@ function updateHero(dt) {
   hero.x += hero.vx * dt * 60;
   heroPrevY = hero.y;
   hero.y += hero.vy * dt * 60;
+
+  if (diverMode) {
+    const surfY = Math.max(120, (s.worldHeight || 1080) * 0.13);
+    if (hero.y + hero.height / 2 < surfY) {
+      diverO2 = Math.min(diverO2Max, diverO2 + 35 * dt);
+    } else {
+      diverO2 -= (hero.properties && hero.properties.oxygenDrain || 0.3) * dt;
+      if (diverO2 <= 0) {
+        diverO2 = 0;
+        diverSuffT -= dt;
+        if (diverSuffT <= 0) { damageHero(12); diverSuffT = 1; }
+      }
+    }
+  }
 
   hero.onGround = false;
   hero.riding = null;
@@ -723,7 +756,19 @@ function resolveHeroCollisions() {
 
     if (et === "platform" || et === "moving_platform") {
       if (rectOverlap(hero, e)) {
-        resolveTop(hero, e);
+        if (diverMode) {
+          const pr = hero.x + hero.width - e.x;
+          const pl = (e.x + e.width) - hero.x;
+          const pt = hero.y + hero.height - e.y;
+          const pb = (e.y + e.height) - hero.y;
+          const m = Math.min(pr, pl, pt, pb);
+          if (m === pt) { hero.y = e.y - hero.height; if (hero.vy > 0) hero.vy = 0; }
+          else if (m === pb) { hero.y = e.y + e.height; if (hero.vy < 0) hero.vy = 0; }
+          else if (m === pr) { hero.x = e.x - hero.width; hero.vx = 0; }
+          else { hero.x = e.x + e.width; hero.vx = 0; }
+        } else {
+          resolveTop(hero, e);
+        }
       }
       continue;
     }
@@ -773,6 +818,9 @@ function resolveHeroCollisions() {
           rpgMsg = "Ключ: " + ((e.properties && e.properties.keyId) || "key");
           rpgMsgTimer = 1.6;
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#FFD700", 12, "collect");
+        } else if (e.properties && e.properties.pickupType === "oxygen") {
+          diverO2 = Math.min(diverO2Max || 100, diverO2 + ((e.properties && e.properties.value) || 40));
+          spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#4FC3F7", 12, "collect");
         } else if (e.properties && e.properties.pickupType === "health") {
           hero.health = Math.min(hero.maxHealth, hero.health + val);
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#ff4466", 8, "collect");
@@ -909,6 +957,7 @@ function heroDie() {
   fadeDir = 1; fadeSpeed = 5;
   fadeCallback = function () {
     hero.health = hero.maxHealth;
+    diverO2 = diverO2Max;
     if (checkpointData) {
       hero.x = checkpointData.x;
       hero.y = checkpointData.y;
@@ -3469,6 +3518,20 @@ function drawHUD() {
     ctx.fillText("POS " + pos + "/" + (runnerRivals.length + 1), W / 2, 36);
   }
 
+  if (diverMode) {
+    const bw = 150, bh = 14, bx = W - bw - 24, by = 24;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
+    const r = Math.max(0, diverO2 / (diverO2Max || 1));
+    const blink = r < 0.25 && Math.floor(Date.now() / 220) % 2 === 0;
+    ctx.fillStyle = blink ? "#ff4444" : "#4FC3F7";
+    ctx.fillRect(bx, by, bw * r, bh);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 10px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("O₂ " + Math.ceil(r * 100) + "%", bx + bw / 2, by + bh - 3);
+  }
+
   if (hero) {
     const barW = Math.min(220, W * 0.2);
     const barH = 18;
@@ -3667,6 +3730,8 @@ window.LimeDriveDebug = function () {
     runner: runnerMode ? { rivals: runnerRivals.length,
       pos: 1 + runnerRivals.filter(rv => rv.x > hero.x).length,
       worldRight: Math.round(runnerWorldRight) } : null,
+    diver: diverMode ? { o2: Math.round(diverO2 * 10) / 10, o2Max: diverO2Max,
+      hp: hero ? hero.health : 0 } : null,
     sh: shooterMode ? { dbg: shDbg, bullets: shBullets.length, ebullets: shEnemyBullets.length,
       alive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length,
       eps: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0)
