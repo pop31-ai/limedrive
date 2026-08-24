@@ -6,6 +6,11 @@ const CORE = [
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./lang/i18n.js",
+  "./lang/en.json",
+  "./lang/ru.json",
+  "./lang/es.json",
+  "./lang/de.json",
   "./examples/player.html",
   "./examples/index.html"
 ];

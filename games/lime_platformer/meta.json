@@ -1,0 +1,25 @@
+{
+  "title": "Lime Platformer",
+  "author": "[УКАЖИТЕ АВТОРА]",
+  "date": "2026-08-24",
+  "engineVersion": "1.0.0",
+  "origin": {
+    "method": "generator",
+    "prompts": [
+      {
+        "text": "(история промптов не сохранялась при создании; фиксируйте промпты в следующих генерациях)",
+        "iteration": 1
+      }
+    ],
+    "manualEdits": []
+  },
+  "fixation": {
+    "sha256": "d414b3ab8dbb1835837d4bdc24a3fa300fd5c770ba020d99d54ad12b60b4bf9f",
+    "fixedAt": "2026-08-24T16:41:32.454Z",
+    "evmRegistration": {
+      "filed": false,
+      "certNumber": null
+    }
+  },
+  "rights": "Творческий вклад принадлежит автору. Совпадение результатов генератора у разных пользователей не является нарушением (см. docs/legal/04)."
+}

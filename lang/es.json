@@ -1,0 +1,13 @@
+{
+  "sub.tagline": "Funciona sin conexión · juegos desde JSON",
+  "hint.android": "Android: menú del navegador → «Añadir a la pantalla de inicio»",
+  "hint.licenses": "Motor gratuito · licencias:",
+  "hint.license.base": "base",
+  "ex.subtitle": "Ejemplos completos de juegos creados con el motor LimeDrive",
+  "ex.loading": "Cargando juego...",
+  "ex.footer": "Funciona con el motor LimeDrive • Formato de juego JSON",
+  "ex.play": "Jugar",
+  "ui.gameOver": "FIN DEL JUEGO",
+  "ui.pressR": "Pulsa R para reintentar",
+  "ui.paused": "PAUSA"
+}

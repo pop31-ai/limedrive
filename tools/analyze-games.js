@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const dir = path.join(__dirname, "..", "examples");
-const files = fs.readdirSync(dir).filter(f => f.endsWith(".json")).sort();
+const files = fs.readdirSync(dir).filter(f => f.endsWith(".json") && !f.startsWith("_")).sort();
 
 const stats = [];
 for (const f of files) {

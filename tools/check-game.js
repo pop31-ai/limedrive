@@ -28,7 +28,7 @@ const SETTLE_MS = 1200;        // wait after networkidle before playing
 
 function collectTargets(argv) {
   if (argv.includes("--all")) {
-    return fs.readdirSync(EXAMPLES).filter(f => f.endsWith(".json"))
+    return fs.readdirSync(EXAMPLES).filter(f => f.endsWith(".json") && !f.startsWith("_"))
       .sort().map(f => path.join(EXAMPLES, f));
   }
   return argv.filter(a => !a.startsWith("--")).map(f => path.resolve(f));

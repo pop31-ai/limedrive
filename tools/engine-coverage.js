@@ -35,7 +35,7 @@ const KNOWN_GENRES = ["platformer", "puzzle", "shooter", "rpg", "racing",
 const handledModes = KNOWN_GENRES.filter(g => src.includes('"' + g + '"'));
 
 // --- what games use ---
-const games = fs.readdirSync(DIR).filter(f => f.endsWith(".json")).sort();
+const games = fs.readdirSync(DIR).filter(f => f.endsWith(".json") && !f.startsWith("_")).sort();
 const rows = [];
 const globalUsedTypes = new Set(), globalUsedProps = new Set();
 for (const f of games) {

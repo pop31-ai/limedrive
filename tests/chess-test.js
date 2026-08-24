@@ -1,130 +1,86 @@
-const puppeteer = require('puppeteer');
+"use strict";
+/* Chess mode smoke test: loads 10-chess-battle, makes rook moves, asserts no JS errors,
+ * canvas stays rendered and the page responds. Self-contained: starts its own HTTP server. */
+const puppeteer = require("C:\\Users\\e\\Documents\\Projects\\limedrive\\node_modules\\puppeteer");
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const ROOT = "C:\\Users\\e\\Documents\\Projects\\limedrive";
+const GAME = process.argv[2] || "10-chess-battle.json";
 
-(async () => {
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+const srv = http.createServer((req, res) => {
+  const u = decodeURIComponent(req.url.split("?")[0]);
+  if (u === "/favicon.ico") { res.writeHead(204); res.end(); return; }
+  fs.readFile(path.join(ROOT, u.slice(1)), (e, d) => {
+    if (e) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { "Content-Type": u.endsWith(".json") ? "application/json" : "text/html" });
+    res.end(d);
+  });
+});
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+let failed = 0;
+function check(name, cond) { console.log((cond ? "PASS" : "FAIL") + " " + name); if (!cond) failed++; }
+
+srv.listen(0, "127.0.0.1", async () => {
+  const port = srv.address().port;
+  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
-  
+
   const errors = [];
-  page.on('pageerror', err => errors.push(err.message));
+  page.on("pageerror", err => errors.push(err.message));
 
   await page.setViewport({ width: 1920, height: 1080 });
-  await page.goto('http://localhost:8080/player.html?game=10-chess-battle.json', { waitUntil: 'networkidle0' });
-  await new Promise(r => setTimeout(r, 500));
+  await page.goto(`http://127.0.0.1:${port}/examples/player.html?game=${encodeURIComponent(GAME)}`,
+    { waitUntil: "networkidle2" });
+  await sleep(1200);
 
-  // Helper: check if game loop is alive by sampling pixels over time
-  async function isAlive() {
-    const s1 = await page.evaluate(() => {
-      const c = document.getElementById('gameCanvas');
-      const x = c.getContext('2d').getImageData(960, 540, 1, 1).data;
-      return `${x[0]},${x[1]},${x[2]}`;
-    });
-    await new Promise(r => setTimeout(r, 100));
-    const s2 = await page.evaluate(() => {
-      const c = document.getElementById('gameCanvas');
-      const x = c.getContext('2d').getImageData(960, 540, 1, 1).data;
-      return `${x[0]},${x[1]},${x[2]}`;
-    });
-    return true; // If we get here, page isn't frozen
-  }
+  const dbg = await page.evaluate(() => LimeDriveDebug());
+  check("mode is chess", dbg.mode === "chess");
+  check("game is playing", dbg.gameState === "playing");
 
-  // Helper: inject chess state reader via overriding IIFE
-  // We can't read vars directly from IIFE, but we can check game behavior
   async function clickCell(gx, gy) {
     const boardX = 640, boardY = 220;
     await page.mouse.click(boardX + gx * 80 + 40, boardY + gy * 80 + 40);
-    await new Promise(r => setTimeout(r, 100));
+    await sleep(120);
   }
-
-  async function getPixelColor(x, y) {
+  async function getPixel(x, y) {
     return page.evaluate((px, py) => {
-      const c = document.getElementById('gameCanvas');
-      const d = c.getContext('2d').getImageData(px, py, 1, 1).data;
-      return `rgb(${d[0]},${d[1]},${d[2]})`;
+      const c = document.getElementById("gameCanvas");
+      const d = c.getContext("2d").getImageData(px, py, 1, 1).data;
+      return `${d[0]},${d[1]},${d[2]}`;
     }, x, y);
   }
 
-  const boardX = 640, boardY = 220;
+  // Board renders: a light square must not be pure black
+  const lightCell = await getPixel(640 + 1 * 80 + 10, 220 + 7 * 80 + 10);
+  check("board renders (light square not black)", lightCell !== "0,0,0");
 
-  // Board layout for level 0:
-  // Player: King(4,0), Rook(0,0), Rook(7,0)
-  // Enemy: King(3,7)
-
-  console.log('=== MOVE 1: Select rook (0,0) ===');
+  // MOVE 1: rook (0,0) -> (0,4), wait for AI reply
   await clickCell(0, 0);
-  let c = await getPixelColor(boardX + 0*80 + 10, boardY + 0*80 + 10);
-  console.log('Rook cell highlight:', c);
-
-  console.log('=== MOVE 1: Move rook to (0,4) ===');
   await clickCell(0, 4);
-  console.log('Waiting 2s for AI...');
-  await new Promise(r => setTimeout(r, 2000));
-  
-  c = await getPixelColor(boardX + 0*80 + 40, boardY + 4*80 + 40);
-  console.log('Cell (0,4) after move:', c);
+  await sleep(2000);
 
-  // Check if we can still click (game not frozen)
-  console.log('\n=== MOVE 2: Select rook (0,4) ===');
+  // MOVE 2: keep moving; page must stay responsive and error-free
   await clickCell(0, 4);
-  await new Promise(r => setTimeout(r, 200));
-  
-  // Check for green selection highlight
-  c = await getPixelColor(boardX + 0*80 + 10, boardY + 4*80 + 10);
-  console.log('Rook cell (0,4) after re-select:', c);
-
-  console.log('=== MOVE 2: Move rook to (0,6) ===');
   await clickCell(0, 6);
-  console.log('Waiting 2s for AI...');
-  await new Promise(r => setTimeout(r, 2000));
+  await sleep(2000);
 
-  // MOVE 3
-  console.log('\n=== MOVE 3: Select rook (0,6) ===');
-  await clickCell(0, 6);
-  await new Promise(r => setTimeout(r, 200));
-  
-  console.log('=== MOVE 3: Move rook to (3,6) to attack enemy king column ===');
-  await clickCell(3, 6);
-  console.log('Waiting 2s...');
-  await new Promise(r => setTimeout(r, 2000));
+  const dbg2 = await page.evaluate(() => LimeDriveDebug());
+  check("still playing after moves", dbg2.gameState === "playing" || dbg2.gameState === "victory");
 
-  // Try MOVE 4
-  console.log('\n=== MOVE 4: Select rook (7,0) ===');
-  await clickCell(7, 0);
-  await new Promise(r => setTimeout(r, 200));
-
-  console.log('=== MOVE 4: Move to (7,4) ===');
-  await clickCell(7, 4);
-  console.log('Waiting 2s...');
-  await new Promise(r => setTimeout(r, 2000));
-
-  // MOVE 5
-  console.log('\n=== MOVE 5: Select rook (7,4) ===');
-  await clickCell(7, 4);
-  await new Promise(r => setTimeout(r, 200));
-
-  console.log('=== MOVE 5: Move to (3,4) ===');
-  await clickCell(3, 4);
-  console.log('Waiting 2s...');
-  await new Promise(r => setTimeout(r, 2000));
-
-  // Final check
-  console.log('\n=== FINAL CHECK ===');
-  const finalAlive = await page.evaluate(() => {
-    // Try to trigger a click handler and see if it responds
-    const canvas = document.getElementById('gameCanvas');
-    let responded = false;
-    canvas.addEventListener('click', () => { responded = true; }, { once: true });
+  const responsive = await page.evaluate(() => {
+    const canvas = document.getElementById("gameCanvas");
+    let ok = false;
+    canvas.addEventListener("click", () => { ok = true; }, { once: true });
     canvas.click();
-    return true; // page is responsive
+    return ok;
   });
-  console.log('Page responsive:', finalAlive);
-
-  if (errors.length > 0) {
-    console.log('\n=== JS ERRORS ===');
-    errors.forEach(e => console.log(e));
-  } else {
-    console.log('No JS errors');
-  }
+  check("page responsive to clicks", responsive);
+  check("no JS errors", errors.length === 0);
+  if (errors.length) errors.forEach(e => console.log("   [pageerror]", e));
 
   await browser.close();
-  console.log('\nTest complete.');
-})();
+  srv.close();
+  console.log(failed ? "\nFAILED" : "\nALL PASS");
+  process.exit(failed ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });

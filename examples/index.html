@@ -215,29 +215,52 @@
 </head>
 <body>
   <h1>LimeDrive Games</h1>
-  <p class="subtitle">15 complete game examples built with the LimeDrive engine</p>
+  <p class="subtitle" data-i18n="ex.subtitle">15 complete game examples built with the LimeDrive engine</p>
 
   <div class="games-grid" id="gamesGrid"></div>
 
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
-    <div class="loading-text">Loading game...</div>
+    <div class="loading-text" data-i18n="ex.loading">Loading game...</div>
   </div>
 
   <div class="error-message" id="errorMessage"></div>
 
-  <footer>
+  <footer data-i18n="ex.footer">
     Powered by LimeDrive Engine • Built with JSON Game Format
   </footer>
 
-  <<span>${game.icon}</span>
+  <script>
+    const games = [
+      { file: "01-lime-platformer.json", icon: "🏃", type: "Platformer", name: "Lime Platformer", description: "Classic platformer adventure through forests, caves and a final castle." },
+      { file: "02-space-invaders.json", icon: "🚀", type: "Shooter / TD", name: "Space Drift", description: "Retro space defense against waves of invaders." },
+      { file: "03-dungeon-crawler.json", icon: "⚔️", type: "RPG", name: "Lime Dungeon", description: "Explore dark dungeons, fight monsters and find treasure." },
+      { file: "04-puzzle-cubes.json", icon: "🧩", type: "Puzzle", name: "Cube Shift", description: "Shift cubes and solve spatial puzzles step by step." },
+      { file: "05-race-lime.json", icon: "🏎️", type: "Racing", name: "Lime Circuit", description: "High-speed races on winding tracks." },
+      { file: "06-ghost-mansion.json", icon: "👻", type: "Platformer", name: "Ghost Mansion", description: "A haunted mansion platformer full of secrets." },
+      { file: "07-ocean-diver.json", icon: "🤿", type: "Platformer", name: "Deep Lime", description: "Dive deep, avoid hazards and collect gems." },
+      { file: "08-tower-defense.json", icon: "🗼", type: "Shooter / TD", name: "Lime Towers", description: "Build towers and stop enemy waves." },
+      { file: "09-neon-runner.json", icon: "⚡", type: "Runner", name: "Neon Dash", description: "Fast neon runner about pure speed." },
+      { file: "10-chess-battle.json", icon: "♟️", type: "Tactics", name: "Chess Clash", description: "Turn-based tactical battles on a chess board." },
+      { file: "11-finance-tycoon.json", icon: "💰", type: "Platformer", name: "Финансовый Тайкун", description: "Платформер о бизнесе и управлении деньгами." },
+      { file: "12-cyber-heist.json", icon: "🕶️", type: "Platformer", name: "Кибер-Грабёж", description: "Киберпанк-ограбление сквозь системы безопасности." },
+      { file: "13-quantum-puzzle.json", icon: "⚛️", type: "Puzzle", name: "Квантовые Головоломки", description: "Квантовые логические головоломки." },
+      { file: "15-dungeon-crawl.json", icon: "🗡️", type: "Platformer", name: "Shadow Labyrinth", description: "Лабиринт теней со скрытыми путями." }
+    ];
+
+    function createGameCard(game) {
+      const play = window.LimeI18n ? LimeI18n.t("ex.play") : "Play Game";
+      return `
+        <div class="game-card">
+          <div class="game-thumbnail">
+            <span>${game.icon}</span>
           </div>
           <div class="game-info">
             <div class="game-type">${game.type}</div>
             <h3 class="game-title">${game.name}</h3>
             <p class="game-description">${game.description}</p>
             <button class="play-button" onclick="loadGame('${game.file}')">
-              Play Game
+              ${play}
             </button>
           </div>
         </div>
@@ -285,6 +308,12 @@
     }
 
     renderGames();
+   </script>
+  <script src="../lang/i18n.js"></script>
+  <script>
+    if (window.LimeI18nCore) {
+      LimeI18nCore.init({ base: "../lang/" }).then(() => renderGames());
+    }
   </script>
 </body>
 </html>

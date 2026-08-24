@@ -1,0 +1,13 @@
+{
+  "sub.tagline": "Playable offline · games from JSON",
+  "hint.android": "Android: browser menu → “Add to Home screen”",
+  "hint.licenses": "Free engine · licenses:",
+  "hint.license.base": "base",
+  "ex.subtitle": "Complete game examples built with the LimeDrive engine",
+  "ex.loading": "Loading game...",
+  "ex.footer": "Powered by LimeDrive Engine • Built with JSON Game Format",
+  "ex.play": "Play Game",
+  "ui.gameOver": "GAME OVER",
+  "ui.pressR": "Press R to retry",
+  "ui.paused": "PAUSED"
+}

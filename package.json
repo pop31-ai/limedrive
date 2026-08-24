@@ -10,7 +10,8 @@
   "scripts": {
     "validate": "node tools/validate.js",
     "check": "node tools/check-game.js",
-    "check:all": "node tools/check-game.js --all"
+    "check:all": "node tools/check-game.js --all",
+    "test": "node tests/run-all.js"
   },
   "repository": {
     "type": "git",

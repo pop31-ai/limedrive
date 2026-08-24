@@ -32,7 +32,8 @@ const ENTITY_TYPES = new Set([
 
 const HERO_TYPES = new Set(["hero", "player"]);
 const CHESS_GAME = "turn-based-strategy";
-const CHESS_PIECE_TYPES = new Set(["king", "queen", "rook", "bishop", "knight", "pawn"]);
+const CHESS_PIECE_TYPES = new Set(["king", "queen", "rook", "bishop", "knight", "pawn",
+  "checker", "damka"]);
 const NUMERIC_SETTINGS = ["gravity", "friction", "airResistance", "jumpForce", "maxSpeed"];
 
 function isHexColor(v) {
@@ -225,7 +226,7 @@ function collectTargets(argv) {
   const files = argv.filter(a => !a.startsWith("--"));
   if (files.length > 0) return files.map(f => path.resolve(f));
   return fs.readdirSync(EXAMPLES_DIR)
-    .filter(f => f.endsWith(".json"))
+    .filter(f => f.endsWith(".json") && !f.startsWith("_"))
     .map(f => path.join(EXAMPLES_DIR, f))
     .sort();
 }

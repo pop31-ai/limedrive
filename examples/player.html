@@ -12,9 +12,13 @@ canvas{display:block;width:100vw;height:100vh}
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
+<script src="../lang/i18n.js"></script>
 <script>
 (function(){
 "use strict";
+
+const uiText = key => (window.LimeI18n ? window.LimeI18n.t(key) : key);
+if (window.LimeI18nCore) LimeI18nCore.init({ base: "../lang/" });
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -154,6 +158,7 @@ let chessMessage = "";
 let chessMessageTimer = 0;
 let chessTurnCount = 0;
 let chessLastMove = null;
+let chessChainLock = false;
 
 let puzzleMode = false;
 let puzzleMovesLeft = 0;
@@ -290,6 +295,7 @@ function loadLevel(idx) {
       const def = JSON.parse(JSON.stringify(levelEntityDefs[i]));
       entities.push(createEntity(def));
     }
+    chessChainLock = false;
     initChessLevel(levelData);
     fadeAlpha = 1; fadeDir = -1; fadeSpeed = 3; fadeCallback = null;
     prevKeys = {};
@@ -494,6 +500,7 @@ function createEntity(def) {
     components: def.components || [],
     id: def.id || "",
     vx: 0, vy: 0,
+    facing: (p.direction != null) ? p.direction : 1,
     onGround: false,
     alive: true,
     active: true,
@@ -1303,6 +1310,35 @@ function chessIsEmpty(gx, gy) {
   return gx >= 0 && gx <= bs && gy >= 0 && gy <= bs && chessBoard[gy] && !chessBoard[gy][gx];
 }
 
+// ---------- CHECKERS (шашки) helpers ----------
+function checkersJumpsFrom(gx, gy, piece) {
+  var side = piece.side;
+  var bs = (getSettings().gridSize || 8) - 1;
+  var fwd = side === "player" ? 1 : -1;
+  var dirs = piece.props.isKing ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[fwd,1],[fwd,-1]];
+  var jumps = [];
+  for (var d = 0; d < dirs.length; d++) {
+    var mx = gx + dirs[d][0], my = gy + dirs[d][1];
+    var lx = gx + dirs[d][0] * 2, ly = gy + dirs[d][1] * 2;
+    if (lx < 0 || lx > bs || ly < 0 || ly > bs) continue;
+    var mid = (mx >= 0 && mx <= bs && my >= 0 && my <= bs) ? getChessPiece(mx, my) : null;
+    if (mid && mid.side !== side && chessIsEmpty(lx, ly)) jumps.push({ x: lx, y: ly, capture: true });
+  }
+  return jumps;
+}
+
+function checkersAnyCapture(side) {
+  var bs = (getSettings().gridSize || 8) - 1;
+  for (var gy = 0; gy <= bs; gy++) {
+    for (var gx = 0; gx <= bs; gx++) {
+      var p = getChessPiece(gx, gy);
+      if (p && p.side === side && p.props.movePattern === "checkers" &&
+          checkersJumpsFrom(gx, gy, p).length > 0) return true;
+    }
+  }
+  return false;
+}
+
 function getValidMoves(gx, gy) {
   var piece = getChessPiece(gx, gy);
   if (!piece) return [];
@@ -1353,6 +1389,27 @@ function getValidMoves(gx, gy) {
     case "l-shape":
       addJumpMoves([[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]);
       break;
+    case "checkers": {
+      var cfwd = side === "player" ? 1 : -1;
+      var jdirs = piece.props.isKing ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[cfwd,1],[cfwd,-1]];
+      for (var cd = 0; cd < jdirs.length; cd++) {
+        var cmx = gx + jdirs[cd][0], cmy = gy + jdirs[cd][1];
+        var clx = gx + jdirs[cd][0] * 2, cly = gy + jdirs[cd][1] * 2;
+        if (clx < 0 || clx > boardSize || cly < 0 || cly > boardSize) continue;
+        var cmid = (cmx >= 0 && cmx <= boardSize && cmy >= 0 && cmy <= boardSize) ? getChessPiece(cmx, cmy) : null;
+        if (cmid && cmid.side !== side && chessIsEmpty(clx, cly)) moves.push({ x: clx, y: cly, capture: true });
+      }
+      if (checkersAnyCapture(side)) {
+        moves = moves.filter(function (m) { return m.capture; });
+        break;
+      }
+      var mdirs = piece.props.isKing ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[cfwd,1],[cfwd,-1]];
+      for (var cd2 = 0; cd2 < mdirs.length; cd2++) {
+        var cnx = gx + mdirs[cd2][0], cny = gy + mdirs[cd2][1];
+        if (chessIsEmpty(cnx, cny)) moves.push({ x: cnx, y: cny, capture: false });
+      }
+      break;
+    }
     case "forward":
       var fwd = side === "player" ? 1 : -1;
       var startRow = piece.props.startRow != null ? piece.props.startRow : (side === "player" ? 1 : boardSize - 1);
@@ -1391,6 +1448,55 @@ function getValidMoves(gx, gy) {
 function executeMove(fx, fy, tx, ty, callback) {
   var attacker = getChessPiece(fx, fy);
   var defender = getChessPiece(tx, ty);
+  // --- checkers jump capture ---
+  if (attacker && attacker.props && attacker.props.movePattern === "checkers" &&
+      Math.abs(tx - fx) === 2 && Math.abs(ty - fy) === 2) {
+    var mx2 = (fx + tx) / 2, my2 = (fy + ty) / 2;
+    var victim = getChessPiece(mx2, my2);
+    if (victim) {
+      var vi = entities.indexOf(victim.entity);
+      if (vi >= 0) { entities[vi].alive = false; entities[vi].active = false; }
+      for (var rr = 0; rr < chessBoard.length; rr++)
+        for (var cc = 0; cc < chessBoard[rr].length; cc++)
+          if (chessBoard[rr][cc] === victim) chessBoard[rr][cc] = null;
+      score += 25;
+      totalEnemiesKilled++;
+      spawnParticles(chessBoardX + mx2 * chessCellSize + chessCellSize / 2,
+        chessBoardY + my2 * chessCellSize + chessCellSize / 2, "#ffffff", 12, "stomp");
+      shakeCamera(3, 0.15);
+    }
+    chessLastMove = { fx: fx, fy: fy, tx: tx, ty: ty };
+    chessBoard[fy][fx] = null;
+    chessBoard[ty][tx] = attacker;
+    attacker.moved = true;
+    checkCheckerPromo(tx, ty, attacker);
+    var chain = checkersJumpsFrom(tx, ty, attacker);
+    if (chain.length > 0) {
+      chessSelected = { x: tx, y: ty };
+      chessValidMoves = chain;
+      chessChainLock = true;
+      chessAnimating = false;
+      chessMessage = "Продолжай бой!";
+      chessMessageTimer = 1.2;
+      if (chessTurn === "enemy") setTimeout(function () { aiTurn(); }, 500);
+      return;
+    }
+    chessChainLock = false;
+    if (countSideHealth("enemy") <= 0) {
+      chessMessage = "Victory!";
+      chessMessageTimer = 3;
+      setTimeout(function () {
+        fadeDir = 1; fadeSpeed = 3;
+        fadeCallback = function () {
+          if (currentLevelIdx + 1 < gameData.levels.length) loadLevel(currentLevelIdx + 1);
+          else showVictory();
+        };
+      }, 1000);
+      return;
+    }
+    if (callback) callback();
+    return;
+  }
   chessLastMove = {fx: fx, fy: fy, tx: tx, ty: ty};
   chessBoard[fy][fx] = null;
   if (defender) {
@@ -1432,7 +1538,22 @@ function executeMove(fx, fy, tx, ty, callback) {
   } else {
     chessBoard[ty][tx] = attacker;
     attacker.moved = true;
+    checkCheckerPromo(tx, ty, attacker);
     checkPawnPromo(tx, ty, attacker, callback);
+  }
+}
+
+function checkCheckerPromo(tx, ty, piece) {
+  var bs = (getSettings().gridSize || 8) - 1;
+  if (piece.props && piece.props.movePattern === "checkers" && !piece.props.isKing &&
+      ((piece.side === "player" && ty === bs) || (piece.side === "enemy" && ty === 0))) {
+    piece.props.isKing = true;
+    piece.props.pieceType = "damka";
+    var col = piece.side === "player" ? "#FFD700" : "#ff8844";
+    piece.color = col;
+    if (piece.entity) piece.entity.color = col;
+    chessMessage = (piece.side === "player" ? "Дамка!" : "Враг: дамка!");
+    chessMessageTimer = 1.5;
   }
 }
 
@@ -1525,7 +1646,32 @@ function countSideHealth(side) {
   return total;
 }
 
+function countChessPieces(side) {
+  var n = 0;
+  var bs = (getSettings().gridSize || 8) - 1;
+  for (var gy = 0; gy <= bs; gy++) {
+    for (var gx = 0; gx <= bs; gx++) {
+      var p = getChessPiece(gx, gy);
+      if (p && p.side === side) n++;
+    }
+  }
+  return n;
+}
+
+function countChessDamkas() {
+  var n = 0;
+  var bs = (getSettings().gridSize || 8) - 1;
+  for (var gy = 0; gy <= bs; gy++) {
+    for (var gx = 0; gx <= bs; gx++) {
+      var p = getChessPiece(gx, gy);
+      if (p && p.props && p.props.isKing) n++;
+    }
+  }
+  return n;
+}
+
 function aiTurn() {
+  chessChainLock = false;
   if (!hasValidMoves("enemy")) {
     chessMessage = "Enemy has no moves!";
     chessMessageTimer = 2;
@@ -1544,7 +1690,8 @@ function aiTurn() {
           var score = 0;
           if (mv[i].capture) {
             var target = getChessPiece(mv[i].x, mv[i].y);
-            score += (target.health || 1) * 10 + (target.damage || 0) * 5;
+            score += ((target && target.health) || 1) * 10 + ((target && target.damage) || 0) * 5;
+            if (p.props && p.props.movePattern === "checkers") score += 15;
           }
           if (p.type === "pawn") score += (mv[i].y) * 1;
           if (p.type === "king") score -= 2;
@@ -1643,16 +1790,16 @@ function handleChessClick() {
       return;
     }
     var clickedPiece = getChessPiece(cell.x, cell.y);
-    if (clickedPiece && clickedPiece.side === "player") {
+    if (clickedPiece && clickedPiece.side === "player" && !chessChainLock) {
       chessSelected = {x: cell.x, y: cell.y};
       chessValidMoves = getValidMoves(cell.x, cell.y);
-    } else {
+    } else if (!chessChainLock) {
       chessSelected = null;
       chessValidMoves = [];
     }
   } else {
     var piece = getChessPiece(cell.x, cell.y);
-    if (piece && piece.side === "player") {
+    if (piece && piece.side === "player" && !chessChainLock) {
       chessSelected = {x: cell.x, y: cell.y};
       chessValidMoves = getValidMoves(cell.x, cell.y);
     }
@@ -2340,10 +2487,10 @@ function renderTd() {
     ctx.textAlign = "center";
     ctx.fillStyle = "#ff4444";
     ctx.font = "bold 52px monospace";
-    ctx.fillText("GAME OVER", W / 2, H / 2 - 20);
+    ctx.fillText(uiText("ui.gameOver"), W / 2, H / 2 - 20);
     ctx.fillStyle = "#ffffff";
     ctx.font = "18px monospace";
-    ctx.fillText("Press R to retry", W / 2, H / 2 + 30);
+    ctx.fillText(uiText("ui.pressR"), W / 2, H / 2 + 30);
   }
 
   if (fadeAlpha > 0) {
@@ -2508,7 +2655,7 @@ function renderShooter() {
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 34px monospace";
-    ctx.fillText("PAUSED", W / 2, H / 2);
+    ctx.fillText(uiText("ui.paused"), W / 2, H / 2);
   }
   if (fadeAlpha > 0) {
     ctx.fillStyle = "rgba(0,0,0," + fadeAlpha + ")";
@@ -3917,6 +4064,10 @@ window.LimeDriveDebug = function () {
     diver: diverMode ? { o2: Math.round(diverO2 * 10) / 10, o2Max: diverO2Max,
       hp: hero ? hero.health : 0 } : null,
     grav: hero && hero._gravField ? hero._gravField : null,
+    chess: chessMode ? { turn: chessTurn, valid: chessValidMoves.length,
+      playerPieces: countChessPieces("player"), enemyPieces: countChessPieces("enemy"),
+      damkas: countChessDamkas(),
+      chainLock: chessChainLock } : null,
     dark: darkMode && hero ? { r: Math.round(darkRadius()),
       ghostsVisible: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0 &&
         e.properties && (e.properties.visibleInLight || e.properties.phaseInWalls) &&

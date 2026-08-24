@@ -1,0 +1,13 @@
+{
+  "sub.tagline": "Funktioniert offline · Spiele aus JSON",
+  "hint.android": "Android: Browsermenü → „Zum Startbildschirm hinzufügen“",
+  "hint.licenses": "Kostenlose Engine · Lizenzen:",
+  "hint.license.base": "Basis",
+  "ex.subtitle": "Vollständige Spielbeispiele mit der LimeDrive-Engine",
+  "ex.loading": "Spiel wird geladen...",
+  "ex.footer": "Läuft auf der LimeDrive-Engine • JSON-Spielformat",
+  "ex.play": "Spielen",
+  "ui.gameOver": "SPIEL VORBEI",
+  "ui.pressR": "R zum Wiederholen drücken",
+  "ui.paused": "PAUSE"
+}

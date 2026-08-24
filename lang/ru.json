@@ -1,0 +1,13 @@
+{
+  "sub.tagline": "Работает офлайн · игры из JSON",
+  "hint.android": "Android: меню браузера → «Добавить на главный экран»",
+  "hint.licenses": "Бесплатный движок · лицензии:",
+  "hint.license.base": "базовая",
+  "ex.subtitle": "Готовые игровые примеры на движке LimeDrive",
+  "ex.loading": "Загрузка игры...",
+  "ex.footer": "Работает на движке LimeDrive • Формат игр — JSON",
+  "ex.play": "Играть",
+  "ui.gameOver": "ИГРА ОКОНЧЕНА",
+  "ui.pressR": "Нажмите R для перезапуска",
+  "ui.paused": "ПАУЗА"
+}

@@ -1,0 +1,55 @@
+{
+  "name": "Fixture Stealth",
+  "version": "1.0.0",
+  "type": "platformer",
+  "description": "Минимальный стелс для mode-stealth.test.js: конус охраны, взлом терминала, дверь",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 9.8,
+    "friction": 0.85,
+    "airResistance": 0.02,
+    "jumpForce": 15,
+    "maxSpeed": 6,
+    "worldWidth": 1000,
+    "worldHeight": 720,
+    "theme": "tech"
+  },
+  "levels": [
+    {
+      "name": "Объект 7",
+      "timeLimit": 180,
+      "background": { "type": "gradient", "colors": ["#0a0f14", "#101820", "#16222c"] },
+      "entities": [
+        { "id": "hero_1", "type": "hero", "x": 60, "y": 576, "z": 1, "width": 40, "height": 44,
+          "color": "#4FC3F7", "health": 100, "speed": 6, "damage": 0,
+          "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlayerControl", "Platformer"],
+          "properties": { "sneakMultiplier": 0.45 } },
+
+        { "id": "guard_1", "type": "enemy", "x": 330, "y": 562, "z": 1, "width": 44, "height": 58,
+          "color": "#ff5252", "health": 9999, "speed": 2, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": { "visionRange": 260, "visionAngle": 60, "direction": 1, "patrolRange": 0 } },
+
+        { "id": "terminal_1", "type": "trigger", "x": 620, "y": 584, "z": 1, "width": 44, "height": 36,
+          "color": "#00E676", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "hackTime": 1.0, "targetId": "stealth_door" } },
+
+        { "id": "stealth_door", "type": "platform", "x": 700, "y": 200, "z": 0, "width": 36, "height": 420,
+          "color": "#8899aa", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} },
+
+        { "id": "finish_1", "type": "finish", "x": 800, "y": 560, "z": 0, "width": 48, "height": 60,
+          "color": "#00ff88", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite"],
+          "properties": { "nextLevel": -1 } },
+
+        { "id": "ground", "type": "platform", "x": 0, "y": 620, "z": 0, "width": 1000, "height": 100,
+          "color": "#2a3440", "health": 0, "speed": 0, "damage": 0,
+          "components": ["Transform", "Sprite", "Collider"],
+          "properties": {} }
+      ]
+    }
+  ]
+}
