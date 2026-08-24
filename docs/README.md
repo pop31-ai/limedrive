@@ -1,341 +1,139 @@
 # LimeDrive v1.0.0
 
-HTML5 2D/3D game engine with ECS architecture, AI, and visual level generator.
+Движок браузерных игр на JSON-описаниях: платформеры, сокобан, шутеры, гонки,
+RPG, раннеры, Tower Defense и пошаговые стратегии (шахматы/шашки).
 
-## Architecture
+В проекте **два слоя**, и их важно не путать:
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   LIMEDRIVE                          │
-├──────────────┬──────────────┬───────────────────────┤
-│    Core      │   Renderer   │    AI                 │
-│  (ECS)       │   (Canvas2D  │  (Minimax +           │
-│              │    + Isometric)│   Counterattack)     │
-├──────────────┴──────────────┴───────────────────────┤
-│  Components │   Systems    │   UI    │  State Machine│
-└─────────────────────────────────────────────────────┘
-```
+| Слой | Где | Статус |
+|------|-----|--------|
+| **Production runtime** | `examples/player.html` | Единственный исполняемый рантайм. Монолит ~4200 строк, покрыт puppeteer-тестами. Все 16 игр работают здесь. |
+| **Reference library** | `engine/*.js` | Экспериментальная ECS-библиотека (6 файлов). **Ни одна страница её не подключает.** Годится как основа для будущего рефакторинга или для встраивания в свои страницы. |
 
-| Module | File | Lines | Purpose |
-|--------|------|-------|---------|
-| Core | `limedrive-core.js` | ~630 | ECS, events, physics, input, collision, JSON loader |
-| Renderer | `limedrive-3d.js` | ~430 | Isometric 3D renderer, camera, mesh, particles, lighting |
-| AI | `limedrive-ai.js` | ~360 | Minimax, counterattack, personalities, difficulty |
-| Components | `limedrive-components.js` | ~480 | 15 built-in components |
-| Systems | `limedrive-systems.js` | ~500 | 12 built-in systems |
-| UI | `limedrive-ui.js` | ~640 | Canvas-based UI widgets |
+## Production runtime — examples/player.html
 
-## Quick Start
-
-```html
-<!DOCTYPE html>
-<html>
-<head><title>LimeDrive Game</title></head>
-<body style="margin:0; background:#000;">
-<script src="../engine/limedrive-core.js"></script>
-<script src="../engine/limedrive-components.js"></script>
-<script src="../engine/limedrive-systems.js"></script>
-<script src="../engine/limedrive-3d.js"></script>
-<script src="../engine/limedrive-ai.js"></script>
-<script src="../engine/limedrive-ui.js"></script>
-<script>
-const game = new LimeDrive.Game({
-  title: 'My Game',
-  canvas: document.body,
-  width: 800,
-  height: 600
-});
-
-const player = game.createEntity({
-  components: {
-    Transform: { x: 100, y: 100 },
-    Sprite: { color: '#00ff00', width: 32, height: 32 },
-    PlayerInput: { speed: 200 },
-    PhysicsBody: { gravity: true, jumpForce: 300 }
-  }
-});
-
-game.start();
-</script>
-</body>
-</html>
-```
-
-## Controls
-
-| Key | Action |
-|-----|--------|
-| Arrow keys / WASD | Move |
-| Space | Jump |
-| Enter | Confirm / Shoot |
-| P | Pause |
-| 1–4 | Attack types |
-| Shift | Dash (if enabled) |
-
-## Entity Component System
-
-Entities are created via JSON or code:
-
-```javascript
-game.createEntity({
-  name: 'enemy',
-  components: {
-    Transform: { x: 300, y: 200 },
-    Sprite: { color: '#ff0000', width: 24, height: 24 },
-    PhysicsBody: { gravity: true },
-    AIEnemy: { personality: 'chaser', difficulty: 2 }
-  }
-});
-```
-
-### Built-in Components
-
-| Component | Key Properties | Description |
-|-----------|---------------|-------------|
-| `Transform` | x, y, z, scaleX, scaleY, angle | Position and transform |
-| `Sprite` | color, width, height, image, visible, opacity, layer | Visual representation |
-| `Animation` | frames, speed, currentFrame | Sprite animation |
-| `PhysicsBody` | velocityX, velocityY, gravity, jumpForce, grounded | Physics simulation |
-| `Collider` | width, height, solid, trigger | Collision detection |
-| `Platform` | moving, speed, rangeX, rangeY | Moving platform |
-| `Health` | hp, maxHp, invincible | Health system |
-| `PlayerInput` | speed, jumpForce | Player keyboard input |
-| `AIEnemy` | personality, sightRange, attackRange | AI enemy behavior |
-| `Item` | type, value, collected | Collectible items |
-| `Projectile` | speed, damage, lifetime, piercing | Projectile behavior |
-| `TriggerZone` | action, payload | Event trigger |
-| `Checkpoint` | x, y, activated | Spawn point |
-| `Parallax` | speedX, speedY, layer | Scrolling background |
-| `LightSource` | color, intensity, radius, flickers | Dynamic lighting |
-
-### Built-in Systems
-
-| System | Priority | Purpose |
-|--------|----------|---------|
-| `InputSystem` | 1 | Handles keyboard/mouse/touch |
-| `PhysicsSystem` | 2 | Gravity, velocity, movement |
-| `CollisionSystem` | 3 | AABB collision detection |
-| `PlatformSystem` | 4 | Moving platform logic |
-| `PlayerSystem` | 5 | Player input processing |
-| `AISystem` | 6 | Enemy AI behavior |
-| `HealthSystem` | 7 | Damage and death handling |
-| `ProjectileSystem` | 8 | Projectile movement and collision |
-| `AnimationSystem` | 9 | Frame animation |
-| `RenderSystem` | 10 | 2D canvas rendering |
-| `Render3DSystem` | 11 | 3D isometric rendering |
-| `TriggerSystem` | 12 | Trigger zone activation |
-
-## API Reference
-
-### Game
-
-```javascript
-const game = new LimeDrive.Game({
-  title: 'string',       // Window title
-  canvas: HTMLElement,    // Container element
-  width: 800,             // Canvas width
-  height: 600,            // Canvas height
-  renderer: '2d'          // '2d' or '3d' for isometric
-});
-```
-
-| Method | Description |
-|--------|-------------|
-| `game.start()` | Start game loop |
-| `game.stop()` | Pause game loop |
-| `game.createEntity(json)` | Create entity from JSON |
-| `game.removeEntity(id)` | Remove entity by ID |
-| `game.getEntitiesByComponent(name)` | Get all entities with component |
-| `game.on(event, callback)` | Register event listener |
-| `game.emit(event, data)` | Emit event |
-| `game.setState(name)` | Switch game state |
-| `game.setDifficulty(level)` | Set AI difficulty (1–5) |
-| `game.loadGame(url)` | Load game from JSON URL |
-| `game.setLanguage(lang)` | Set UI language |
-| `game.registerComponent(name, schema)` | Register custom component |
-| `game.registerSystem(name, fn, priority)` | Register custom system |
-
-### Input
-
-```javascript
-LimeDrive.Input.isDown('left')    // Arrow left / A
-LimeDrive.Input.isDown('right')   // Arrow right / D
-LimeDrive.Input.isDown('up')      // Arrow up / W
-LimeDrive.Input.isDown('down')    // Arrow down / S
-LimeDrive.Input.isDown('jump')    // Space
-LimeDrive.Input.isDown('confirm') // Enter
-LimeDrive.Input.isDown('pause')   // P
-LimeDrive.Input.isDown('attack1') // 1
-LimeDrive.Input.isDown('attack2') // 2
-LimeDrive.Input.isDown('attack3') // 3
-LimeDrive.Input.isDown('attack4') // 4
-LimeDrive.Input.isDown('shift')   // Shift
-```
-
-### Vector Math
-
-```javascript
-LimeDrive.Vector2.add(v1, v2)
-LimeDrive.Vector2.subtract(v1, v2)
-LimeDrive.Vector2.multiply(v1, scalar)
-LimeDrive.Vector2.magnitude(v)
-LimeDrive.Vector2.normalize(v)
-LimeDrive.Vector2.distance(v1, v2)
-LimeDrive.Vector2.angle(v1, v2)
-```
-
-### Utilities
-
-```javascript
-LimeDrive.Utils.clamp(value, min, max)
-LimeDrive.Utils.lerp(a, b, t)
-LimeDrive.Utils.randomRange(min, max)
-LimeDrive.Utils.randomInt(min, max)
-LimeDrive.Utils.choose(array)
-LimeDrive.Utils.shuffle(array)
-LimeDrive.Utils.deepClone(obj)
-LimeDrive.Utils.loadJSON(url)
-```
-
-### Canvas
-
-```javascript
-const canvas = new LimeDrive.Canvas({
-  parent: document.body,
-  width: 800,
-  height: 600,
-  background: '#1a1a2e'
-});
-
-canvas.clear()
-canvas.drawRect(x, y, w, h, color)
-canvas.drawCircle(x, y, r, color)
-canvas.drawText(text, x, y, { size, color, align })
-canvas.drawImage(img, x, y, w, h)
-```
-
-### 3D / Isometric
-
-```javascript
-const camera = new LimeDrive.Camera3D();
-camera.position = { x: 0, y: 200, z: 200 };
-camera.lookAt = { x: 0, y: 0, z: 0 };
-
-const mesh = new LimeDrive.Mesh([
-  { x: -1, y: 0, z: -1 },
-  { x: 1, y: 0, z: -1 },
-  { x: 0, y: 1, z: 0 }
-], [0, 1, 2]);
-
-const lighting = new LimeDrive.Lighting3D();
-lighting.addLight({ x: 0, y: 100, color: '#ffffff', intensity: 1 });
-```
-
-### State Machine
-
-```javascript
-game.registerState('menu', {
-  enter: (data) => { /* setup */ },
-  update: (dt) => { /* logic */ },
-  exit: () => { /* cleanup */ }
-});
-
-game.registerState('playing', {
-  enter: () => { game.loadGame('levels/1.json'); },
-  update: (dt) => { /* game logic */ }
-});
-
-game.setState('menu');
-```
-
-### Localization
-
-```javascript
-game.setLanguage('en');  // or 'zh', 'ja', etc.
-game.t('greeting');      // Returns localized string from lang/ folder
-```
-
-### Event System
-
-```javascript
-game.on('entityCreated', (entity) => { });
-game.on('entityRemoved', (entity) => { });
-game.on('collision', (e) => { e.a, e.b });
-game.on('damage', (e) => { e.target, e.amount });
-game.on('death', (entity) => { });
-game.on('collect', (e) => { e.entity, e.item });
-game.on('stateChange', (e) => { e.from, e.to });
-```
-
-## Game JSON Structure
-
-```json
-{
-  "meta": { "title": "string", "version": "1.0" },
-  "settings": {
-    "gravity": 980,
-    "width": 800,
-    "height": 600,
-    "language": "en"
-  },
-  "states": {
-    "menu": { "entities": [...] },
-    "game": { "entities": [...] },
-    "win": { "entities": [...] }
-  },
-  "entities": [ ... ]
-}
-```
-
-## Running
-
-Serve the `limedrive` folder with any HTTP server:
+### Запуск
 
 ```bash
 cd limedrive
 python -m http.server 8080
+# http://localhost:8080/examples/player.html?game=01-lime-platformer.json
 ```
 
-Open `http://localhost:8080/examples/` to play all example games.
+Параметр `?game=` — имя JSON-файла относительно `examples/`. Каталог игр:
+`examples/index.html`, лендинг: корневой `index.html`.
 
-## File Structure
+### Режимы (автоопределение по JSON)
+
+| Режим | Условие |
+|-------|---------|
+| chess (TBS) | `type: "turn-based-strategy"` |
+| puzzle (сокобан) | `type: "puzzle"` |
+| tower defense | `type: "shooter"` + компонент `WaveSpawner`/`TowerPlacer` у героя |
+| runner | `type: "endless-runner"` |
+| racing | `type: "racing"` |
+| rpg (top-down) | `type: "rpg"` |
+| shooter (формации) | `type: "shooter"` без TD-компонентов |
+| platformer (базовый) | всё остальное |
+
+Поверх базового режимов включаются модификаторы по свойствам сущностей:
+`maxOxygen` → дайвинг, `lanternRadius` → темнота с фонарём, `visionRange`
+(у любой сущности) → стелс-конусы, `capitalGoal` → финиш-ворота по капиталу,
+`gravityField` → гравитационные пады low/high/flip.
+
+Полная спецификация формата JSON — в [`PROMPT.md`](../PROMPT.md) (разделы
+«Режимы движка») и [`GAME-FORMAT.md`](GAME-FORMAT.md).
+
+### Управление
+
+| Клавиша | Действие |
+|---------|----------|
+| Стрелки / WASD | движение (во всех режимах) |
+| Space | прыжок / выстрел / пропуск отсчёта волны в TD |
+| Enter | ближняя атака (RPG) |
+| Shift | подкрадывание (стелс) |
+| R | рестарт уровня (сокобан, экран поражения/победы) |
+| Esc | пауза |
+| 1–4 | выбор башни (TD); клик по слоту — построить |
+| Мышь | ходы фигур (шахматы/шашки), строительство башен (TD) |
+
+Touch-управление (D-pad + кнопки) включается автоматически на тачскринах.
+Офлайн-режим — через service worker (`sw.js`, регистрируется только по HTTPS).
+
+### Отладка
+
+На странице доступна `window.LimeDriveDebug()` — снимок состояния:
+`gameState`, `score`, `mode`, `heroPos`, `movesLeft`, `td`, `race`, `rpg`,
+`diver`, `grav`, `dark`, `stealth`, `onFinish` и др. Её используют все тесты.
+
+## Тестирование и QA
+
+```bash
+npm test          # все puppeteer-тесты режимов + патентные юнит-тесты
+npm run validate  # схема-валидация всех examples/*.json
+npm run check:all # валидация + headless-плейтест каждой игры + repair-отчёты
+```
+
+Механики каждого режима проверяются минимальными фикстурами
+`examples/_fixture-*.json` (префикс `_` — служебный файл: валидатор и
+генераторы каталогов их пропускают). Отчёты плейтеста пишутся в `reports/`.
+
+## engine/ — reference library
+
+Браузерная библиотека под глобалом `window.LD`. Не загружена ни одной
+страницей проекта; API ниже описывает реальный код файлов.
+
+```html
+<script src="engine/limedrive-core.js"></script>
+<script src="engine/limedrive-components.js"></script>
+<script src="engine/limedrive-systems.js"></script>
+```
+
+| Файл | Основные экспорты |
+|------|-------------------|
+| `limedrive-core.js` | события `LD.on/off/emit`; `LD.Timer`, `LD.Input`, `LD.Physics`, `LD.State`, `LD.Assets`; классы `Entity/Component/System/World`; цикл `LD.start(gameJson)/stop/pause/resume`, `LD.getFps()`; загрузка и сохранение: `LD.loadGame(jsonOrUrl)`, `LD.saveGame()`, `LD.loadSave(str)`; `LD.init(canvasId)` |
+| `limedrive-components.js` | 18 компонентов: Transform, Sprite, PhysicsBody, Collider, Health, PlayerControl, AIControl, Platformer, Animator, ParticleEmitter, AudioEmitter, HealthPickup, Weapon, Inventory, Cooldown, Trail, DelayedAction, Dialogue — `LD.Components.*` |
+| `limedrive-systems.js` | 15 систем: Render, Physics, Collision, PlayerInput, AIControl, Animator, Particle, Platformer, Health, Camera, Pickup, Cooldown, Trail, DelayedAction, Weapon — `LD.Systems.*` |
+| `limedrive-ui.js` | Button, Label, Panel, ProgressBar, Slider, Dialog, HUD, MenuSystem + хелперы `LD.UI.toast/dialog/showMenu...` |
+| `limedrive-ai.js` | минимакс с альфа-бета: `LD.AI.getBestMove(state, difficulty)`; `EnemyController` (patrol/flee/counter), пресеты `DIFFICULTY` и `PERSONALITY`; глобальный тик `LD.AI.register/unregister/tick` |
+| `limedrive-3d.js` | изометрия: `LD.Iso`, `LD.Mesh`, `LD.Camera3D`, `LD.SceneNode`, `LD.Renderer3D`, `LD.Lighting` |
+
+Минимальная страница на reference-библиотеке:
+
+```html
+<canvas id="game"></canvas>
+<script src="engine/limedrive-core.js"></script>
+<script>
+  LD.init('game');
+  const hero = LD.getWorld().createEntity('hero');
+  hero.addComponent(new LD.Components.Transform({ x: 100, y: 100 }));
+  LD.start(); // цикл: update -> render, dt зажат до 0.05 c
+</script>
+```
+
+Замечание: массивы `components[]` в JSON играх
+для player.html носят декларативный характер — актуальная матрица
+«что движок реально читает» генерируется в
+[`ENGINE-COVERAGE.md`](ENGINE-COVERAGE.md) командой
+`node tools/engine-coverage.js`.
+
+## Структура проекта
 
 ```
 limedrive/
-├── engine/
-│   ├── limedrive-core.js          # ECS core + utilities
-│   ├── limedrive-3d.js            # 3D isometric renderer
-│   ├── limedrive-ai.js            # AI system
-│   ├── limedrive-components.js    # Built-in components
-│   ├── limedrive-systems.js       # Built-in systems
-│   └── limedrive-ui.js            # UI widgets
-├── generator/
-│   ├── generator.html               # Visual level generator
-│   └── patent-docs/                 # Registration package generators + registry
-├── examples/
-│   ├── index.html                   # Game selector
-│   ├── 01-lime-platformer.json     # Example games
-│   ├── 02-space-shooter.json
-│   ├── 03-dungeon-quest.json
-│   ├── 04-race-track.json
-│   ├── 05-tower-defense.json
-│   ├── 06-kingdom-rpg.json
-│   ├── 07-martial-arts.json
-│   ├── 08-timeline-quest.json
-│   ├── 09-space-station.json
-│   └── 10-chess-battle.json
-├── games/                           # Game collection (game.json + meta.json per game)
-├── tests/                           # Puppeteer game tests + patent-docs unit tests
-├── tools/                           # validate.js, check-game.js, patent-package.js
-├── lang/                            # Localization files
-├── LICENSE.md / LICENSE-NC.md / LICENSE-EDU.md
-└── docs/                            # Documentation
-    ├── README.md
-    ├── GAME-FORMAT.md
-    ├── AI-SYSTEM.md
-    ├── GENERATOR.md
-    ├── EXAMPLES.md
-    └── legal/                       # IP policy, licenses research, sources
+├── index.html               # лендинг-каталог игр (генерируется tools/make-landing.js)
+├── PROMPT.md                # промпты для создания игр + спецификация режимов v1.2
+├── manifest.json, sw.js     # PWA
+├── engine/                  # reference-библиотека (см. выше)
+├── examples/                # player.html + 16 игр + _fixture-* (тестовые)
+├── games/                   # пользовательская коллекция (конвенция game.json+meta.json)
+├── generator/               # generator.html + патентные генераторы
+├── articles/                # альманах «Деловая этика в играх»
+├── lang/                    # локализация интерфейса
+├── tests/                   # run-all.js + тесты режимов + патентные юнит-тесты
+├── tools/                   # validate.js, check-game.js, анализаторы, генераторы
+├── reports/                 # QA-отчёты (не коммитятся)
+└── docs/                    # эта документация + legal/
 ```
 
 ## Legal & Licensing
@@ -353,10 +151,10 @@ LimeDrive распространяется бесплатно по трём ре
 публикации; совпадение результатов генератора у разных пользователей не является
 нарушением; приоритет в каталоге — по дате хеш-фиксации игры в реестре.
 
-Юридический контур: `docs/legal/00-master-ip-policy.md` (мастер-документ,
-11 пунктов), там же — анализ авторских прав на ИИ-генерацию, механизм
-разрешения споров, библиография первоисточников и готовый пакет регистрации
-движка как программы для ЭВМ (`docs/legal/engine-evm-package.txt`).
+Юридический контур: `docs/legal/00-master-ip-policy.md` (мастер-документ),
+там же — анализ авторских прав на ИИ-генерацию, механизм разрешения споров,
+библиография первоисточников и пакет регистрации движка как программы для ЭВМ
+(`docs/legal/engine-evm-package.txt`).
 
 Генерация пакета регистрации для своей игры:
 
@@ -366,3 +164,11 @@ node tools/patent-package.js examples/01-lime-platformer.json --author "Имя"
 
 Результат — `reports/<game>.patent.txt`: реферат, описание, чек-лист подачи,
 пошлины, депонируемый листинг и sha256-фиксация приоритета.
+
+## Roadmap
+
+- [ ] Звук: WebAudio-синтез событий (в играх сейчас нет аудио)
+- [ ] Сохранение прогресса/рекордов (localStorage), экспорт сейва
+- [ ] Авто-пауза по `visibilitychange`
+- [ ] Fullscreen API
+- [ ] Постепенный перенос проверенных кусков engine/ (save/UI/AI) в player.html

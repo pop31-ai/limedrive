@@ -373,7 +373,8 @@ window.LD = window.LD || {};
   };
 
   LD.AI.unregister = function (controller) {
-    _aiControllers = _aiControllers.filter(function (c) { return c !== controller; });
+    const idx = _aiControllers.indexOf(controller);
+    if (idx >= 0) _aiControllers.splice(idx, 1);
   };
 
   LD.AI.tick = function (dt) {
