@@ -17,13 +17,12 @@ _Запуск игр: `python -m http.server 8080` → `http://localhost:8080/ex
 | 10 | `10-chess-battle.json` | Chess Clash | Пошаговая тактика | 3 | 64 |
 | 11 | `11-finance-tycoon.json` | Финансовый Тайкун | Платформер | 3 | 215 |
 | 12 | `12-cyber-heist.json` | Кибер-Грабёж | Платформер | 4 | 279 |
-| 13 | `13-quantum-puzzle.json` | Квантовые Головоломки | Сокобан-головоломка | 3 | 169 |
-| 14 | `14-tower-defense.json` | Tower Siege | Платформер | 3 | 75 |
-| 15 | `15-dungeon-crawl.json` | Shadow Labyrinth | Платформер | 3 | 62 |
+| 13 | `13-quantum-puzzle.json` | Квантовые Головоломки | Сокобан-головоломка | 3 | 170 |
+| 14 | `15-dungeon-crawl.json` | Shadow Labyrinth | Платформер | 3 | 62 |
 
 ## Механики по режимам
 
-- **Платформер** (`platformer`): Lime Platformer, Ghost Mansion, Deep Lime, Финансовый Тайкун, Кибер-Грабёж, Tower Siege, Shadow Labyrinth
+- **Платформер** (`platformer`): Lime Platformer, Ghost Mansion, Deep Lime, Финансовый Тайкун, Кибер-Грабёж, Shadow Labyrinth
 - **Шутер / Tower Defense** (`shooter`): Space Drift, Lime Towers
 - **RPG** (`rpg`): Lime Dungeon
 - **Сокобан-головоломка** (`puzzle`): Cube Shift, Квантовые Головоломки
