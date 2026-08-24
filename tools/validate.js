@@ -33,7 +33,7 @@ const ENTITY_TYPES = new Set([
 const HERO_TYPES = new Set(["hero", "player"]);
 const CHESS_GAME = "turn-based-strategy";
 const CHESS_PIECE_TYPES = new Set(["king", "queen", "rook", "bishop", "knight", "pawn",
-  "checker", "damka", "fighter"]);
+  "checker", "damka", "fighter", "elemental", "core"]);
 const NUMERIC_SETTINGS = ["gravity", "friction", "airResistance", "jumpForce", "maxSpeed"];
 
 function isHexColor(v) {

@@ -1,0 +1,21 @@
+name: validate-registry
+
+on:
+  pull_request:
+    paths:
+      - "registry/**"
+  push:
+    branches: [main]
+    paths:
+      - "registry/**"
+
+jobs:
+  verify-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify fixation chain
+        run: node tools/registry-export.js verify registry/fixations.jsonl

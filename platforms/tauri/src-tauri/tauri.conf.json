@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LimeDrive",
+  "version": "1.0.0",
+  "identifier": "com.limedrive.desktop",
+  "build": {
+    "frontendDist": "../../"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "LimeDrive",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 640,
+        "minHeight": 480
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Games",
+    "shortDescription": "JSON game engine",
+    "longDescription": "LimeDrive — free HTML5/Canvas game engine with declarative JSON game format.",
+    "icon": [
+      "icons/icon-512.png"
+    ]
+  }
+}

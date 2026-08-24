@@ -38,13 +38,14 @@ srv.listen(0, "127.0.0.1", async () => {
 
   check("i18n loaded on root page", await page.evaluate("!!window.LimeI18n"));
   check("forced locale is en", await page.evaluate("window.LimeI18n.locale") === "en");
-  check("tagline translated", (await page.evaluate("document.querySelector('[data-i18n=\"sub.tagline\"]').textContent")) === "Playable offline · games from JSON");
+  check("tagline translated (auto-boot .sub)", (await page.evaluate("document.querySelector('.sub').textContent")) === "Playable offline · games from JSON");
+  check("license footer injected", await page.evaluate("document.body.innerHTML.indexOf('LICENSE-NC.md') >= 0"));
 
   await page.evaluate("localStorage.setItem('limedrive-lang','ru')");
   await page.reload({ waitUntil: "networkidle2" });
   await page.waitForFunction("!!window.LimeI18n", { timeout: 5000 }).catch(() => {});
   check("ru locale applied after reload", await page.evaluate("window.LimeI18n.locale") === "ru");
-  check("ru tagline rendered", (await page.evaluate("document.querySelector('[data-i18n=\"sub.tagline\"]').textContent")).indexOf("офлайн") >= 0);
+  check("ru tagline rendered", (await page.evaluate("document.querySelector('.sub').textContent")).indexOf("офлайн") >= 0);
   check("lang switcher populated", await page.evaluate("document.getElementById('langSwitch').options.length") === 4);
   check("root page no js errors", pageErrors === 0);
 

@@ -355,6 +355,7 @@ let undoTimer=null;
 function getDefaultProject(){
   return {
     name:'Pixel Quest',nameIdx:0,gameType:0,worldSize:1,difficulty:5,theme:0,
+    author:'',promptLog:'',
     entities:[],
     levels:[{
       name:'Level 1',timeLimit:120,enemyCount:5,platformDensity:40,
@@ -545,6 +546,20 @@ function renderProjectPanel(el){
       <input type="range" min="0" max="${THEMES.length-1}" value="${project.theme}"
         oninput="project.theme=+this.value;this.previousElementSibling.querySelector('.val').textContent=THEMES[this.value]">
     </div>`}
+  </div>
+  <div class="panel-section">
+    <h3>Authorship</h3>
+    <div class="slider-group">
+      <div class="slider-label"><span>Author</span></div>
+      <input type="text" value="${(project.author||'').replace(/"/g,'&quot;')}" placeholder="your name"
+        oninput="project.author=this.value" style="width:100%;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-family:monospace">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>AI Prompt Log</span><span class="val" style="font-size:10px">PROMPT.md workflow</span></div>
+      <textarea rows="5" placeholder="Вставьте промпты, которые вы отправляли ИИ для этой игры (каждый с новой строки)"
+        oninput="project.promptLog=this.value" style="width:100%;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-family:monospace;font-size:11px;resize:vertical">${(project.promptLog||'').replace(/</g,'&lt;')}</textarea>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px">Попадёт в meta.json при «To collection» — доказательство творческого вклада (docs/legal/01)</div>
+    </div>
   </div>
   <div class="panel-section">
     <h3>Statistics</h3>
@@ -1624,7 +1639,7 @@ function exportToCollection(){
     engineVersion:'1.0.0',
     origin:{
       method:'manual',
-      prompts:[{text:(project.promptHistory&&project.promptHistory.length?project.promptHistory.join('\n'):'(промпты не записывались при создании проекта)'),iteration:1}],
+      prompts:[{text:(project.promptLog&&project.promptLog.trim()?project.promptLog.trim():'(промпты не записывались при создании проекта)'),iteration:1}],
       manualEdits:[]
     },
     fixation:{sha256:sha,fixedAt:now.toISOString(),evmRegistration:{filed:false,certNumber:null}},

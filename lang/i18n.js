@@ -84,4 +84,33 @@
 
   if (typeof module !== "undefined" && module.exports) module.exports = core;
   root.LimeI18nCore = core;
+
+  if (typeof document !== "undefined" && !root.LimeI18nNoAutoBoot) {
+    var autoBoot = function () {
+      if (root.LimeI18n) return;
+      var base = "lang/";
+      var scripts = document.getElementsByTagName("script");
+      for (var i = 0; i < scripts.length; i++) {
+        var s = scripts[i].getAttribute("src") || "";
+        if (s.indexOf("i18n.js") >= 0) { base = s.slice(0, s.lastIndexOf("i18n.js")); break; }
+      }
+      init({ base: base }).then(function (api) {
+        var sub = document.querySelector(".sub");
+        if (sub && !sub.hasAttribute("data-i18n")) sub.textContent = api.t("sub.tagline");
+        if (!document.getElementById("langSwitch")) {
+          var hint = document.querySelector(".hint") || document.body;
+          var wrap = document.createElement("span");
+          wrap.innerHTML = '<br><span>' + api.t("hint.licenses") + '</span> '
+            + '<a href="LICENSE.md" style="color:#00cc77">' + api.t("hint.license.base") + '</a>'
+            + ' · <a href="LICENSE-NC.md" style="color:#00cc77">NC</a>'
+            + ' · <a href="LICENSE-EDU.md" style="color:#00cc77">EDU</a>'
+            + ' · <select id="langSwitch" style="background:#141424;color:#e8e8f0;border:1px solid #262640;border-radius:6px;font-family:monospace"></select>';
+          hint.appendChild(wrap);
+          api.buildSwitcher(document.getElementById("langSwitch"));
+        }
+      });
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", autoBoot);
+    else autoBoot();
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

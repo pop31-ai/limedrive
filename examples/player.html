@@ -12,6 +12,7 @@ canvas{display:block;width:100vw;height:100vh}
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
+<script>window.LimeI18nNoAutoBoot = true;</script>
 <script src="../lang/i18n.js"></script>
 <script>
 (function(){
@@ -244,6 +245,61 @@ let darkMode = false;
 let stealthMode = false;
 let chessPromoPending = null;
 let chessRangedMode = false;
+
+// ---------- AUDIO (WebAudio synth, no assets) ----------
+let _actx = null;
+let audioMuted = false;
+try { audioMuted = localStorage.getItem("limedrive_muted") === "1"; } catch (e) {}
+function audioCtx() {
+  if (audioMuted) return null;
+  if (!_actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { _actx = new AC(); } catch (e) { return null; }
+  }
+  if (_actx.state === "suspended") { try { _actx.resume().catch(function () {}); } catch (e) {} }
+  return _actx;
+}
+function beep(freq, dur, type, vol, slideTo) {
+  const ctx = audioCtx();
+  if (!ctx) return;
+  try {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.04, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + dur);
+  } catch (e) {}
+}
+const SFX = {
+  jump: function () { beep(300, 0.12, "square", 0.03, 520); },
+  coin: function () { beep(880, 0.07, "square", 0.03); setTimeout(function () { beep(1320, 0.09, "square", 0.03); }, 60); },
+  hurt: function () { beep(220, 0.18, "sawtooth", 0.05, 90); },
+  shoot: function () { beep(660, 0.06, "triangle", 0.02, 330); },
+  kill: function () { beep(160, 0.2, "sawtooth", 0.05, 40); },
+  door: function () { beep(523, 0.1, "triangle", 0.04); setTimeout(function () { beep(784, 0.14, "triangle", 0.04); }, 90); },
+  win: function () { [523, 659, 784, 1047].forEach(function (f, i) { setTimeout(function () { beep(f, 0.16, "triangle", 0.05); }, i * 130); }); },
+  lose: function () { [392, 311, 262].forEach(function (f, i) { setTimeout(function () { beep(f, 0.22, "sawtooth", 0.05); }, i * 160); }); }
+};
+window.addEventListener("keydown", function () { audioCtx(); });
+window.addEventListener("mousedown", function () { audioCtx(); });
+
+// ---------- PROGRESS PERSISTENCE ----------
+function progressKey() {
+  return "limedrive_progress_" + ((gameData && gameData.name) ? gameData.name : "unknown");
+}
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem(progressKey()) || "{}"); } catch (e) { return {}; }
+}
+function saveProgress(patch) {
+  try {
+    const p = Object.assign(loadProgress(), patch);
+    localStorage.setItem(progressKey(), JSON.stringify(p));
+  } catch (e) {}
+}
 
 function loadFromURL() {
   const p = new URLSearchParams(window.location.search);
@@ -739,6 +795,7 @@ function updateHero(dt) {
   if (!diverMode && isJump() && hero.jumpCooldown <= 0) {
     if (hero.coyoteTimer > 0 || hero.onGround) {
       hero.vy = -jumpForce * flipSign;
+      SFX.jump();
       hero.onGround = false;
       hero.riding = null;
       hero.coyoteTimer = 0;
@@ -850,6 +907,7 @@ function resolveHeroCollisions() {
         const enemyTop = e.y;
         if (hero.vy > 0 && (heroBottom - enemyTop) < e.height * 0.45 && hero.vy > 2) {
           damageEnemy(e, e.health);
+          SFX.kill();
           hero.vy = -(getSettings().jumpForce != null ? getSettings().jumpForce : 16) * 0.7;
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, e.color || "#ff0000", 12, "stomp");
           shakeCamera(4, 0.2);
@@ -887,15 +945,19 @@ function resolveHeroCollisions() {
           rpgKeys.add((e.properties && e.properties.keyId) || "key");
           rpgMsg = "Ключ: " + ((e.properties && e.properties.keyId) || "key");
           rpgMsgTimer = 1.6;
+          SFX.door();
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#FFD700", 12, "collect");
         } else if (e.properties && e.properties.pickupType === "oxygen") {
           diverO2 = Math.min(diverO2Max || 100, diverO2 + ((e.properties && e.properties.value) || 40));
+          SFX.coin();
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#4FC3F7", 12, "collect");
         } else if (e.properties && e.properties.pickupType === "health") {
           hero.health = Math.min(hero.maxHealth, hero.health + val);
+          SFX.coin();
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, "#ff4466", 8, "collect");
         } else {
           score += val;
+          SFX.coin();
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, e.color || "#FFD700", 10, "collect");
         }
         totalPickupsCollected++;
@@ -1026,6 +1088,7 @@ function damageHero(dmg) {
   hero.health -= dmg;
   hero.invincible = 0.8;
   damageFlash = 1;
+  SFX.hurt();
   shakeCamera(6 + Math.min(dmg, 30) * 0.3, 0.3);
   spawnParticles(hero.x + hero.width / 2, hero.y + hero.height / 2, "#ff0000", 8, "damage");
   if (hero.health <= 0) {
@@ -1361,8 +1424,7 @@ function getValidMoves(gx, gy) {
   var side = piece.side;
   var s = getSettings();
   var ff = s.friendlyFire || false;
-  var boardSize = (s.gridSize || 8) - 1;
-  function canOccupy(nx, ny) {
+  var boardSize = (s.gridSize || 8) - 1;  function canOccupy(nx, ny) {
     if (nx < 0 || nx > boardSize || ny < 0 || ny > boardSize) return false;
     if (chessHasAlly(nx, ny, side)) return ff ? "capture" : false;
     if (chessHasEnemy(nx, ny, side)) return "capture";
@@ -1455,6 +1517,27 @@ function getValidMoves(gx, gy) {
       }
       break;
   }
+  // --- elimintali: filter losing captures, add fuse actions ---
+  if (piece.props.pieceType === "elemental") {
+    moves = moves.filter(function (m) {
+      if (!m.capture) return true;
+      var t = getChessPiece(m.x, m.y);
+      if (!t) return false;
+      return elemOutcome(piece, t) !== "lose";
+    });
+    if (!piece.props.hybrid && (piece.props.tier || 1) < 3) {
+      var D8 = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+      for (var d8 = 0; d8 < D8.length; d8++) {
+        var fnx = gx + D8[d8][0], fny = gy + D8[d8][1];
+        if (fnx < 0 || fnx > boardSize || fny < 0 || fny > boardSize) continue;
+        var ally = getChessPiece(fnx, fny);
+        if (ally && ally.side === side && ally.props.pieceType === "elemental" &&
+            !ally.props.hybrid && (ally.props.tier || 1) === (piece.props.tier || 1)) {
+          moves.push({ x: fnx, y: fny, capture: false, fuse: true });
+        }
+      }
+    }
+  }
   return moves;
 }
 
@@ -1464,6 +1547,61 @@ function executeMove(fx, fy, tx, ty, callback) {
   // --- qi duel resolution (ци-шах) ---
   if (defender && getSettings().variant === "qi") {
     qiResolve(attacker, defender, fx, fy, tx, ty, callback);
+    return;
+  }
+  // --- elimintali: fuse with ally / elemental capture outcome ---
+  if (defender && getSettings().variant === "elem" &&
+      attacker.props.pieceType === "elemental") {
+    if (defender.side === attacker.side) {
+      elemFuse(attacker, defender, fx, fy, tx, ty);
+      chessAnimating = false;
+      if (callback) callback();
+      return;
+    }
+    var eout = defender.props.pieceType === "core" ? "win" : elemOutcome(attacker, defender);
+    var di2 = entities.indexOf(defender.entity);
+    if (di2 >= 0) { entities[di2].alive = false; entities[di2].active = false; }
+    chessBoard[ty][tx] = null;
+    if (eout === "draw") {
+      var ai2 = entities.indexOf(attacker.entity);
+      if (ai2 >= 0) { entities[ai2].alive = false; entities[ai2].active = false; }
+      chessBoard[fy][fx] = null;
+      chessMessage = "Обмен!";
+      chessMessageTimer = 1.4;
+    } else {
+      chessBoard[ty][tx] = attacker;
+      chessBoard[fy][fx] = null;
+      score += 30;
+      totalEnemiesKilled++;
+      chessMessage = eout === "win" ? "Стихия сильнее!" : "Захват ядра!";
+      chessMessageTimer = 1.4;
+      spawnParticles(chessBoardX + tx * chessCellSize + chessCellSize / 2,
+        chessBoardY + ty * chessCellSize + chessCellSize / 2, "#ffe27a", 12, "stomp");
+    }
+    chessAnimating = false;
+    if (defender.props.pieceType === "core") {
+      if (defender.side === "enemy") {
+        chessMessage = "Ядро захвачено! Victory!";
+        chessMessageTimer = 3;
+        setTimeout(function () {
+          fadeDir = 1; fadeSpeed = 3;
+          fadeCallback = function () {
+            if (currentLevelIdx + 1 < gameData.levels.length) loadLevel(currentLevelIdx + 1);
+            else showVictory();
+          };
+        }, 1000);
+        return;
+      } else {
+        chessMessage = "Наше ядро потеряно...";
+        chessMessageTimer = 3;
+        setTimeout(function () {
+          fadeDir = 1; fadeSpeed = 3;
+          fadeCallback = function () { loadLevel(currentLevelIdx); };
+        }, 1000);
+        return;
+      }
+    }
+    if (callback) callback();
     return;
   }
   // --- checkers jump capture ---
@@ -1560,6 +1698,59 @@ function executeMove(fx, fy, tx, ty, callback) {
     checkPawnPromo(tx, ty, attacker, callback);
   }
 }
+
+// ---------- ELIMINTALI (стихийные шахматы: слияние и цикл стихий) ----------
+var ELEM_BEATS = { fire: ["air"], air: ["earth"], earth: ["water"], water: ["fire"] };
+var ELEM_HYBRID = {
+  "air:fire": "Молния", "earth:fire": "Магма", "fire:water": "Пар",
+  "air:earth": "Песок", "earth:water": "Грязь", "air:water": "Туман"
+};
+function elemOutcome(a, b) {
+  var ap = a.props, bp = b.props;
+  if (bp.pieceType === "core") return "win";
+  if (ap.pieceType === "core") return "lose";
+  var ah = !!ap.hybrid, bh = !!bp.hybrid;
+  var el;
+  if (ah && bh) el = "draw";
+  else if (ah) el = (ap.hybrid.indexOf(bp.elem) >= 0) ? "win" : "lose";
+  else if (bh) el = (bp.hybrid.indexOf(ap.elem) >= 0) ? "lose" : "win";
+  else if (ELEM_BEATS[ap.elem] && ELEM_BEATS[ap.elem].indexOf(bp.elem) >= 0) el = "win";
+  else if (ELEM_BEATS[bp.elem] && ELEM_BEATS[bp.elem].indexOf(ap.elem) >= 0) el = "lose";
+  else el = "draw";
+  if (el !== "draw") return el;
+  if ((ap.tier || 1) > (bp.tier || 1)) return "win";
+  if ((ap.tier || 1) < (bp.tier || 1)) return "lose";
+  return "draw";
+}
+
+function elemFuse(a, q, fx, fy, tx, ty) {
+  var t = (a.props.tier || 1) + 1;
+  var name;
+  if (a.props.elem && a.props.elem === q.props.elem) {
+    a.props.hybrid = null;
+    a.props.tier = t;
+    name = a.props.elem + " T" + t;
+  } else {
+    var key = [a.props.elem, q.props.elem].filter(Boolean).sort().join(":");
+    a.props.hybrid = key.split(":");
+    a.props.elem = null;
+    a.props.tier = t;
+    name = (ELEM_HYBRID[key] || "Гибрид") + " T" + t;
+  }
+  a.props.movePattern = t === 2 ? "l-shape" : (t >= 3 ? "any-direction" : "adjacent");
+  a.props.maxMoveDistance = t >= 3 ? 3 : 1;
+  var qi2 = entities.indexOf(q.entity);
+  if (qi2 >= 0) { entities[qi2].alive = false; entities[qi2].active = false; }
+  chessBoard[ty][tx] = null;
+  chessBoard[fy][fx] = a;
+  score += 30;
+  chessMessage = "Слияние: " + name + "!";
+  chessMessageTimer = 1.6;
+  spawnParticles(chessBoardX + fx * chessCellSize + chessCellSize / 2,
+    chessBoardY + fy * chessCellSize + chessCellSize / 2, "#ffe27a", 14, "collect");
+}
+
+// ---------- END ELIMINTALI ----------
 
 // ---------- QI DUEL (ци-шах: парирование на внутренней доске) ----------
 function qiResolve(att, def, fx, fy, tx, ty, callback) {
@@ -1768,6 +1959,7 @@ function aiTurn() {
             var target = getChessPiece(mv[i].x, mv[i].y);
             score += ((target && target.health) || 1) * 10 + ((target && target.damage) || 0) * 5;
             if (p.props && p.props.movePattern === "checkers") score += 15;
+            if (mv[i].fuse) score += 20;
           }
           if (p.type === "pawn") score += (mv[i].y) * 1;
           if (p.type === "king") score -= 2;
@@ -2174,6 +2366,7 @@ function puzzleUpdateSwitches() {
       p.locked = false;
       door.alive = false;
       score += 100;
+      SFX.door();
       spawnParticles(door.x + door.width / 2, door.y + door.height / 2, "#FFD700", 14, "collect");
       puzzleMsg = "Door opened!";
       puzzleMsgTimer = 1.2;
@@ -2389,7 +2582,7 @@ function updateTdEnemies(dt) {
       tdEnemies.splice(i, 1);
       tdLives--;
       shakeCamera(6, 0.3);
-      if (tdLives <= 0) { tdLives = 0; tdGameOver = true; }
+      if (tdLives <= 0) { tdLives = 0; tdGameOver = true; SFX.lose(); }
       continue;
     }
     const dx = wp.x - en.x, dy = wp.y - en.y;
@@ -2448,6 +2641,7 @@ function tdHit(x, y, pr) {
       if (en.hp <= 0) {
         tdGold += en.reward;
         score += en.reward;
+        SFX.kill();
         totalEnemiesKilled++;
         spawnParticles(en.x, en.y, en.color, 10, "stomp");
       }
@@ -2603,6 +2797,7 @@ function updateShooter(dt) {
     const bd = (hero.properties && hero.properties.bulletDamage) || 10;
     shBullets.push({ x: hero.x + hero.width / 2, y: hero.y, vy: -bs * 60 });
     shBullets[shBullets.length - 1].damage = bd;
+    SFX.shoot();
     shFireCd = 1 / fr;
     shDbg.shots++;
     spawnParticles(hero.x + hero.width / 2, hero.y, "#ffff88", 3, "collect");
@@ -2644,6 +2839,7 @@ function updateShooter(dt) {
         hit = true;
         if (e.health <= 0) {
           score += (e.properties && e.properties.scoreValue) || 20;
+          SFX.kill();
           totalEnemiesKilled++;
           shakeCamera(e.type === "boss" ? 10 : 3, e.type === "boss" ? 0.5 : 0.15);
           spawnParticles(e.x + e.width / 2, e.y + e.height / 2, stripAlpha(e.color) || "#ff5555", e.type === "boss" ? 40 : 12, "stomp");
@@ -3212,6 +3408,7 @@ function updateRpg(dt) {
         spawnParticles(ex, ey, "#ffdd44", 6, "stomp");
         if (e.health <= 0) {
           score += (e.properties && e.properties.scoreValue) || 25;
+          SFX.kill();
           totalEnemiesKilled++;
           shakeCamera(3, 0.15);
         }
@@ -3236,6 +3433,7 @@ function rpgResolveWalls() {
           w.properties.locked = false;
           w.alive = false;
           score += 50;
+          SFX.door();
           rpgMsg = "Дверь открыта!";
           rpgMsgTimer = 1.6;
           spawnParticles(w.x + w.width / 2, w.y + w.height / 2, "#FFD700", 14, "collect");
@@ -4009,6 +4207,15 @@ function roundRect(x, y, w, h, r) {
 
 function showVictory() {
   gameState = "victory";
+  SFX.win();
+  try {
+    const p = loadProgress();
+    saveProgress({
+      bestScore: Math.max(p.bestScore || 0, score),
+      completed: true,
+      unlockedLevel: gameData ? gameData.levels.length : (p.unlockedLevel || 0)
+    });
+  } catch (e) {}
   victoryStats = {
     score: score,
     levels: gameData ? gameData.levels.length : 0,
@@ -4091,6 +4298,22 @@ function gameLoop(now) {
     }
   }
 
+  if (justPressed.KeyM && gameState !== "boot") {
+    audioMuted = !audioMuted;
+    try { localStorage.setItem("limedrive_muted", audioMuted ? "1" : "0"); } catch (e) {}
+    if (!audioMuted) beep(880, 0.08, "triangle", 0.04);
+  }
+
+  if (justPressed.KeyF) {
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(function () {});
+      } else if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(function () {});
+      }
+    } catch (e) {}
+  }
+
   if (gameState === "victory" && justPressed.KeyR) {
     gameState = "playing";
     startGame();
@@ -4119,6 +4342,13 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("../sw.js").catch(() => {});
 }
 
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" &&
+      gameState === "playing" && !paused && !levelTransitioning) {
+    paused = true;
+  }
+});
+
 window.LimeDriveDebug = function () {
   return {
     gameState: gameState,
@@ -4145,7 +4375,7 @@ window.LimeDriveDebug = function () {
       var bss = (getSettings().gridSize || 8) - 1;
       for (var qy = 0; qy <= bss; qy++) for (var qx = 0; qx <= bss; qx++) {
         var qp = getChessPiece(qx, qy);
-        if (qp) list.push({ x: qx, y: qy, side: qp.side, t: qp.props.pieceType });
+        if (qp) list.push({ x: qx, y: qy, side: qp.side, t: qp.props.pieceType, tr: qp.props.tier || null, el: qp.props.elem || (qp.props.hybrid ? qp.props.hybrid.join(":") : null) });
       }
       return { turn: chessTurn, valid: chessValidMoves.length,
         playerPieces: countChessPieces("player"), enemyPieces: countChessPieces("enemy"),
@@ -4184,7 +4414,11 @@ window.LimeDriveDebug = function () {
       enemies: tdEnemies.length, queue: tdSpawnQueue.length,
       towers: tdTowers.length, intermission: Math.max(0, tdIntermission),
       gameOver: tdGameOver
-    } : null
+    } : null,
+    audio: { muted: audioMuted, ready: !!(_actx && _actx.state === "running") },
+    paused: paused,
+    fullscreen: !!document.fullscreenElement,
+    progress: loadProgress()
   };
 };
 })();

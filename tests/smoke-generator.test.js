@@ -46,6 +46,20 @@ srv.listen(0, "127.0.0.1", async () => {
   check("registry persisted to localStorage", stored.length >= 1 && stored[stored.length - 1].sha256.length === 64);
 
   check("collection buttons present", await page.evaluate("document.body.innerHTML.indexOf('exportToCollection()') >= 0"));
+
+  const metaCheck = await page.evaluate(`(() => {
+    project.author = "Тест Автор";
+    project.promptLog = "создай платформер\\nдобавь босса";
+    switchTab("project");
+    const panel = document.getElementById("tab-project");
+    return {
+      authorShown: panel.innerHTML.indexOf('Тест Автор') >= 0,
+      logShown: panel.innerHTML.indexOf('добавь босса') >= 0,
+      hasAuthorshipSection: panel.innerHTML.indexOf("Authorship") >= 0
+    };
+  })()`);
+  check("authorship section renders", !!metaCheck && metaCheck.hasAuthorshipSection && metaCheck.authorShown && metaCheck.logShown);
+
   check("generator page no js errors", pageErrors === 0);
 
   await browser.close();
