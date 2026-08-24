@@ -224,6 +224,8 @@ let diverO2Max = 0;
 let diverSuffT = 0;
 
 let darkMode = false;
+
+let stealthMode = false;
 let chessPromoPending = null;
 let chessRangedMode = false;
 
@@ -465,6 +467,8 @@ function loadLevel(idx) {
 
   darkMode = !!(hero && hero.properties && hero.properties.lanternRadius != null);
 
+  stealthMode = levelEntityDefs.some(e => e.properties && e.properties.visionRange != null);
+
   fadeAlpha = 1;
   fadeDir = -1;
   fadeSpeed = 3;
@@ -538,6 +542,7 @@ function update(dt) {
     if (timeLeft <= 0) { timeLeft = 0; if (fadeCallback === null && !levelTransitioning) heroDie(); }
   }
   if (rpgMsgTimer > 0) rpgMsgTimer -= dt;
+  updateStealth(dt);
 
   if (shooterMode) {
     updateShooter(dt);
@@ -654,11 +659,13 @@ function updateHero(dt) {
   if (!hero.onGround) {
     hero.vx *= Math.pow(1 - airRes, dt * 60);
   }
+  const sneakMul = (isSneaking() && hero.properties && hero.properties.sneakMultiplier != null)
+    ? hero.properties.sneakMultiplier : 1;
   hero.vx *= Math.pow(friction, dt * 60);
   if (Math.abs(hero.vx) < 0.1) hero.vx = 0;
   if (!runnerMode) {
-    if (hero.vx > maxSpeed) hero.vx = maxSpeed;
-    if (hero.vx < -maxSpeed) hero.vx = -maxSpeed;
+    if (hero.vx > maxSpeed * sneakMul) hero.vx = maxSpeed * sneakMul;
+    if (hero.vx < -maxSpeed * sneakMul) hero.vx = -maxSpeed * sneakMul;
   }
 
   let effectiveGravity = gravity;
@@ -960,11 +967,12 @@ function resolveHeroCollisions() {
     }
 
     if (et === "trigger") {
+      if (e.properties && e.properties.hackTime != null) continue;
       if (rectOverlap(hero, e) && !e.triggered && !levelTransitioning) {
         e.triggered = true;
-        levelTransitioning = true;
         const action = e.properties && e.properties.action;
         if (action === "nextLevel") {
+          levelTransitioning = true;
           const next = e.properties.level != null ? e.properties.level : currentLevelIdx + 1;
           fadeDir = 1; fadeSpeed = 4;
           fadeCallback = function () { loadLevel(next); };
@@ -2840,6 +2848,102 @@ function heroLitDist(e) {
                     (e.y + e.height / 2) - (hero.y + hero.height / 2));
 }
 
+// ---------- STEALTH (vision cones, alert chase, hack terminals) ----------
+function isSneaking() {
+  return !!(keys.ShiftLeft || keys.ShiftRight);
+}
+
+function updateStealth(dt) {
+  if (!stealthMode || !hero) return;
+  const sneak = isSneaking();
+  for (const e of entities) {
+    if (e.type !== "enemy" || e.health <= 0 || !e.alive) continue;
+    const p = e.properties || {};
+    if (p.visionRange == null) continue;
+    if (e.alertT > 0) {
+      e.alertT -= dt;
+      const dx = (hero.x + hero.width / 2) - (e.x + e.width / 2);
+      e.facing = dx >= 0 ? 1 : -1;
+      e.x += Math.sign(dx) * (e.speed || 2) * 1.6 * dt * 60;
+      continue;
+    }
+    const range = p.visionRange * (sneak ? 0.55 : 1);
+    const half = ((p.visionAngle || 60) * Math.PI / 180) / 2;
+    const dx = (hero.x + hero.width / 2) - (e.x + e.width / 2);
+    const dy = (hero.y + hero.height / 2) - (e.y + e.height / 2);
+    const dist = Math.hypot(dx, dy);
+    if (dist > range) continue;
+    const facing = e.facing >= 0 ? 0 : Math.PI;
+    let ang = Math.abs(Math.atan2(dy, dx) - facing);
+    while (ang > Math.PI) ang = Math.abs(ang - 2 * Math.PI);
+    if (ang <= half) {
+      e.alertT = 2.5;
+      spawnParticles(e.x + e.width / 2, e.y - 10, "#ff4444", 6, "collect");
+      shakeCamera(2, 0.1);
+    }
+  }
+  // hack terminals
+  for (const t of entities) {
+    const tp = t.properties || {};
+    if (tp.hackTime == null || !t.alive) continue;
+    if (t.done) continue;
+    if (rectOverlap(hero, t)) {
+      t.hackProg = (t.hackProg || 0) + dt;
+      if (Math.random() < 0.3) spawnParticles(t.x + t.width / 2, t.y, "#00E676", 2, "collect");
+      if (t.hackProg >= tp.hackTime) {
+        t.done = true;
+        score += 100;
+        const target = entities.find(x => x.id === tp.targetId);
+        if (target) { target.alive = false; target.active = false; }
+        rpgMsg = "Взломано!";
+        rpgMsgTimer = 1.6;
+        spawnParticles(t.x + t.width / 2, t.y + t.height / 2, "#00E676", 16, "collect");
+      }
+    } else {
+      t.hackProg = Math.max(0, (t.hackProg || 0) - dt * 2);
+    }
+  }
+}
+
+function drawVisionCones() {
+  if (!stealthMode || !hero) return;
+  const sneak = isSneaking();
+  for (const e of entities) {
+    if (e.type !== "enemy" || e.health <= 0 || !e.alive) continue;
+    const p = e.properties || {};
+    if (p.visionRange == null) continue;
+    const range = p.visionRange * (sneak ? 0.55 : 1);
+    const half = ((p.visionAngle || 60) * Math.PI / 180) / 2;
+    const facing = e.facing >= 0 ? 0 : Math.PI;
+    const cx = e.x + e.width / 2, cy = e.y + e.height / 2;
+    ctx.fillStyle = e.alertT > 0 ? "rgba(255,60,60,0.20)" : "rgba(80,200,255,0.10)";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, range, facing - half, facing + half);
+    ctx.closePath();
+    ctx.fill();
+    if (e.alertT > 0) {
+      ctx.fillStyle = "#ff4444";
+      ctx.font = "bold 16px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("!", cx, e.y - 8);
+    }
+    if (p.hackTime != null && !e.done) continue;
+  }
+  // hack progress bars
+  for (const t of entities) {
+    const tp = t.properties || {};
+    if (tp.hackTime == null || !t.alive || t.done) continue;
+    if (!(t.hackProg > 0)) continue;
+    const bw = 46, bx = t.x + t.width / 2 - bw / 2, by = t.y - 14;
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(bx - 1, by - 1, bw + 2, 8);
+    ctx.fillStyle = "#00E676";
+    ctx.fillRect(bx, by, bw * Math.min(1, t.hackProg / tp.hackTime), 6);
+  }
+}
+// ---------- END STEALTH ----------
+
 // ---------- RPG MODE (top-down action) ----------
 function updateRpg(dt) {
   updateFade(dt);
@@ -3020,6 +3124,7 @@ function render() {
   ctx.save();
   ctx.translate(-camX, -camY);
   drawEntities(camX, camY);
+  drawVisionCones();
   drawParticles();
   ctx.restore();
   drawGroundLine(camY);
@@ -3816,6 +3921,11 @@ window.LimeDriveDebug = function () {
       ghostsVisible: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0 &&
         e.properties && (e.properties.visibleInLight || e.properties.phaseInWalls) &&
         heroLitDist(e) <= darkRadius()).length } : null,
+    stealth: stealthMode ? { cones: entities.filter(e => e.properties && e.properties.visionRange != null && e.alive).length,
+      alerted: entities.filter(e => e.alertT > 0).length,
+      hacksDone: entities.filter(e => e.properties && e.properties.hackTime != null && e.done).length } : null,
+    onFinish: hero ? entities.some(e => e.type === "finish" && e.alive && rectOverlap(hero, e)) : false,
+    levelTransitioning: levelTransitioning,
     sh: shooterMode ? { dbg: shDbg, bullets: shBullets.length, ebullets: shEnemyBullets.length,
       alive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length,
       eps: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0)

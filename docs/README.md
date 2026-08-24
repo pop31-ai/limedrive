@@ -310,10 +310,11 @@ limedrive/
 │   ├── limedrive-systems.js       # Built-in systems
 │   └── limedrive-ui.js            # UI widgets
 ├── generator/
-│   └── generator.html             # Visual level generator
+│   ├── generator.html               # Visual level generator
+│   └── patent-docs/                 # Registration package generators + registry
 ├── examples/
-│   ├── index.html                 # Game selector
-│   ├── 01-lime-platformer.json    # Example games
+│   ├── index.html                   # Game selector
+│   ├── 01-lime-platformer.json     # Example games
 │   ├── 02-space-shooter.json
 │   ├── 03-dungeon-quest.json
 │   ├── 04-race-track.json
@@ -323,11 +324,45 @@ limedrive/
 │   ├── 08-timeline-quest.json
 │   ├── 09-space-station.json
 │   └── 10-chess-battle.json
-├── lang/                          # Localization files
-└── docs/                          # Documentation
+├── games/                           # Game collection (game.json + meta.json per game)
+├── tests/                           # Puppeteer game tests + patent-docs unit tests
+├── tools/                           # validate.js, check-game.js, patent-package.js
+├── lang/                            # Localization files
+├── LICENSE.md / LICENSE-NC.md / LICENSE-EDU.md
+└── docs/                            # Documentation
     ├── README.md
     ├── GAME-FORMAT.md
     ├── AI-SYSTEM.md
     ├── GENERATOR.md
-    └── EXAMPLES.md
+    ├── EXAMPLES.md
+    └── legal/                       # IP policy, licenses research, sources
 ```
+
+## Legal & Licensing
+
+LimeDrive распространяется бесплатно по трём редакциям лицензии
+(см. `LICENSE.md`, `LICENSE-NC.md`, `LICENSE-EDU.md` в корне):
+
+| Редакция | Коммерческие игры | Для кого |
+|---|---|---|
+| Базовая | Да | Игроделы и инди |
+| NC | Нет | Хобби, джемы, портфолио |
+| EDU | Учебный процесс | Школы, вузы, кружки |
+
+Общие правила всех редакций: атрибуция «Создано на движке LimeDrive» при
+публикации; совпадение результатов генератора у разных пользователей не является
+нарушением; приоритет в каталоге — по дате хеш-фиксации игры в реестре.
+
+Юридический контур: `docs/legal/00-master-ip-policy.md` (мастер-документ,
+11 пунктов), там же — анализ авторских прав на ИИ-генерацию, механизм
+разрешения споров, библиография первоисточников и готовый пакет регистрации
+движка как программы для ЭВМ (`docs/legal/engine-evm-package.txt`).
+
+Генерация пакета регистрации для своей игры:
+
+```bash
+node tools/patent-package.js examples/01-lime-platformer.json --author "Имя"
+```
+
+Результат — `reports/<game>.patent.txt`: реферат, описание, чек-лист подачи,
+пошлины, депонируемый листинг и sha256-фиксация приоритета.
