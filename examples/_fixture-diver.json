@@ -5,9 +5,9 @@
   "description": "Минимальный дайвинг для mode-diver.test.js: кислород, поверхность, пузырь, удушье",
   "author": "limedrive-tests",
   "settings": {
-    "gravity": 9.8,
+    "gravity": 0.5,
     "friction": 0.92,
-    "airResistance": 0.02,
+    "airResistance": 0.15,
     "jumpForce": 15,
     "maxSpeed": 5,
     "worldWidth": 900,
@@ -25,7 +25,7 @@
           "components": ["Transform", "Sprite", "PhysicsBody", "Collider"],
           "properties": { "maxOxygen": 20, "oxygenDrain": 1.5, "swimForce": 6, "diveSpeed": 4 } },
 
-        { "id": "bubble_1", "type": "pickup", "x": 400, "y": 300, "z": 1, "width": 30, "height": 30,
+        { "id": "bubble_1", "type": "pickup", "x": 85, "y": 320, "z": 1, "width": 30, "height": 30,
           "color": "#4FC3F7", "health": 0, "speed": 0, "damage": 0,
           "components": ["Transform", "Sprite"],
           "properties": { "pickupType": "oxygen", "value": 40 } },
