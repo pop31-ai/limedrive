@@ -19,202 +19,3902 @@
       "name": "Суперпозиция",
       "timeLimit": 240,
       "par": 1,
-      "background": { "type": "gradient", "colors": ["#0B0033", "#1A055E", "#311B92"] },
+      "background": {
+        "type": "gradient",
+        "colors": [
+          "#0B0033",
+          "#1A055E",
+          "#311B92"
+        ]
+      },
       "entities": [
-        { "id": "hero", "type": "hero", "x": 100, "y": 900, "z": 0, "width": 44, "height": 60, "color": "#00E5FF", "health": 100, "speed": 5, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "Animator", "PlayerInput"], "properties": { "jumps": 2, "coyoteTime": 0.15 } },
-        { "id": "spawn_1", "type": "spawn_point", "x": 100, "y": 900, "z": 0, "width": 32, "height": 32, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "SpawnPoint"], "properties": {} },
-        { "id": "crystal_ground_1", "type": "platform", "x": 0, "y": 980, "z": 0, "width": 640, "height": 100, "color": "#4A148C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_2", "type": "platform", "x": 700, "y": 980, "z": 0, "width": 480, "height": 100, "color": "#6A1B9A", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_3", "type": "platform", "x": 1240, "y": 980, "z": 0, "width": 560, "height": 100, "color": "#4A148C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_4", "type": "platform", "x": 1860, "y": 980, "z": 0, "width": 520, "height": 100, "color": "#6A1B9A", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_5", "type": "platform", "x": 2440, "y": 980, "z": 0, "width": 1400, "height": 100, "color": "#4A148C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "quantum_plat_1", "type": "platform", "x": 350, "y": 820, "z": 0, "width": 128, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_2", "type": "platform", "x": 600, "y": 720, "z": 0, "width": 112, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_3", "type": "platform", "x": 950, "y": 780, "z": 0, "width": 140, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_4", "type": "platform", "x": 1400, "y": 700, "z": 0, "width": 128, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_5", "type": "platform", "x": 1700, "y": 800, "z": 0, "width": 128, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_6", "type": "platform", "x": 2100, "y": 740, "z": 0, "width": 128, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_7", "type": "platform", "x": 2600, "y": 680, "z": 0, "width": 128, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_8", "type": "platform", "x": 2950, "y": 780, "z": 0, "width": 140, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "portal_alpha_a", "type": "portal", "x": 1150, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "alpha", "exitId": "portal_alpha_b", "glowColor": "#D500F9" } },
-        { "id": "portal_alpha_b", "type": "portal", "x": 2700, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#00B0FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "alpha", "exitId": "portal_alpha_a", "glowColor": "#00B0FF" } },
-        { "id": "gravity_pad_low_1", "type": "platform", "x": 600, "y": 940, "z": 0, "width": 96, "height": 24, "color": "#18FFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider", "GravityField"], "properties": { "gravityField": "low", "radius": 220 } },
-        { "id": "gravity_pad_low_2", "type": "platform", "x": 1900, "y": 940, "z": 0, "width": 96, "height": 24, "color": "#18FFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider", "GravityField"], "properties": { "gravityField": "low", "radius": 220 } },
-        { "id": "wisp_1", "type": "enemy", "x": 800, "y": 500, "z": 0, "width": 36, "height": 36, "color": "#EA80FC", "health": 25, "speed": 2.5, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "FlyingEnemy"], "properties": { "flyPattern": "sine", "amplitude": 90, "frequency": 1.3, "enemyType": "quantum_wisp" } },
-        { "id": "wisp_2", "type": "enemy", "x": 1500, "y": 450, "z": 0, "width": 36, "height": 36, "color": "#EA80FC", "health": 25, "speed": 2.5, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "FlyingEnemy"], "properties": { "flyPattern": "circle", "radius": 70, "enemyType": "quantum_wisp" } },
-        { "id": "wisp_3", "type": "enemy", "x": 2300, "y": 480, "z": 0, "width": 36, "height": 36, "color": "#CE93D8", "health": 30, "speed": 2.8, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "FlyingEnemy"], "properties": { "flyPattern": "sine", "amplitude": 110, "frequency": 1.5, "enemyType": "quantum_wisp" } },
-        { "id": "wisp_4", "type": "enemy", "x": 3000, "y": 500, "z": 0, "width": 36, "height": 36, "color": "#EA80FC", "health": 25, "speed": 2.5, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "FlyingEnemy"], "properties": { "flyPattern": "circle", "radius": 60, "enemyType": "quantum_wisp" } },
-        { "id": "crawler_1", "type": "enemy", "x": 1300, "y": 916, "z": 0, "width": 44, "height": 44, "color": "#AA00FF", "health": 30, "speed": 2, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "Patrol"], "properties": { "patrolRange": 180, "direction": 1, "enemyType": "phase_crawler" } },
-        { "id": "crawler_2", "type": "enemy", "x": 2500, "y": 916, "z": 0, "width": 44, "height": 44, "color": "#AA00FF", "health": 30, "speed": 2, "damage": 15, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "EnemyAI", "Patrol"], "properties": { "patrolRange": 200, "direction": -1, "enemyType": "phase_crawler" } },
-        { "id": "shard_1", "type": "pickup", "x": 200, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_2", "type": "pickup", "x": 380, "y": 780, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_3", "type": "pickup", "x": 620, "y": 680, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_4", "type": "pickup", "x": 760, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_5", "type": "pickup", "x": 1010, "y": 740, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_6", "type": "pickup", "x": 1160, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_7", "type": "pickup", "x": 1430, "y": 660, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_8", "type": "pickup", "x": 1560, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_9", "type": "pickup", "x": 1730, "y": 760, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_10", "type": "pickup", "x": 1960, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_11", "type": "pickup", "x": 2130, "y": 700, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_12", "type": "pickup", "x": 2280, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_13", "type": "pickup", "x": 2630, "y": 640, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_14", "type": "pickup", "x": 2780, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_15", "type": "pickup", "x": 2980, "y": 740, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_16", "type": "pickup", "x": 3150, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "entangled_core_1", "type": "pickup", "x": 3300, "y": 940, "z": 0, "width": 32, "height": 32, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect", "Rotate"], "properties": { "value": 60, "gemType": "entangled_core" } },
-        { "id": "isotope_1", "type": "pickup", "x": 1060, "y": 740, "z": 0, "width": 24, "height": 24, "color": "#76FF03", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup"], "properties": { "value": 30, "pickupType": "health" } },
-        { "id": "isotope_2", "type": "pickup", "x": 2160, "y": 700, "z": 0, "width": 24, "height": 24, "color": "#76FF03", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup"], "properties": { "value": 30, "pickupType": "health" } },
-        { "id": "phase_spike_1", "type": "hazard", "x": 1150, "y": 960, "z": 0, "width": 60, "height": 20, "color": "#D500F9", "health": 0, "speed": 0, "damage": 30, "components": ["Transform", "Sprite", "Collider", "PeriodicHazard", "GlowEffect"], "properties": { "interval": 2, "duration": 1, "glowColor": "#D500F9" } },
-        { "id": "phase_spike_2", "type": "hazard", "x": 2350, "y": 960, "z": 0, "width": 60, "height": 20, "color": "#D500F9", "health": 0, "speed": 0, "damage": 30, "components": ["Transform", "Sprite", "Collider", "PeriodicHazard", "GlowEffect"], "properties": { "interval": 2, "duration": 1, "glowColor": "#D500F9" } },
-        { "id": "phase_spike_3", "type": "hazard", "x": 3050, "y": 960, "z": 0, "width": 60, "height": 20, "color": "#D500F9", "health": 0, "speed": 0, "damage": 30, "components": ["Transform", "Sprite", "Collider", "PeriodicHazard", "GlowEffect"], "properties": { "interval": 1.8, "duration": 1.2, "glowColor": "#D500F9" } },
-        { "id": "gap_1", "type": "hazard", "x": 640, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "gap_2", "type": "hazard", "x": 1180, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "gap_3", "type": "hazard", "x": 1800, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "gap_4", "type": "hazard", "x": 2380, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "crystal_decor_1", "type": "decoration", "x": 150, "y": 860, "z": -1, "width": 32, "height": 56, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "GlowEffect"], "properties": { "glowColor": "#00E5FF" } },
-        { "id": "crystal_decor_2", "type": "decoration", "x": 900, "y": 870, "z": -1, "width": 28, "height": 48, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "GlowEffect"], "properties": { "glowColor": "#D500F9" } },
-        { "id": "crystal_decor_3", "type": "decoration", "x": 1700, "y": 860, "z": -1, "width": 32, "height": 56, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "GlowEffect"], "properties": { "glowColor": "#00E5FF" } },
-        { "id": "crystal_decor_4", "type": "decoration", "x": 2500, "y": 870, "z": -1, "width": 28, "height": 48, "color": "#FFD740", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "GlowEffect"], "properties": { "glowColor": "#FFD740" } },
-        { "id": "crystal_decor_5", "type": "decoration", "x": 3300, "y": 860, "z": -1, "width": 32, "height": 56, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "GlowEffect"], "properties": { "glowColor": "#00E5FF" } },
-        { "id": "star_1", "type": "decoration", "x": 400, "y": 150, "z": -2, "width": 24, "height": 24, "color": "#FFFFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Parallax", "Twinkle"], "properties": { "parallaxLayer": 2 } },
-        { "id": "star_2", "type": "decoration", "x": 1200, "y": 120, "z": -2, "width": 20, "height": 20, "color": "#E0E0E0", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Parallax", "Twinkle"], "properties": { "parallaxLayer": 2 } },
-        { "id": "star_3", "type": "decoration", "x": 2000, "y": 160, "z": -2, "width": 24, "height": 24, "color": "#FFFFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Parallax", "Twinkle"], "properties": { "parallaxLayer": 2 } },
-        { "id": "star_4", "type": "decoration", "x": 2800, "y": 130, "z": -2, "width": 20, "height": 20, "color": "#B0BEC5", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Parallax", "Twinkle"], "properties": { "parallaxLayer": 2 } },
-        { "id": "star_5", "type": "decoration", "x": 3500, "y": 150, "z": -2, "width": 24, "height": 24, "color": "#FFFFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Parallax", "Twinkle"], "properties": { "parallaxLayer": 2 } },
-        { "id": "nebula_1", "type": "decoration", "x": 1000, "y": 250, "z": -2, "width": 300, "height": 140, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Parallax", "Drift"], "properties": { "driftSpeed": 0.1, "parallaxLayer": 2 } },
-        { "id": "nebula_2", "type": "decoration", "x": 2600, "y": 220, "z": -2, "width": 260, "height": 120, "color": "#536DFE", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Parallax", "Drift"], "properties": { "driftSpeed": 0.08, "parallaxLayer": 2 } },
-        { "id": "checkpoint_1", "type": "checkpoint", "x": 1830, "y": 920, "z": 0, "width": 32, "height": 60, "color": "#FFFFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Checkpoint"], "properties": {} },
-        { "id": "finish_1", "type": "finish", "x": 3700, "y": 900, "z": 0, "width": 64, "height": 80, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Goal"], "properties": { "nextLevel": 1 } },
-        { "id": "trigger_exit_1", "type": "trigger", "x": 3640, "y": 880, "z": 0, "width": 128, "height": 120, "color": "#D500F900", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Collider", "LevelTrigger"], "properties": { "action": "nextLevel" } }
+        {
+          "id": "hero",
+          "type": "hero",
+          "x": 100,
+          "y": 900,
+          "z": 0,
+          "width": 44,
+          "height": 60,
+          "color": "#00E5FF",
+          "health": 100,
+          "speed": 5,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "Animator",
+            "PlayerInput"
+          ],
+          "properties": {
+            "jumps": 2,
+            "coyoteTime": 0.15
+          }
+        },
+        {
+          "id": "spawn_1",
+          "type": "spawn_point",
+          "x": 100,
+          "y": 900,
+          "z": 0,
+          "width": 32,
+          "height": 32,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "SpawnPoint"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "crystal_ground_1",
+          "type": "platform",
+          "x": 0,
+          "y": 980,
+          "z": 0,
+          "width": 640,
+          "height": 100,
+          "color": "#4A148C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_2",
+          "type": "platform",
+          "x": 700,
+          "y": 980,
+          "z": 0,
+          "width": 480,
+          "height": 100,
+          "color": "#6A1B9A",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_3",
+          "type": "platform",
+          "x": 1240,
+          "y": 980,
+          "z": 0,
+          "width": 560,
+          "height": 100,
+          "color": "#4A148C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_4",
+          "type": "platform",
+          "x": 1860,
+          "y": 980,
+          "z": 0,
+          "width": 520,
+          "height": 100,
+          "color": "#6A1B9A",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_5",
+          "type": "platform",
+          "x": 2440,
+          "y": 980,
+          "z": 0,
+          "width": 1400,
+          "height": 100,
+          "color": "#4A148C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "quantum_plat_1",
+          "type": "platform",
+          "x": 350,
+          "y": 820,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_2",
+          "type": "platform",
+          "x": 600,
+          "y": 720,
+          "z": 0,
+          "width": 112,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_3",
+          "type": "platform",
+          "x": 950,
+          "y": 780,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_4",
+          "type": "platform",
+          "x": 1400,
+          "y": 700,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_5",
+          "type": "platform",
+          "x": 1700,
+          "y": 800,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_6",
+          "type": "platform",
+          "x": 2100,
+          "y": 740,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_7",
+          "type": "platform",
+          "x": 2600,
+          "y": 680,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_8",
+          "type": "platform",
+          "x": 2950,
+          "y": 780,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "portal_alpha_a",
+          "type": "portal",
+          "x": 1150,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "alpha",
+            "exitId": "portal_alpha_b",
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "portal_alpha_b",
+          "type": "portal",
+          "x": 2700,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#00B0FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "alpha",
+            "exitId": "portal_alpha_a",
+            "glowColor": "#00B0FF"
+          }
+        },
+        {
+          "id": "gravity_pad_low_1",
+          "type": "platform",
+          "x": 600,
+          "y": 940,
+          "z": 0,
+          "width": 96,
+          "height": 24,
+          "color": "#18FFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider",
+            "GravityField"
+          ],
+          "properties": {
+            "gravityField": "low",
+            "radius": 220
+          }
+        },
+        {
+          "id": "gravity_pad_low_2",
+          "type": "platform",
+          "x": 1900,
+          "y": 940,
+          "z": 0,
+          "width": 96,
+          "height": 24,
+          "color": "#18FFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider",
+            "GravityField"
+          ],
+          "properties": {
+            "gravityField": "low",
+            "radius": 220
+          }
+        },
+        {
+          "id": "wisp_1",
+          "type": "enemy",
+          "x": 800,
+          "y": 500,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#EA80FC",
+          "health": 25,
+          "speed": 2.5,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy"
+          ],
+          "properties": {
+            "flyPattern": "sine",
+            "amplitude": 90,
+            "frequency": 1.3,
+            "enemyType": "quantum_wisp"
+          }
+        },
+        {
+          "id": "wisp_2",
+          "type": "enemy",
+          "x": 1500,
+          "y": 450,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#EA80FC",
+          "health": 25,
+          "speed": 2.5,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy"
+          ],
+          "properties": {
+            "flyPattern": "circle",
+            "radius": 70,
+            "enemyType": "quantum_wisp"
+          }
+        },
+        {
+          "id": "wisp_3",
+          "type": "enemy",
+          "x": 2300,
+          "y": 480,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#CE93D8",
+          "health": 30,
+          "speed": 2.8,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy"
+          ],
+          "properties": {
+            "flyPattern": "sine",
+            "amplitude": 110,
+            "frequency": 1.5,
+            "enemyType": "quantum_wisp"
+          }
+        },
+        {
+          "id": "wisp_4",
+          "type": "enemy",
+          "x": 3000,
+          "y": 500,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#EA80FC",
+          "health": 25,
+          "speed": 2.5,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy"
+          ],
+          "properties": {
+            "flyPattern": "circle",
+            "radius": 60,
+            "enemyType": "quantum_wisp"
+          }
+        },
+        {
+          "id": "crawler_1",
+          "type": "enemy",
+          "x": 1300,
+          "y": 916,
+          "z": 0,
+          "width": 44,
+          "height": 44,
+          "color": "#AA00FF",
+          "health": 30,
+          "speed": 2,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "patrolRange": 180,
+            "direction": 1,
+            "enemyType": "phase_crawler"
+          }
+        },
+        {
+          "id": "crawler_2",
+          "type": "enemy",
+          "x": 2500,
+          "y": 916,
+          "z": 0,
+          "width": 44,
+          "height": 44,
+          "color": "#AA00FF",
+          "health": 30,
+          "speed": 2,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "patrolRange": 200,
+            "direction": -1,
+            "enemyType": "phase_crawler"
+          }
+        },
+        {
+          "id": "shard_1",
+          "type": "pickup",
+          "x": 200,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_2",
+          "type": "pickup",
+          "x": 380,
+          "y": 780,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_3",
+          "type": "pickup",
+          "x": 620,
+          "y": 680,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_4",
+          "type": "pickup",
+          "x": 760,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_5",
+          "type": "pickup",
+          "x": 1010,
+          "y": 740,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_6",
+          "type": "pickup",
+          "x": 1160,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_7",
+          "type": "pickup",
+          "x": 1430,
+          "y": 660,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_8",
+          "type": "pickup",
+          "x": 1560,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_9",
+          "type": "pickup",
+          "x": 1730,
+          "y": 760,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_10",
+          "type": "pickup",
+          "x": 1960,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_11",
+          "type": "pickup",
+          "x": 2130,
+          "y": 700,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_12",
+          "type": "pickup",
+          "x": 2280,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_13",
+          "type": "pickup",
+          "x": 2630,
+          "y": 640,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_14",
+          "type": "pickup",
+          "x": 2780,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_15",
+          "type": "pickup",
+          "x": 2980,
+          "y": 740,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_16",
+          "type": "pickup",
+          "x": 3150,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "entangled_core_1",
+          "type": "pickup",
+          "x": 3300,
+          "y": 940,
+          "z": 0,
+          "width": 32,
+          "height": 32,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect",
+            "Rotate"
+          ],
+          "properties": {
+            "value": 60,
+            "gemType": "entangled_core"
+          }
+        },
+        {
+          "id": "isotope_1",
+          "type": "pickup",
+          "x": 1060,
+          "y": 740,
+          "z": 0,
+          "width": 24,
+          "height": 24,
+          "color": "#76FF03",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup"
+          ],
+          "properties": {
+            "value": 30,
+            "pickupType": "health"
+          }
+        },
+        {
+          "id": "isotope_2",
+          "type": "pickup",
+          "x": 2160,
+          "y": 700,
+          "z": 0,
+          "width": 24,
+          "height": 24,
+          "color": "#76FF03",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup"
+          ],
+          "properties": {
+            "value": 30,
+            "pickupType": "health"
+          }
+        },
+        {
+          "id": "phase_spike_1",
+          "type": "hazard",
+          "x": 1150,
+          "y": 960,
+          "z": 0,
+          "width": 60,
+          "height": 20,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 30,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "PeriodicHazard",
+            "GlowEffect"
+          ],
+          "properties": {
+            "interval": 2,
+            "duration": 1,
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "phase_spike_2",
+          "type": "hazard",
+          "x": 2350,
+          "y": 960,
+          "z": 0,
+          "width": 60,
+          "height": 20,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 30,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "PeriodicHazard",
+            "GlowEffect"
+          ],
+          "properties": {
+            "interval": 2,
+            "duration": 1,
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "phase_spike_3",
+          "type": "hazard",
+          "x": 3050,
+          "y": 960,
+          "z": 0,
+          "width": 60,
+          "height": 20,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 30,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "PeriodicHazard",
+            "GlowEffect"
+          ],
+          "properties": {
+            "interval": 1.8,
+            "duration": 1.2,
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "gap_1",
+          "type": "hazard",
+          "x": 640,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "gap_2",
+          "type": "hazard",
+          "x": 1180,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "gap_3",
+          "type": "hazard",
+          "x": 1800,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "gap_4",
+          "type": "hazard",
+          "x": 2380,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "crystal_decor_1",
+          "type": "decoration",
+          "x": 150,
+          "y": 860,
+          "z": -1,
+          "width": 32,
+          "height": 56,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "GlowEffect"
+          ],
+          "properties": {
+            "glowColor": "#00E5FF"
+          }
+        },
+        {
+          "id": "crystal_decor_2",
+          "type": "decoration",
+          "x": 900,
+          "y": 870,
+          "z": -1,
+          "width": 28,
+          "height": 48,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "GlowEffect"
+          ],
+          "properties": {
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "crystal_decor_3",
+          "type": "decoration",
+          "x": 1700,
+          "y": 860,
+          "z": -1,
+          "width": 32,
+          "height": 56,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "GlowEffect"
+          ],
+          "properties": {
+            "glowColor": "#00E5FF"
+          }
+        },
+        {
+          "id": "crystal_decor_4",
+          "type": "decoration",
+          "x": 2500,
+          "y": 870,
+          "z": -1,
+          "width": 28,
+          "height": 48,
+          "color": "#FFD740",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "GlowEffect"
+          ],
+          "properties": {
+            "glowColor": "#FFD740"
+          }
+        },
+        {
+          "id": "crystal_decor_5",
+          "type": "decoration",
+          "x": 3300,
+          "y": 860,
+          "z": -1,
+          "width": 32,
+          "height": 56,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "GlowEffect"
+          ],
+          "properties": {
+            "glowColor": "#00E5FF"
+          }
+        },
+        {
+          "id": "star_1",
+          "type": "decoration",
+          "x": 400,
+          "y": 150,
+          "z": -2,
+          "width": 24,
+          "height": 24,
+          "color": "#FFFFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Parallax",
+            "Twinkle"
+          ],
+          "properties": {
+            "parallaxLayer": 2
+          }
+        },
+        {
+          "id": "star_2",
+          "type": "decoration",
+          "x": 1200,
+          "y": 120,
+          "z": -2,
+          "width": 20,
+          "height": 20,
+          "color": "#E0E0E0",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Parallax",
+            "Twinkle"
+          ],
+          "properties": {
+            "parallaxLayer": 2
+          }
+        },
+        {
+          "id": "star_3",
+          "type": "decoration",
+          "x": 2000,
+          "y": 160,
+          "z": -2,
+          "width": 24,
+          "height": 24,
+          "color": "#FFFFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Parallax",
+            "Twinkle"
+          ],
+          "properties": {
+            "parallaxLayer": 2
+          }
+        },
+        {
+          "id": "star_4",
+          "type": "decoration",
+          "x": 2800,
+          "y": 130,
+          "z": -2,
+          "width": 20,
+          "height": 20,
+          "color": "#B0BEC5",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Parallax",
+            "Twinkle"
+          ],
+          "properties": {
+            "parallaxLayer": 2
+          }
+        },
+        {
+          "id": "star_5",
+          "type": "decoration",
+          "x": 3500,
+          "y": 150,
+          "z": -2,
+          "width": 24,
+          "height": 24,
+          "color": "#FFFFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Parallax",
+            "Twinkle"
+          ],
+          "properties": {
+            "parallaxLayer": 2
+          }
+        },
+        {
+          "id": "nebula_1",
+          "type": "decoration",
+          "x": 1000,
+          "y": 250,
+          "z": -2,
+          "width": 300,
+          "height": 140,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Parallax",
+            "Drift"
+          ],
+          "properties": {
+            "driftSpeed": 0.1,
+            "parallaxLayer": 2
+          }
+        },
+        {
+          "id": "nebula_2",
+          "type": "decoration",
+          "x": 2600,
+          "y": 220,
+          "z": -2,
+          "width": 260,
+          "height": 120,
+          "color": "#536DFE",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Parallax",
+            "Drift"
+          ],
+          "properties": {
+            "driftSpeed": 0.08,
+            "parallaxLayer": 2
+          }
+        },
+        {
+          "id": "checkpoint_1",
+          "type": "checkpoint",
+          "x": 1830,
+          "y": 920,
+          "z": 0,
+          "width": 32,
+          "height": 60,
+          "color": "#FFFFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Checkpoint"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "finish_1",
+          "type": "finish",
+          "x": 3700,
+          "y": 900,
+          "z": 0,
+          "width": 64,
+          "height": 80,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Goal"
+          ],
+          "properties": {
+            "nextLevel": 1
+          }
+        },
+        {
+          "id": "trigger_exit_1",
+          "type": "trigger",
+          "x": 3640,
+          "y": 880,
+          "z": 0,
+          "width": 128,
+          "height": 120,
+          "color": "#D500F900",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Collider",
+            "LevelTrigger"
+          ],
+          "properties": {
+            "action": "nextLevel"
+          }
+        }
       ],
       "cameras": [
-        { "type": "follow", "target": "hero", "smooth": 0.08, "offset": { "x": 0, "y": -150 } }
+        {
+          "type": "follow",
+          "target": "hero",
+          "smooth": 0.08,
+          "offset": {
+            "x": 0,
+            "y": -150
+          }
+        }
       ]
     },
     {
       "name": "Запутанность",
       "timeLimit": 260,
       "par": 2,
-      "background": { "type": "gradient", "colors": ["#0D0221", "#1B0845", "#4A148C"] },
+      "background": {
+        "type": "gradient",
+        "colors": [
+          "#0D0221",
+          "#1B0845",
+          "#4A148C"
+        ]
+      },
       "entities": [
-        { "id": "hero", "type": "hero", "x": 100, "y": 900, "z": 0, "width": 44, "height": 60, "color": "#00E5FF", "health": 100, "speed": 5, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "Animator", "PlayerInput"], "properties": { "jumps": 2, "coyoteTime": 0.15 } },
-        { "id": "spawn_2", "type": "spawn_point", "x": 100, "y": 900, "z": 0, "width": 32, "height": 32, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "SpawnPoint"], "properties": {} },
-        { "id": "crystal_ground_1", "type": "platform", "x": 0, "y": 980, "z": 0, "width": 600, "height": 100, "color": "#4A148C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_2", "type": "platform", "x": 660, "y": 980, "z": 0, "width": 460, "height": 100, "color": "#6A1B9A", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_3", "type": "platform", "x": 1180, "y": 980, "z": 0, "width": 520, "height": 100, "color": "#4A148C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_4", "type": "platform", "x": 1760, "y": 980, "z": 0, "width": 480, "height": 100, "color": "#6A1B9A", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "crystal_ground_5", "type": "platform", "x": 2300, "y": 980, "z": 0, "width": 1540, "height": 100, "color": "#4A148C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "quantum_plat_1", "type": "platform", "x": 320, "y": 820, "z": 0, "width": 128, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_2", "type": "platform", "x": 560, "y": 720, "z": 0, "width": 112, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_3", "type": "platform", "x": 900, "y": 780, "z": 0, "width": 140, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_4", "type": "platform", "x": 1300, "y": 700, "z": 0, "width": 128, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_5", "type": "platform", "x": 1600, "y": 800, "z": 0, "width": 128, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_6", "type": "platform", "x": 2000, "y": 740, "z": 0, "width": 128, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_7", "type": "platform", "x": 2450, "y": 680, "z": 0, "width": 128, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_8", "type": "platform", "x": 2800, "y": 780, "z": 0, "width": 140, "height": 24, "color": "#651FFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_9", "type": "platform", "x": 3150, "y": 700, "z": 0, "width": 128, "height": 24, "color": "#7C4DFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "portal_beta_a", "type": "portal", "x": 620, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "beta", "exitId": "portal_beta_b", "glowColor": "#D500F9" } },
-        { "id": "portal_beta_b", "type": "portal", "x": 2350, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#00B0FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "beta", "exitId": "portal_beta_a", "glowColor": "#00B0FF" } },
-        { "id": "portal_gamma_a", "type": "portal", "x": 1720, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#FFD740", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "gamma", "exitId": "portal_gamma_b", "glowColor": "#FFD740" } },
-        { "id": "portal_gamma_b", "type": "portal", "x": 3250, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#76FF03", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "gamma", "exitId": "portal_gamma_a", "glowColor": "#76FF03" } },
-        { "id": "gravity_pad_low_1", "type": "platform", "x": 1250, "y": 940, "z": 0, "width": 96, "height": 24, "color": "#18FFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider", "GravityField"], "properties": { "gravityField": "low", "radius": 240 } },
-        { "id": "gravity_pad_high_1", "type": "platform", "x": 2900, "y": 940, "z": 0, "width": 96, "height": 24, "color": "#FF6E40", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider", "GravityField"], "properties": { "gravityField": "high", "radius": 180 } },
-        { "id": "drift_platform_1", "type": "moving_platform", "x": 1500, "y": 620, "z": 0, "width": 140, "height": 24, "color": "#B388FF", "health": 0, "speed": 2, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlatformMover"], "properties": { "axis": "horizontal", "range": 260, "delay": 0 } },
-        { "id": "drift_platform_2", "type": "moving_platform", "x": 2600, "y": 560, "z": 0, "width": 140, "height": 24, "color": "#B388FF", "health": 0, "speed": 1.8, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlatformMover"], "properties": { "axis": "vertical", "range": 240, "delay": 0 } },
-        { "id": "drift_platform_3", "type": "moving_platform", "x": 3050, "y": 640, "z": 0, "width": 140, "height": 24, "color": "#82B1FF", "health": 0, "speed": 2.4, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlatformMover"], "properties": { "axis": "horizontal", "range": 200, "delay": 0 } },
-        { "id": "wisp_1", "type": "enemy", "x": 800, "y": 700, "z": 0, "width": 36, "height": 36, "color": "#FF4081", "health": 30, "speed": 2, "damage": 15, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "FlyingEnemy", "GlowEffect"], "properties": { "patrolAxis": "horizontal", "range": 220, "glowColor": "#FF4081" } },
-        { "id": "wisp_2", "type": "enemy", "x": 1480, "y": 580, "z": 0, "width": 36, "height": 36, "color": "#FF4081", "health": 30, "speed": 2.2, "damage": 15, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "FlyingEnemy", "GlowEffect"], "properties": { "patrolAxis": "vertical", "range": 180, "glowColor": "#FF4081" } },
-        { "id": "wisp_3", "type": "enemy", "x": 2550, "y": 560, "z": 0, "width": 36, "height": 36, "color": "#EA80FC", "health": 35, "speed": 2.4, "damage": 15, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "FlyingEnemy", "GlowEffect"], "properties": { "patrolAxis": "horizontal", "range": 260, "glowColor": "#EA80FC" } },
-        { "id": "crawler_1", "type": "enemy", "x": 900, "y": 940, "z": 0, "width": 44, "height": 36, "color": "#00BFA5", "health": 40, "speed": 1.5, "damage": 20, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "Patrol"], "properties": { "range": 300 } },
-        { "id": "crawler_2", "type": "enemy", "x": 1950, "y": 940, "z": 0, "width": 44, "height": 36, "color": "#00BFA5", "health": 40, "speed": 1.6, "damage": 20, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "Patrol"], "properties": { "range": 280 } },
-        { "id": "crawler_3", "type": "enemy", "x": 2750, "y": 940, "z": 0, "width": 44, "height": 36, "color": "#1DE9B6", "health": 45, "speed": 1.8, "damage": 20, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "Patrol"], "properties": { "range": 340 } },
-        { "id": "shard_17", "type": "pickup", "x": 250, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_18", "type": "pickup", "x": 450, "y": 790, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_19", "type": "pickup", "x": 620, "y": 690, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_20", "type": "pickup", "x": 950, "y": 750, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_21", "type": "pickup", "x": 1350, "y": 670, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_22", "type": "pickup", "x": 1650, "y": 770, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_23", "type": "pickup", "x": 2050, "y": 710, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_24", "type": "pickup", "x": 2500, "y": 650, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_25", "type": "pickup", "x": 2850, "y": 750, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_26", "type": "pickup", "x": 3200, "y": 670, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_27", "type": "pickup", "x": 3400, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_28", "type": "pickup", "x": 3550, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_29", "type": "pickup", "x": 1500, "y": 560, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_30", "type": "pickup", "x": 2650, "y": 500, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "entangled_core_2", "type": "pickup", "x": 3100, "y": 640, "z": 0, "width": 32, "height": 32, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect", "Rotate"], "properties": { "value": 60, "gemType": "entangled_core" } },
-        { "id": "isotope_3", "type": "pickup", "x": 1000, "y": 940, "z": 0, "width": 24, "height": 24, "color": "#76FF03", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup"], "properties": { "value": 30, "pickupType": "health" } },
-        { "id": "isotope_4", "type": "pickup", "x": 2100, "y": 940, "z": 0, "width": 24, "height": 24, "color": "#76FF03", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup"], "properties": { "value": 30, "pickupType": "health" } },
-        { "id": "phase_spike_4", "type": "hazard", "x": 1500, "y": 960, "z": 0, "width": 60, "height": 20, "color": "#D500F9", "health": 0, "speed": 0, "damage": 30, "components": ["Transform", "Sprite", "Collider", "PeriodicHazard", "GlowEffect"], "properties": { "interval": 2, "duration": 1, "glowColor": "#D500F9" } },
-        { "id": "phase_spike_5", "type": "hazard", "x": 2600, "y": 960, "z": 0, "width": 60, "height": 20, "color": "#D500F9", "health": 0, "speed": 0, "damage": 30, "components": ["Transform", "Sprite", "Collider", "PeriodicHazard", "GlowEffect"], "properties": { "interval": 1.8, "duration": 1.2, "glowColor": "#D500F9" } },
-        { "id": "phase_spike_6", "type": "hazard", "x": 3300, "y": 960, "z": 0, "width": 60, "height": 20, "color": "#D500F9", "health": 0, "speed": 0, "damage": 30, "components": ["Transform", "Sprite", "Collider", "PeriodicHazard", "GlowEffect"], "properties": { "interval": 2.2, "duration": 0.9, "glowColor": "#D500F9" } },
-        { "id": "gap_5", "type": "hazard", "x": 600, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "gap_6", "type": "hazard", "x": 1120, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "gap_7", "type": "hazard", "x": 1700, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "gap_8", "type": "hazard", "x": 2240, "y": 1050, "z": 0, "width": 60, "height": 60, "color": "#B71C1C00", "health": 0, "speed": 0, "damage": 50, "components": ["Transform", "Collider", "Killzone"], "properties": {} },
-        { "id": "checkpoint_2", "type": "checkpoint", "x": 2450, "y": 920, "z": 0, "width": 32, "height": 60, "color": "#FFFFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Checkpoint"], "properties": {} },
-        { "id": "finish_2", "type": "finish", "x": 3700, "y": 900, "z": 0, "width": 64, "height": 80, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Goal"], "properties": { "nextLevel": 2 } },
-        { "id": "trigger_exit_2", "type": "trigger", "x": 3640, "y": 880, "z": 0, "width": 128, "height": 120, "color": "#D500F900", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Collider", "LevelTrigger"], "properties": { "action": "nextLevel" } }
+        {
+          "id": "hero",
+          "type": "hero",
+          "x": 100,
+          "y": 900,
+          "z": 0,
+          "width": 44,
+          "height": 60,
+          "color": "#00E5FF",
+          "health": 100,
+          "speed": 5,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "Animator",
+            "PlayerInput"
+          ],
+          "properties": {
+            "jumps": 2,
+            "coyoteTime": 0.15
+          }
+        },
+        {
+          "id": "spawn_2",
+          "type": "spawn_point",
+          "x": 100,
+          "y": 900,
+          "z": 0,
+          "width": 32,
+          "height": 32,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "SpawnPoint"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "crystal_ground_1",
+          "type": "platform",
+          "x": 0,
+          "y": 980,
+          "z": 0,
+          "width": 600,
+          "height": 100,
+          "color": "#4A148C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_2",
+          "type": "platform",
+          "x": 660,
+          "y": 980,
+          "z": 0,
+          "width": 460,
+          "height": 100,
+          "color": "#6A1B9A",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_3",
+          "type": "platform",
+          "x": 1180,
+          "y": 980,
+          "z": 0,
+          "width": 520,
+          "height": 100,
+          "color": "#4A148C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_4",
+          "type": "platform",
+          "x": 1760,
+          "y": 980,
+          "z": 0,
+          "width": 480,
+          "height": 100,
+          "color": "#6A1B9A",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "crystal_ground_5",
+          "type": "platform",
+          "x": 2300,
+          "y": 980,
+          "z": 0,
+          "width": 1540,
+          "height": 100,
+          "color": "#4A148C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "quantum_plat_1",
+          "type": "platform",
+          "x": 320,
+          "y": 820,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_2",
+          "type": "platform",
+          "x": 560,
+          "y": 720,
+          "z": 0,
+          "width": 112,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_3",
+          "type": "platform",
+          "x": 900,
+          "y": 780,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_4",
+          "type": "platform",
+          "x": 1300,
+          "y": 700,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_5",
+          "type": "platform",
+          "x": 1600,
+          "y": 800,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_6",
+          "type": "platform",
+          "x": 2000,
+          "y": 740,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_7",
+          "type": "platform",
+          "x": 2450,
+          "y": 680,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_8",
+          "type": "platform",
+          "x": 2800,
+          "y": 780,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#651FFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_9",
+          "type": "platform",
+          "x": 3150,
+          "y": 700,
+          "z": 0,
+          "width": 128,
+          "height": 24,
+          "color": "#7C4DFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "portal_beta_a",
+          "type": "portal",
+          "x": 620,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "beta",
+            "exitId": "portal_beta_b",
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "portal_beta_b",
+          "type": "portal",
+          "x": 2350,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#00B0FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "beta",
+            "exitId": "portal_beta_a",
+            "glowColor": "#00B0FF"
+          }
+        },
+        {
+          "id": "portal_gamma_a",
+          "type": "portal",
+          "x": 1720,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#FFD740",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "gamma",
+            "exitId": "portal_gamma_b",
+            "glowColor": "#FFD740"
+          }
+        },
+        {
+          "id": "portal_gamma_b",
+          "type": "portal",
+          "x": 3250,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#76FF03",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "gamma",
+            "exitId": "portal_gamma_a",
+            "glowColor": "#76FF03"
+          }
+        },
+        {
+          "id": "gravity_pad_low_1",
+          "type": "platform",
+          "x": 1250,
+          "y": 940,
+          "z": 0,
+          "width": 96,
+          "height": 24,
+          "color": "#18FFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider",
+            "GravityField"
+          ],
+          "properties": {
+            "gravityField": "low",
+            "radius": 240
+          }
+        },
+        {
+          "id": "gravity_pad_high_1",
+          "type": "platform",
+          "x": 2900,
+          "y": 940,
+          "z": 0,
+          "width": 96,
+          "height": 24,
+          "color": "#FF6E40",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider",
+            "GravityField"
+          ],
+          "properties": {
+            "gravityField": "high",
+            "radius": 180
+          }
+        },
+        {
+          "id": "drift_platform_1",
+          "type": "moving_platform",
+          "x": 1500,
+          "y": 620,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#B388FF",
+          "health": 0,
+          "speed": 2,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlatformMover"
+          ],
+          "properties": {
+            "axis": "horizontal",
+            "range": 260,
+            "delay": 0
+          }
+        },
+        {
+          "id": "drift_platform_2",
+          "type": "moving_platform",
+          "x": 2600,
+          "y": 560,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#B388FF",
+          "health": 0,
+          "speed": 1.8,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlatformMover"
+          ],
+          "properties": {
+            "axis": "vertical",
+            "range": 240,
+            "delay": 0
+          }
+        },
+        {
+          "id": "drift_platform_3",
+          "type": "moving_platform",
+          "x": 3050,
+          "y": 640,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#82B1FF",
+          "health": 0,
+          "speed": 2.4,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlatformMover"
+          ],
+          "properties": {
+            "axis": "horizontal",
+            "range": 200,
+            "delay": 0
+          }
+        },
+        {
+          "id": "wisp_1",
+          "type": "enemy",
+          "x": 800,
+          "y": 700,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#FF4081",
+          "health": 30,
+          "speed": 2,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy",
+            "GlowEffect"
+          ],
+          "properties": {
+            "patrolAxis": "horizontal",
+            "range": 220,
+            "glowColor": "#FF4081"
+          }
+        },
+        {
+          "id": "wisp_2",
+          "type": "enemy",
+          "x": 1480,
+          "y": 580,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#FF4081",
+          "health": 30,
+          "speed": 2.2,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy",
+            "GlowEffect"
+          ],
+          "properties": {
+            "patrolAxis": "vertical",
+            "range": 180,
+            "glowColor": "#FF4081"
+          }
+        },
+        {
+          "id": "wisp_3",
+          "type": "enemy",
+          "x": 2550,
+          "y": 560,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#EA80FC",
+          "health": 35,
+          "speed": 2.4,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy",
+            "GlowEffect"
+          ],
+          "properties": {
+            "patrolAxis": "horizontal",
+            "range": 260,
+            "glowColor": "#EA80FC"
+          }
+        },
+        {
+          "id": "crawler_1",
+          "type": "enemy",
+          "x": 900,
+          "y": 940,
+          "z": 0,
+          "width": 44,
+          "height": 36,
+          "color": "#00BFA5",
+          "health": 40,
+          "speed": 1.5,
+          "damage": 20,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "range": 300
+          }
+        },
+        {
+          "id": "crawler_2",
+          "type": "enemy",
+          "x": 1950,
+          "y": 940,
+          "z": 0,
+          "width": 44,
+          "height": 36,
+          "color": "#00BFA5",
+          "health": 40,
+          "speed": 1.6,
+          "damage": 20,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "range": 280
+          }
+        },
+        {
+          "id": "crawler_3",
+          "type": "enemy",
+          "x": 2750,
+          "y": 940,
+          "z": 0,
+          "width": 44,
+          "height": 36,
+          "color": "#1DE9B6",
+          "health": 45,
+          "speed": 1.8,
+          "damage": 20,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "range": 340
+          }
+        },
+        {
+          "id": "shard_17",
+          "type": "pickup",
+          "x": 250,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_18",
+          "type": "pickup",
+          "x": 450,
+          "y": 790,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_19",
+          "type": "pickup",
+          "x": 620,
+          "y": 690,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_20",
+          "type": "pickup",
+          "x": 950,
+          "y": 750,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_21",
+          "type": "pickup",
+          "x": 1350,
+          "y": 670,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_22",
+          "type": "pickup",
+          "x": 1650,
+          "y": 770,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_23",
+          "type": "pickup",
+          "x": 2050,
+          "y": 710,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_24",
+          "type": "pickup",
+          "x": 2500,
+          "y": 650,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_25",
+          "type": "pickup",
+          "x": 2850,
+          "y": 750,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_26",
+          "type": "pickup",
+          "x": 3200,
+          "y": 670,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_27",
+          "type": "pickup",
+          "x": 3400,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_28",
+          "type": "pickup",
+          "x": 3550,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_29",
+          "type": "pickup",
+          "x": 1500,
+          "y": 560,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_30",
+          "type": "pickup",
+          "x": 2650,
+          "y": 500,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "entangled_core_2",
+          "type": "pickup",
+          "x": 3100,
+          "y": 640,
+          "z": 0,
+          "width": 32,
+          "height": 32,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect",
+            "Rotate"
+          ],
+          "properties": {
+            "value": 60,
+            "gemType": "entangled_core"
+          }
+        },
+        {
+          "id": "isotope_3",
+          "type": "pickup",
+          "x": 1000,
+          "y": 940,
+          "z": 0,
+          "width": 24,
+          "height": 24,
+          "color": "#76FF03",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup"
+          ],
+          "properties": {
+            "value": 30,
+            "pickupType": "health"
+          }
+        },
+        {
+          "id": "isotope_4",
+          "type": "pickup",
+          "x": 2100,
+          "y": 940,
+          "z": 0,
+          "width": 24,
+          "height": 24,
+          "color": "#76FF03",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup"
+          ],
+          "properties": {
+            "value": 30,
+            "pickupType": "health"
+          }
+        },
+        {
+          "id": "phase_spike_4",
+          "type": "hazard",
+          "x": 1500,
+          "y": 960,
+          "z": 0,
+          "width": 60,
+          "height": 20,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 30,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "PeriodicHazard",
+            "GlowEffect"
+          ],
+          "properties": {
+            "interval": 2,
+            "duration": 1,
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "phase_spike_5",
+          "type": "hazard",
+          "x": 2600,
+          "y": 960,
+          "z": 0,
+          "width": 60,
+          "height": 20,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 30,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "PeriodicHazard",
+            "GlowEffect"
+          ],
+          "properties": {
+            "interval": 1.8,
+            "duration": 1.2,
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "phase_spike_6",
+          "type": "hazard",
+          "x": 3300,
+          "y": 960,
+          "z": 0,
+          "width": 60,
+          "height": 20,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 30,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "PeriodicHazard",
+            "GlowEffect"
+          ],
+          "properties": {
+            "interval": 2.2,
+            "duration": 0.9,
+            "glowColor": "#D500F9"
+          }
+        },
+        {
+          "id": "gap_5",
+          "type": "hazard",
+          "x": 600,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "gap_6",
+          "type": "hazard",
+          "x": 1120,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "gap_7",
+          "type": "hazard",
+          "x": 1700,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "gap_8",
+          "type": "hazard",
+          "x": 2240,
+          "y": 1050,
+          "z": 0,
+          "width": 60,
+          "height": 60,
+          "color": "#B71C1C00",
+          "health": 0,
+          "speed": 0,
+          "damage": 50,
+          "components": [
+            "Transform",
+            "Collider",
+            "Killzone"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "checkpoint_2",
+          "type": "checkpoint",
+          "x": 2450,
+          "y": 920,
+          "z": 0,
+          "width": 32,
+          "height": 60,
+          "color": "#FFFFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Checkpoint"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "finish_2",
+          "type": "finish",
+          "x": 3700,
+          "y": 900,
+          "z": 0,
+          "width": 64,
+          "height": 80,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Goal"
+          ],
+          "properties": {
+            "nextLevel": 2
+          }
+        },
+        {
+          "id": "trigger_exit_2",
+          "type": "trigger",
+          "x": 3640,
+          "y": 880,
+          "z": 0,
+          "width": 128,
+          "height": 120,
+          "color": "#D500F900",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Collider",
+            "LevelTrigger"
+          ],
+          "properties": {
+            "action": "nextLevel"
+          }
+        }
       ],
       "cameras": [
-        { "type": "follow", "target": "hero", "smooth": 0.08, "offset": { "x": 0, "y": -150 } }
+        {
+          "type": "follow",
+          "target": "hero",
+          "smooth": 0.08,
+          "offset": {
+            "x": 0,
+            "y": -150
+          }
+        }
       ]
     },
     {
       "name": "Туннельный Эффект",
       "timeLimit": 280,
       "par": 2,
-      "background": { "type": "gradient", "colors": ["#02111B", "#00363A", "#00695C"] },
+      "background": {
+        "type": "gradient",
+        "colors": [
+          "#02111B",
+          "#00363A",
+          "#00695C"
+        ]
+      },
       "entities": [
-        { "id": "hero", "type": "hero", "x": 100, "y": 900, "z": 0, "width": 44, "height": 60, "color": "#00E5FF", "health": 100, "speed": 5, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "Animator", "PlayerInput"], "properties": { "jumps": 2, "coyoteTime": 0.15 } },
-        { "id": "spawn_3", "type": "spawn_point", "x": 100, "y": 900, "z": 0, "width": 32, "height": 32, "color": "#D500F9", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "SpawnPoint"], "properties": {} },
-        { "id": "tunnel_ground_1", "type": "platform", "x": 0, "y": 980, "z": 0, "width": 540, "height": 100, "color": "#004D40", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "tunnel_ground_2", "type": "platform", "x": 620, "y": 980, "z": 0, "width": 420, "height": 100, "color": "#00695C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "tunnel_ground_3", "type": "platform", "x": 1120, "y": 980, "z": 0, "width": 560, "height": 100, "color": "#004D40", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "tunnel_ground_4", "type": "platform", "x": 1760, "y": 980, "z": 0, "width": 440, "height": 100, "color": "#00695C", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "tunnel_ground_5", "type": "platform", "x": 2280, "y": 980, "z": 0, "width": 1560, "height": 100, "color": "#004D40", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "wormhole_wall_1", "type": "platform", "x": 480, "y": 760, "z": 0, "width": 24, "height": 220, "color": "#26A69A", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "wormhole_wall_2", "type": "platform", "x": 1060, "y": 700, "z": 0, "width": 24, "height": 160, "color": "#26A69A", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "wormhole_wall_3", "type": "platform", "x": 1620, "y": 720, "z": 0, "width": 24, "height": 180, "color": "#26A69A", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": { "surface": "crystal" } },
-        { "id": "quantum_plat_a", "type": "platform", "x": 340, "y": 800, "z": 0, "width": 120, "height": 24, "color": "#64FFDA", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_b", "type": "platform", "x": 700, "y": 700, "z": 0, "width": 120, "height": 24, "color": "#1DE9B6", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_c", "type": "platform", "x": 1180, "y": 760, "z": 0, "width": 130, "height": 24, "color": "#64FFDA", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_d", "type": "platform", "x": 1450, "y": 640, "z": 0, "width": 120, "height": 24, "color": "#1DE9B6", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_e", "type": "platform", "x": 1850, "y": 720, "z": 0, "width": 130, "height": 24, "color": "#64FFDA", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_f", "type": "platform", "x": 2150, "y": 600, "z": 0, "width": 120, "height": 24, "color": "#1DE9B6", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_g", "type": "platform", "x": 2500, "y": 700, "z": 0, "width": 130, "height": 24, "color": "#64FFDA", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_h", "type": "platform", "x": 2900, "y": 620, "z": 0, "width": 120, "height": 24, "color": "#1DE9B6", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "quantum_plat_i", "type": "platform", "x": 3250, "y": 720, "z": 0, "width": 130, "height": 24, "color": "#64FFDA", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider"], "properties": {} },
-        { "id": "portal_delta_a", "type": "portal", "x": 440, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#18FFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "delta", "exitId": "portal_delta_b", "glowColor": "#18FFFF" } },
-        { "id": "portal_delta_b", "type": "portal", "x": 2700, "y": 856, "z": 0, "width": 56, "height": 56, "color": "#FF4081", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Portal", "GlowEffect"], "properties": { "linkId": "delta", "exitId": "portal_delta_a", "glowColor": "#FF4081" } },
-        { "id": "gravity_pad_low_2", "type": "platform", "x": 1350, "y": 940, "z": 0, "width": 96, "height": 24, "color": "#18FFFF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider", "GravityField"], "properties": { "gravityField": "low", "radius": 260 } },
-        { "id": "gravity_pad_flip_1", "type": "platform", "x": 2200, "y": 940, "z": 0, "width": 96, "height": 24, "color": "#FFD740", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider", "GravityField"], "properties": { "gravityField": "flip", "radius": 200 } },
-        { "id": "gravity_pad_high_2", "type": "platform", "x": 3050, "y": 940, "z": 0, "width": 96, "height": 24, "color": "#FF6E40", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "StaticCollider", "GravityField"], "properties": { "gravityField": "high", "radius": 180 } },
-        { "id": "tunnel_mover_1", "type": "moving_platform", "x": 880, "y": 640, "z": 0, "width": 140, "height": 24, "color": "#B2DFDB", "health": 0, "speed": 2, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlatformMover"], "properties": { "axis": "horizontal", "range": 240, "delay": 0 } },
-        { "id": "tunnel_mover_2", "type": "moving_platform", "x": 1950, "y": 560, "z": 0, "width": 140, "height": 24, "color": "#B2DFDB", "health": 0, "speed": 2.2, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlatformMover"], "properties": { "axis": "vertical", "range": 260, "delay": 0 } },
-        { "id": "tunnel_mover_3", "type": "moving_platform", "x": 2650, "y": 600, "z": 0, "width": 130, "height": 24, "color": "#80CBC4", "health": 0, "speed": 1.8, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlatformMover"], "properties": { "axis": "horizontal", "range": 300, "delay": 0 } },
-        { "id": "tunnel_mover_4", "type": "moving_platform", "x": 3400, "y": 580, "z": 0, "width": 130, "height": 24, "color": "#80CBC4", "health": 0, "speed": 2, "damage": 0, "components": ["Transform", "Sprite", "PhysicsBody", "Collider", "PlatformMover"], "properties": { "axis": "vertical", "range": 200, "delay": 0 } },
-        { "id": "wisp_4", "type": "enemy", "x": 760, "y": 620, "z": 0, "width": 36, "height": 36, "color": "#FF4081", "health": 30, "speed": 2, "damage": 15, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "FlyingEnemy", "GlowEffect"], "properties": { "patrolAxis": "horizontal", "range": 200, "glowColor": "#FF4081" } },
-        { "id": "wisp_5", "type": "enemy", "x": 1520, "y": 520, "z": 0, "width": 36, "height": 36, "color": "#EA80FC", "health": 35, "speed": 2.4, "damage": 15, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "FlyingEnemy", "GlowEffect"], "properties": { "patrolAxis": "vertical", "range": 220, "glowColor": "#EA80FC" } },
-        { "id": "wisp_6", "type": "enemy", "x": 2350, "y": 500, "z": 0, "width": 36, "height": 36, "color": "#FF4081", "health": 30, "speed": 2.2, "damage": 15, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "FlyingEnemy", "GlowEffect"], "properties": { "patrolAxis": "horizontal", "range": 260, "glowColor": "#FF4081" } },
-        { "id": "wisp_7", "type": "enemy", "x": 3150, "y": 520, "z": 0, "width": 36, "height": 36, "color": "#EA80FC", "health": 35, "speed": 2.6, "damage": 15, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "FlyingEnemy", "GlowEffect"], "properties": { "patrolAxis": "vertical", "range": 200, "glowColor": "#EA80FC" } },
-        { "id": "crawler_4", "type": "enemy", "x": 800, "y": 940, "z": 0, "width": 44, "height": 36, "color": "#00BFA5", "health": 40, "speed": 1.6, "damage": 20, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "Patrol"], "properties": { "range": 280 } },
-        { "id": "crawler_5", "type": "enemy", "x": 1900, "y": 940, "z": 0, "width": 44, "height": 36, "color": "#00BFA5", "health": 40, "speed": 1.7, "damage": 20, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "Patrol"], "properties": { "range": 320 } },
-        { "id": "crawler_6", "type": "enemy", "x": 2900, "y": 940, "z": 0, "width": 44, "height": 36, "color": "#1DE9B6", "health": 45, "speed": 1.9, "damage": 20, "components": ["Transform", "Sprite", "Collider", "EnemyAI", "Patrol"], "properties": { "range": 360 } },
-        { "id": "shard_31", "type": "pickup", "x": 220, "y": 940, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_32", "type": "pickup", "x": 400, "y": 770, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_33", "type": "pickup", "x": 750, "y": 670, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_34", "type": "pickup", "x": 1250, "y": 730, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_35", "type": "pickup", "x": 1500, "y": 610, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_36", "type": "pickup", "x": 1900, "y": 690, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_37", "type": "pickup", "x": 2200, "y": 570, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_38", "type": "pickup", "x": 2550, "y": 670, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_39", "type": "pickup", "x": 2950, "y": 590, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } },
-        { "id": "shard_40", "type": "pickup", "x": 3300, "y": 690, "z": 0, "width": 20, "height": 28, "color": "#00E5FF", "health": 0, "speed": 0, "damage": 0, "components": ["Transform", "Sprite", "Collider", "Pickup", "GlowEffect"], "properties": { "value": 15, "gemType": "energy_shard" } }
+        {
+          "id": "hero",
+          "type": "hero",
+          "x": 100,
+          "y": 900,
+          "z": 0,
+          "width": 44,
+          "height": 60,
+          "color": "#00E5FF",
+          "health": 100,
+          "speed": 5,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "Animator",
+            "PlayerInput"
+          ],
+          "properties": {
+            "jumps": 2,
+            "coyoteTime": 0.15
+          }
+        },
+        {
+          "id": "spawn_3",
+          "type": "spawn_point",
+          "x": 100,
+          "y": 900,
+          "z": 0,
+          "width": 32,
+          "height": 32,
+          "color": "#D500F9",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "SpawnPoint"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "tunnel_ground_1",
+          "type": "platform",
+          "x": 0,
+          "y": 980,
+          "z": 0,
+          "width": 540,
+          "height": 100,
+          "color": "#004D40",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "tunnel_ground_2",
+          "type": "platform",
+          "x": 620,
+          "y": 980,
+          "z": 0,
+          "width": 420,
+          "height": 100,
+          "color": "#00695C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "tunnel_ground_3",
+          "type": "platform",
+          "x": 1120,
+          "y": 980,
+          "z": 0,
+          "width": 560,
+          "height": 100,
+          "color": "#004D40",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "tunnel_ground_4",
+          "type": "platform",
+          "x": 1760,
+          "y": 980,
+          "z": 0,
+          "width": 440,
+          "height": 100,
+          "color": "#00695C",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "tunnel_ground_5",
+          "type": "platform",
+          "x": 2280,
+          "y": 980,
+          "z": 0,
+          "width": 1560,
+          "height": 100,
+          "color": "#004D40",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "wormhole_wall_1",
+          "type": "platform",
+          "x": 480,
+          "y": 760,
+          "z": 0,
+          "width": 24,
+          "height": 220,
+          "color": "#26A69A",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "wormhole_wall_2",
+          "type": "platform",
+          "x": 1060,
+          "y": 700,
+          "z": 0,
+          "width": 24,
+          "height": 160,
+          "color": "#26A69A",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "wormhole_wall_3",
+          "type": "platform",
+          "x": 1620,
+          "y": 720,
+          "z": 0,
+          "width": 24,
+          "height": 180,
+          "color": "#26A69A",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {
+            "surface": "crystal"
+          }
+        },
+        {
+          "id": "quantum_plat_a",
+          "type": "platform",
+          "x": 340,
+          "y": 800,
+          "z": 0,
+          "width": 120,
+          "height": 24,
+          "color": "#64FFDA",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_b",
+          "type": "platform",
+          "x": 700,
+          "y": 700,
+          "z": 0,
+          "width": 120,
+          "height": 24,
+          "color": "#1DE9B6",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_c",
+          "type": "platform",
+          "x": 1180,
+          "y": 760,
+          "z": 0,
+          "width": 130,
+          "height": 24,
+          "color": "#64FFDA",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_d",
+          "type": "platform",
+          "x": 1450,
+          "y": 640,
+          "z": 0,
+          "width": 120,
+          "height": 24,
+          "color": "#1DE9B6",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_e",
+          "type": "platform",
+          "x": 1850,
+          "y": 720,
+          "z": 0,
+          "width": 130,
+          "height": 24,
+          "color": "#64FFDA",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_f",
+          "type": "platform",
+          "x": 2150,
+          "y": 600,
+          "z": 0,
+          "width": 120,
+          "height": 24,
+          "color": "#1DE9B6",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_g",
+          "type": "platform",
+          "x": 2500,
+          "y": 700,
+          "z": 0,
+          "width": 130,
+          "height": 24,
+          "color": "#64FFDA",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_h",
+          "type": "platform",
+          "x": 2900,
+          "y": 620,
+          "z": 0,
+          "width": 120,
+          "height": 24,
+          "color": "#1DE9B6",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "quantum_plat_i",
+          "type": "platform",
+          "x": 3250,
+          "y": 720,
+          "z": 0,
+          "width": 130,
+          "height": 24,
+          "color": "#64FFDA",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        },
+        {
+          "id": "portal_delta_a",
+          "type": "portal",
+          "x": 440,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#18FFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "delta",
+            "exitId": "portal_delta_b",
+            "glowColor": "#18FFFF"
+          }
+        },
+        {
+          "id": "portal_delta_b",
+          "type": "portal",
+          "x": 2700,
+          "y": 856,
+          "z": 0,
+          "width": 56,
+          "height": 56,
+          "color": "#FF4081",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Portal",
+            "GlowEffect"
+          ],
+          "properties": {
+            "linkId": "delta",
+            "exitId": "portal_delta_a",
+            "glowColor": "#FF4081"
+          }
+        },
+        {
+          "id": "gravity_pad_low_2",
+          "type": "platform",
+          "x": 1350,
+          "y": 940,
+          "z": 0,
+          "width": 96,
+          "height": 24,
+          "color": "#18FFFF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider",
+            "GravityField"
+          ],
+          "properties": {
+            "gravityField": "low",
+            "radius": 260
+          }
+        },
+        {
+          "id": "gravity_pad_flip_1",
+          "type": "platform",
+          "x": 2200,
+          "y": 940,
+          "z": 0,
+          "width": 96,
+          "height": 24,
+          "color": "#FFD740",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider",
+            "GravityField"
+          ],
+          "properties": {
+            "gravityField": "flip",
+            "radius": 200
+          }
+        },
+        {
+          "id": "gravity_pad_high_2",
+          "type": "platform",
+          "x": 3050,
+          "y": 940,
+          "z": 0,
+          "width": 96,
+          "height": 24,
+          "color": "#FF6E40",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider",
+            "GravityField"
+          ],
+          "properties": {
+            "gravityField": "high",
+            "radius": 180
+          }
+        },
+        {
+          "id": "tunnel_mover_1",
+          "type": "moving_platform",
+          "x": 880,
+          "y": 640,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#B2DFDB",
+          "health": 0,
+          "speed": 2,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlatformMover"
+          ],
+          "properties": {
+            "axis": "horizontal",
+            "range": 240,
+            "delay": 0
+          }
+        },
+        {
+          "id": "tunnel_mover_2",
+          "type": "moving_platform",
+          "x": 1950,
+          "y": 560,
+          "z": 0,
+          "width": 140,
+          "height": 24,
+          "color": "#B2DFDB",
+          "health": 0,
+          "speed": 2.2,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlatformMover"
+          ],
+          "properties": {
+            "axis": "vertical",
+            "range": 260,
+            "delay": 0
+          }
+        },
+        {
+          "id": "tunnel_mover_3",
+          "type": "moving_platform",
+          "x": 2650,
+          "y": 600,
+          "z": 0,
+          "width": 130,
+          "height": 24,
+          "color": "#80CBC4",
+          "health": 0,
+          "speed": 1.8,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlatformMover"
+          ],
+          "properties": {
+            "axis": "horizontal",
+            "range": 300,
+            "delay": 0
+          }
+        },
+        {
+          "id": "tunnel_mover_4",
+          "type": "moving_platform",
+          "x": 3400,
+          "y": 580,
+          "z": 0,
+          "width": 130,
+          "height": 24,
+          "color": "#80CBC4",
+          "health": 0,
+          "speed": 2,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "PhysicsBody",
+            "Collider",
+            "PlatformMover"
+          ],
+          "properties": {
+            "axis": "vertical",
+            "range": 200,
+            "delay": 0
+          }
+        },
+        {
+          "id": "wisp_4",
+          "type": "enemy",
+          "x": 760,
+          "y": 620,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#FF4081",
+          "health": 30,
+          "speed": 2,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy",
+            "GlowEffect"
+          ],
+          "properties": {
+            "patrolAxis": "horizontal",
+            "range": 200,
+            "glowColor": "#FF4081"
+          }
+        },
+        {
+          "id": "wisp_5",
+          "type": "enemy",
+          "x": 1520,
+          "y": 520,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#EA80FC",
+          "health": 35,
+          "speed": 2.4,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy",
+            "GlowEffect"
+          ],
+          "properties": {
+            "patrolAxis": "vertical",
+            "range": 220,
+            "glowColor": "#EA80FC"
+          }
+        },
+        {
+          "id": "wisp_6",
+          "type": "enemy",
+          "x": 2350,
+          "y": 500,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#FF4081",
+          "health": 30,
+          "speed": 2.2,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy",
+            "GlowEffect"
+          ],
+          "properties": {
+            "patrolAxis": "horizontal",
+            "range": 260,
+            "glowColor": "#FF4081"
+          }
+        },
+        {
+          "id": "wisp_7",
+          "type": "enemy",
+          "x": 3150,
+          "y": 520,
+          "z": 0,
+          "width": 36,
+          "height": 36,
+          "color": "#EA80FC",
+          "health": 35,
+          "speed": 2.6,
+          "damage": 15,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "FlyingEnemy",
+            "GlowEffect"
+          ],
+          "properties": {
+            "patrolAxis": "vertical",
+            "range": 200,
+            "glowColor": "#EA80FC"
+          }
+        },
+        {
+          "id": "crawler_4",
+          "type": "enemy",
+          "x": 800,
+          "y": 940,
+          "z": 0,
+          "width": 44,
+          "height": 36,
+          "color": "#00BFA5",
+          "health": 40,
+          "speed": 1.6,
+          "damage": 20,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "range": 280
+          }
+        },
+        {
+          "id": "crawler_5",
+          "type": "enemy",
+          "x": 1900,
+          "y": 940,
+          "z": 0,
+          "width": 44,
+          "height": 36,
+          "color": "#00BFA5",
+          "health": 40,
+          "speed": 1.7,
+          "damage": 20,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "range": 320
+          }
+        },
+        {
+          "id": "crawler_6",
+          "type": "enemy",
+          "x": 2900,
+          "y": 940,
+          "z": 0,
+          "width": 44,
+          "height": 36,
+          "color": "#1DE9B6",
+          "health": 45,
+          "speed": 1.9,
+          "damage": 20,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "EnemyAI",
+            "Patrol"
+          ],
+          "properties": {
+            "range": 360
+          }
+        },
+        {
+          "id": "shard_31",
+          "type": "pickup",
+          "x": 220,
+          "y": 940,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_32",
+          "type": "pickup",
+          "x": 400,
+          "y": 770,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_33",
+          "type": "pickup",
+          "x": 750,
+          "y": 670,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_34",
+          "type": "pickup",
+          "x": 1250,
+          "y": 730,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_35",
+          "type": "pickup",
+          "x": 1500,
+          "y": 610,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_36",
+          "type": "pickup",
+          "x": 1900,
+          "y": 690,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_37",
+          "type": "pickup",
+          "x": 2200,
+          "y": 570,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_38",
+          "type": "pickup",
+          "x": 2550,
+          "y": 670,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_39",
+          "type": "pickup",
+          "x": 2950,
+          "y": 590,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "shard_40",
+          "type": "pickup",
+          "x": 3300,
+          "y": 690,
+          "z": 0,
+          "width": 20,
+          "height": 28,
+          "color": "#00E5FF",
+          "health": 0,
+          "speed": 0,
+          "damage": 0,
+          "components": [
+            "Transform",
+            "Sprite",
+            "Collider",
+            "Pickup",
+            "GlowEffect"
+          ],
+          "properties": {
+            "value": 15,
+            "gemType": "energy_shard"
+          }
+        },
+        {
+          "id": "flip_ceiling",
+          "type": "platform",
+          "x": 2040,
+          "y": 140,
+          "width": 340,
+          "height": 32,
+          "color": "#4527A0",
+          "components": [
+            "Transform",
+            "Sprite",
+            "StaticCollider"
+          ],
+          "properties": {}
+        }
       ],
       "cameras": [
-        { "type": "follow", "target": "hero", "smooth": 0.08, "offset": { "x": 0, "y": -150 } }
+        {
+          "type": "follow",
+          "target": "hero",
+          "smooth": 0.08,
+          "offset": {
+            "x": 0,
+            "y": -150
+          }
+        }
       ]
     }
   ],

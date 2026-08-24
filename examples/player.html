@@ -673,6 +673,26 @@ function updateHero(dt) {
     if (hero.vy > 7) hero.vy = 7;
     effectiveGravity *= 0.35;
   }
+  hero._gravField = null;
+  hero._landedTop = false;
+  for (let i = 0; i < entities.length; i++) {
+    const pd = entities[i];
+    const pp = pd.properties || {};
+    if (!pp.gravityField || !pd.alive || !pd.active) continue;
+    const ddx = (pd.x + pd.width / 2) - (hero.x + hero.width / 2);
+    const ddy = (pd.y + pd.height / 2) - (hero.y + hero.height / 2);
+    if (Math.hypot(ddx, ddy) <= (pp.radius || 200)) {
+      if (pp.gravityField === "low") effectiveGravity *= 0.3;
+      else if (pp.gravityField === "high") effectiveGravity *= 2.2;
+      else if (pp.gravityField === "flip") { hero._flipLatch = true; }
+      hero._gravField = pp.gravityField;
+      break;
+    }
+  }
+  if (hero._flipLatch) {
+    effectiveGravity = -Math.abs(gravity);
+    if (!hero._gravField) hero._gravField = "flip";
+  }
   hero.vy += effectiveGravity * dt * 60;
 
   if (!hero.onGround) {
@@ -682,17 +702,18 @@ function updateHero(dt) {
   }
 
   const jumpsLeft = hero.maxJumps || 1;
+  const flipSign = hero._flipLatch ? -1 : 1;
   let jumpUsed = false;
   if (!diverMode && isJump() && hero.jumpCooldown <= 0) {
     if (hero.coyoteTimer > 0 || hero.onGround) {
-      hero.vy = -jumpForce;
+      hero.vy = -jumpForce * flipSign;
       hero.onGround = false;
       hero.riding = null;
       hero.coyoteTimer = 0;
       hero.jumpCooldown = 0.15;
       jumpUsed = true;
     } else if (jumpsLeft > 1) {
-      hero.vy = -jumpForce * 0.85;
+      hero.vy = -jumpForce * 0.85 * flipSign;
       hero.riding = null;
       hero.jumpCooldown = 0.15;
       jumpUsed = true;
@@ -720,12 +741,14 @@ function updateHero(dt) {
   hero.onGround = false;
   hero.riding = null;
   resolveHeroCollisions();
+  if (hero._flipLatch && hero.onGround && hero._landedTop) hero._flipLatch = false;
 
   const ww = runnerMode ? (runnerWorldRight || s.worldWidth || 3840) : (s.worldWidth || 3840);
   const wh = s.worldHeight || 1080;
   if (hero.x < 0) { hero.x = 0; hero.vx = 0; }
   if (hero.x + hero.width > ww) { hero.x = ww - hero.width; hero.vx = 0; }
   if (hero.y > wh + 200) { heroDie(); }
+  if (hero.y < -300) { heroDie(); }
 }
 
 function resolveHeroCollisions() {
@@ -766,6 +789,11 @@ function resolveHeroCollisions() {
           else if (m === pb) { hero.y = e.y + e.height; if (hero.vy < 0) hero.vy = 0; }
           else if (m === pr) { hero.x = e.x - hero.width; hero.vx = 0; }
           else { hero.x = e.x + e.width; hero.vx = 0; }
+        } else if (hero._flipLatch && hero.vy < 0 &&
+                   heroPrevY >= e.y + e.height - 14) {
+          hero.y = e.y + e.height;
+          hero.vy = 0;
+          hero.onGround = true;
         } else {
           resolveTop(hero, e);
         }
@@ -934,6 +962,7 @@ function resolveTop(hero, e) {
   if (hero.vy >= 0 && prevBottom <= eTop + 2 + pd && heroBottom >= eTop - 2 - pd && heroRight > eLeft + 4 && heroLeft < eRight - 4) {
     hero.y = eTop - hero.height;
     hero.vy = 0;
+    hero._landedTop = true;
     hero.onGround = true;
     if (e.type === "moving_platform") { hero.riding = e; } else { hero.riding = null; }
   }
@@ -958,6 +987,7 @@ function heroDie() {
   fadeCallback = function () {
     hero.health = hero.maxHealth;
     diverO2 = diverO2Max;
+    hero._flipLatch = false;
     if (checkpointData) {
       hero.x = checkpointData.x;
       hero.y = checkpointData.y;
@@ -3732,6 +3762,7 @@ window.LimeDriveDebug = function () {
       worldRight: Math.round(runnerWorldRight) } : null,
     diver: diverMode ? { o2: Math.round(diverO2 * 10) / 10, o2Max: diverO2Max,
       hp: hero ? hero.health : 0 } : null,
+    grav: hero && hero._gravField ? hero._gravField : null,
     sh: shooterMode ? { dbg: shDbg, bullets: shBullets.length, ebullets: shEnemyBullets.length,
       alive: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0).length,
       eps: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0)
