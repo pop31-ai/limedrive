@@ -71,4 +71,7 @@ function canonicalize(value) {
   return "{" + keys.map(k => JSON.stringify(k) + ":" + canonicalize(value[k])).join(",") + "}";
 }
 
-module.exports = { sha256Hex, canonicalize };
+const LimeHash = { sha256Hex, canonicalize };
+
+if (typeof module !== "undefined" && module.exports) module.exports = LimeHash;
+if (typeof globalThis !== "undefined") globalThis.LimeHash = LimeHash;

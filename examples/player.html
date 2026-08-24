@@ -111,6 +111,17 @@ function getThemeColors(theme) {
 }
 
 let gameState = "loading";
+
+// ---------- deterministic PRNG (mulberry32) ----------
+var _rngState = 1;
+function rngSeed(s) { _rngState = (s >>> 0) || 1; }
+function rng() {
+  _rngState |= 0;
+  _rngState = _rngState + 0x6D2B79F5 | 0;
+  var t = Math.imul(_rngState ^ _rngState >>> 15, 1 | _rngState);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
 let gameData = null;
 let currentLevelIdx = 0;
 let levelData = null;
@@ -276,6 +287,8 @@ function loadLevel(idx) {
   }
   currentLevelIdx = idx;
   levelData = gameData.levels[idx];
+  var _sd = (gameData.settings && gameData.settings.seed) || 1;
+  rngSeed((_sd * 7919 + idx * 104729) >>> 0);
   levelTransitioning = false;
   entities = [];
   particles = [];
@@ -803,7 +816,7 @@ function resolveHeroCollisions() {
     ctx.textAlign = "center";
     ctx.font = "bold 18px monospace";
     ctx.fillStyle = score >= capGoal ? "#FFD700" : "#7ef0a0";
-    ctx.fillText("КАПИТАЛ " + score + " / " + capGoal + (score >= capGoal ? " ✓" : ""), W / 2, 64);
+    ctx.fillText(uiText("ui.capital") + " " + score + " / " + capGoal + (score >= capGoal ? " ✓" : ""), W / 2, 64);
   }
 
   if (diverMode) {
@@ -1448,6 +1461,11 @@ function getValidMoves(gx, gy) {
 function executeMove(fx, fy, tx, ty, callback) {
   var attacker = getChessPiece(fx, fy);
   var defender = getChessPiece(tx, ty);
+  // --- qi duel resolution (ци-шах) ---
+  if (defender && getSettings().variant === "qi") {
+    qiResolve(attacker, defender, fx, fy, tx, ty, callback);
+    return;
+  }
   // --- checkers jump capture ---
   if (attacker && attacker.props && attacker.props.movePattern === "checkers" &&
       Math.abs(tx - fx) === 2 && Math.abs(ty - fy) === 2) {
@@ -1483,7 +1501,7 @@ function executeMove(fx, fy, tx, ty, callback) {
     }
     chessChainLock = false;
     if (countSideHealth("enemy") <= 0) {
-      chessMessage = "Victory!";
+      chessMessage = uiText("ui.chessVictory");
       chessMessageTimer = 3;
       setTimeout(function () {
         fadeDir = 1; fadeSpeed = 3;
@@ -1542,6 +1560,64 @@ function executeMove(fx, fy, tx, ty, callback) {
     checkPawnPromo(tx, ty, attacker, callback);
   }
 }
+
+// ---------- QI DUEL (ци-шах: парирование на внутренней доске) ----------
+function qiResolve(att, def, fx, fy, tx, ty, callback) {
+  var ap = att.props, dp = def.props;
+  ap.energy = Math.max(0, (ap.energy != null ? ap.energy : 3) - 1);
+  var atempo = ap.tempo || 0;
+  var dtempo = dp.tempo || 0;
+  var roll = rng();
+  var force = getSettings().qiForce;
+  if (force === "hit") roll = 1;
+  else if (force === "parry") roll = 0.2;
+  else if (force === "counter") roll = 0;
+  var counterP = dtempo >= 2 ? 0.25 : 0.10;
+  var parryP = 0.35 + dtempo * 0.15 - atempo * 0.08;
+  var astr = ap.str != null ? ap.str : 2;
+  var dstr = dp.str != null ? dp.str : 2;
+  var cx = chessBoardX + tx * chessCellSize + chessCellSize / 2;
+  var cy = chessBoardY + ty * chessCellSize + chessCellSize / 2;
+  var msg;
+
+  if (roll < counterP) {
+    dp.tempo = Math.min(2, dtempo + 1);
+    var back = 8 + dtempo * 4;
+    att.health = Math.max(1, att.health - back);
+    if (att.entity) att.entity.health = att.health;
+    chessBoard[ty][tx] = def;
+    chessBoard[fy][fx] = att;
+    spawnParticles(cx, cy, "#ff8844", 10, "damage");
+    msg = "Контратака! -" + back;
+  } else if (roll < counterP + parryP) {
+    ap.tempo = Math.min(2, atempo + 1);
+    chessBoard[ty][tx] = def;
+    chessBoard[fy][fx] = att;
+    spawnParticles(cx, cy, "#f0c674", 8, "collect");
+    msg = "Парирование! Темп " + ap.tempo;
+  } else {
+    var dmg = 10 + astr * 4 + atempo * 5;
+    def.health -= dmg;
+    if (def.entity) def.entity.health = def.health;
+    ap.tempo = 0;
+    spawnParticles(cx, cy, "#f85149", 14, "damage");
+    shakeCamera(4, 0.2);
+    if (def.health <= 0) {
+      var di = entities.indexOf(def.entity);
+      if (di >= 0) { entities[di].alive = false; entities[di].active = false; }
+      chessBoard[ty][tx] = att;
+      chessBoard[fy][fx] = null;
+      msg = "Попадание " + dmg + " — нокаут!";
+    } else {
+      msg = "Попадание " + dmg;
+    }
+  }
+  chessMessage = msg;
+  chessMessageTimer = 1.5;
+  chessAnimating = false;
+  if (callback) callback();
+}
+// ---------- END QI DUEL ----------
 
 function checkCheckerPromo(tx, ty, piece) {
   var bs = (getSettings().gridSize || 8) - 1;
@@ -1695,7 +1771,7 @@ function aiTurn() {
           }
           if (p.type === "pawn") score += (mv[i].y) * 1;
           if (p.type === "king") score -= 2;
-          score += Math.random() * 3;
+          score += rng() * 3;
           candidates.push({fx: gx, fy: gy, tx: mv[i].x, ty: mv[i].y, capture: mv[i].capture, score: score});
         }
       }
@@ -1760,7 +1836,7 @@ function handleChessClick() {
         chessAnimating = false;
         var eHP = countSideHealth("enemy");
         if (eHP <= 0) {
-          chessMessage = "Victory!";
+          chessMessage = uiText("ui.chessVictory");
           chessMessageTimer = 3;
           setTimeout(function() { fadeDir = 1; fadeSpeed = 3; fadeCallback = function() {
             if (currentLevelIdx + 1 < gameData.levels.length) loadLevel(currentLevelIdx + 1);
@@ -1880,16 +1956,16 @@ function renderChess() {
   ctx.fillText(turnText, W / 2, 30);
   ctx.fillStyle = "#888";
   ctx.font = "14px monospace";
-  ctx.fillText("Turn " + (chessTurnCount + 1), W / 2, 52);
+  ctx.fillText(uiText("ui.turn") + " " + (chessTurnCount + 1), W / 2, 52);
   var pH = countSideHealth("player");
   var eH = countSideHealth("enemy");
   ctx.textAlign = "left";
   ctx.fillStyle = "#00ff88";
   ctx.font = "bold 16px monospace";
-  ctx.fillText("You: " + pH + " HP", 24, H - 20);
+  ctx.fillText(uiText("ui.you") + ": " + pH + " HP", 24, H - 20);
   ctx.textAlign = "right";
   ctx.fillStyle = "#ff4444";
-  ctx.fillText("Enemy: " + eH + " HP", W - 24, H - 20);
+  ctx.fillText(uiText("ui.enemy") + ": " + eH + " HP", W - 24, H - 20);
   if (chessSelected) {
     var sp = getChessPiece(chessSelected.x, chessSelected.y);
     if (sp) {
@@ -2066,7 +2142,7 @@ function puzzleConsumeMove() {
     }
   }
   if (puzzleMovesLeft <= 0 && gameState === "playing" && !levelTransitioning) {
-    puzzleMsg = "Out of moves! Restarting...";
+    puzzleMsg = uiText("ui.outOfMoves");
     puzzleMsgTimer = 1.2;
     fadeDir = 1;
     fadeSpeed = 2.5;
@@ -2115,17 +2191,17 @@ function renderPuzzle() {
   ctx.textAlign = "left";
   ctx.fillStyle = "#00ff88";
   ctx.font = "bold 20px monospace";
-  ctx.fillText("MOVES LEFT: " + Math.max(0, puzzleMovesLeft), 24, H - 24);
+  ctx.fillText(uiText("ui.movesLeft") + Math.max(0, puzzleMovesLeft), 24, H - 24);
   ctx.textAlign = "right";
   ctx.fillStyle = "#FFD700";
-  ctx.fillText("SCORE: " + score, W - 24, H - 24);
+  ctx.fillText(uiText("ui.score") + score, W - 24, H - 24);
   ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 22px monospace";
   ctx.fillText(levelData.name || "", W / 2, 30);
   ctx.fillStyle = "#888888";
   ctx.font = "13px monospace";
-  ctx.fillText("Arrows/WASD move & push | R restart", W / 2, H - 8);
+  ctx.fillText(uiText("ui.hintPuzzle"), W / 2, H - 8);
 
   if (puzzleMsgTimer > 0) {
     ctx.globalAlpha = Math.min(1, puzzleMsgTimer);
@@ -2447,11 +2523,11 @@ function renderTd() {
   ctx.textAlign = "left";
   ctx.font = "bold 20px monospace";
   ctx.fillStyle = "#FFD700";
-  ctx.fillText("GOLD: " + tdGold, 24, 36);
+  ctx.fillText(uiText("ui.gold") + tdGold, 24, 36);
   ctx.fillStyle = tdLives > 5 ? "#00ff88" : "#ff4444";
-  ctx.fillText("LIVES: " + tdLives, 24, 64);
+  ctx.fillText(uiText("ui.lives") + tdLives, 24, 64);
   ctx.fillStyle = "#ffffff";
-  ctx.fillText("WAVE: " + Math.min(tdWaveNum, tdWaves.length) + "/" + tdWaves.length, 24, 92);
+  ctx.fillText(uiText("ui.wave") + Math.min(tdWaveNum, tdWaves.length) + "/" + tdWaves.length, 24, 92);
 
   // build palette
   ctx.textAlign = "center";
@@ -2470,7 +2546,7 @@ function renderTd() {
   ctx.textAlign = "right";
   ctx.fillStyle = "#888888";
   ctx.font = "13px monospace";
-  ctx.fillText("click empty slot to build | 1-" + tdTowerTypes.length + " select | SPACE next wave", W - 24, H - 12);
+  ctx.fillText(uiText("ui.hintTD").replace("{n}", String(tdTowerTypes.length)), W - 24, H - 12);
 
   if (tdIntermission > 0 && !tdGameOver) {
     ctx.textAlign = "center";
@@ -2933,12 +3009,12 @@ function renderRacing() {
   ctx.textAlign = "left";
   ctx.font = "bold 22px monospace";
   ctx.fillStyle = "#ffffff";
-  ctx.fillText("LAP " + Math.min(raceLap, raceLapsReq) + "/" + raceLapsReq, 24, 40);
+  ctx.fillText(uiText("ui.lap") + Math.min(raceLap, raceLapsReq) + "/" + raceLapsReq, 24, 40);
   ctx.fillStyle = pos === 1 ? "#FFD700" : "#dddddd";
-  ctx.fillText("POS " + pos + "/" + total, 24, 70);
+  ctx.fillText(uiText("ui.pos") + pos + "/" + total, 24, 70);
   ctx.font = "14px monospace";
   ctx.fillStyle = "#888888";
-  ctx.fillText("UP/W gas | LEFT/RIGHT steer | DOWN brake", 24, H - 16);
+  ctx.fillText(uiText("ui.hintRace"), 24, H - 16);
 
   // speed bar
   const sw = 140, sp = Math.min(1, Math.abs(raceSpeed) / ((hero.properties.topSpeed || 10) * 1.5));
@@ -2950,7 +3026,7 @@ function renderRacing() {
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFD700";
     ctx.font = "bold 16px monospace";
-    ctx.fillText("BOOST " + raceBoostT.toFixed(1), W - 24, 60);
+    ctx.fillText(uiText("ui.boost") + raceBoostT.toFixed(1), W - 24, 60);
   }
 
   // minimap
@@ -3225,7 +3301,7 @@ function renderRpgOverlay(camX, camY) {
   ctx.textAlign = "center";
   ctx.fillStyle = "#777777";
   ctx.font = "13px monospace";
-  ctx.fillText("Arrows/WASD move | SPACE/ENTER attack", W / 2, H - 10);
+  ctx.fillText(uiText("ui.hintBrawler"), W / 2, H - 10);
 }
 // ---------- END RPG MODE ----------
 
@@ -3303,10 +3379,10 @@ function render() {
     ctx.fillStyle = "#00ff88";
     ctx.font = "bold 48px monospace";
     ctx.textAlign = "center";
-    ctx.fillText("PAUSED", W / 2, H / 2 - 20);
+    ctx.fillText(uiText("ui.paused"), W / 2, H / 2 - 20);
     ctx.fillStyle = "#888";
     ctx.font = "20px monospace";
-    ctx.fillText("Press ESC to resume", W / 2, H / 2 + 30);
+    ctx.fillText(uiText("ui.pressEsc"), W / 2, H / 2 + 30);
   }
 
   if (fadeAlpha > 0) {
@@ -3321,24 +3397,24 @@ function render() {
     ctx.fillStyle = "rgba(0,255,136," + a + ")";
     ctx.font = "bold 36px monospace";
     ctx.textAlign = "center";
-    ctx.fillText("CONTROLS", W / 2, H / 2 - 100);
+    ctx.fillText(uiText("ui.controls"), W / 2, H / 2 - 100);
     ctx.fillStyle = "rgba(200,220,240," + a + ")";
     ctx.font = "20px monospace";
     const lines = chessMode ? [
-      "Click — Select / Move piece",
-      "Click enemy — Attack",
-      "ESC — Pause"
+      uiText("ui.ctlClickMove"),
+      uiText("ui.ctlClickAttack"),
+      uiText("ui.ctlEsc")
     ] : [
-      "Arrow Keys / WASD \u2014 Move",
-      "Space \u2014 Jump",
-      "ESC \u2014 Pause"
+      uiText("ui.ctlArrows"),
+      uiText("ui.ctlSpace"),
+      uiText("ui.ctlEsc")
     ];
     for (let i = 0; i < lines.length; i++) {
       ctx.fillText(lines[i], W / 2, H / 2 - 30 + i * 40);
     }
     ctx.fillStyle = "rgba(0,255,136," + (a * 0.5) + ")";
     ctx.font = "14px monospace";
-    ctx.fillText("This overlay fades away...", W / 2, H / 2 + 120);
+    ctx.fillText(uiText("ui.fadesAway"), W / 2, H / 2 + 120);
   }
 }
 
@@ -3573,7 +3649,7 @@ function drawBoss(e, sx, sy, sw, sh) {
   ctx.fillStyle = pc;
   ctx.font = "bold 11px monospace";
   ctx.textAlign = "center";
-  ctx.fillText("Phase " + (e.bossPhase + 1), sx + sw / 2, sy - 22);
+  ctx.fillText(uiText("ui.phase") + " " + (e.bossPhase + 1), sx + sw / 2, sy - 22);
 }
 
 function drawPickup(e, sx, sy, sw, sh) {
@@ -3847,7 +3923,7 @@ function drawHUD() {
     ctx.textAlign = "center";
     ctx.font = "bold 20px monospace";
     ctx.fillStyle = pos === 1 ? "#FFD700" : "#ffffff";
-    ctx.fillText("POS " + pos + "/" + (runnerRivals.length + 1), W / 2, 36);
+    ctx.fillText(uiText("ui.pos") + pos + "/" + (runnerRivals.length + 1), W / 2, 36);
   }
 
   if (diverMode) {
@@ -3891,7 +3967,7 @@ function drawHUD() {
   ctx.fillStyle = "#00ff88";
   ctx.font = "bold 22px monospace";
   ctx.textAlign = "right";
-  ctx.fillText("SCORE: " + score, W - hudPad, hudY + 18);
+  ctx.fillText(uiText("ui.score") + score, W - hudPad, hudY + 18);
 
   ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
@@ -3908,11 +3984,11 @@ function drawHUD() {
   ctx.fillStyle = "rgba(255,255,255,0.35)";
   ctx.font = "12px monospace";
   ctx.textAlign = "left";
-  ctx.fillText("FPS: " + fps, hudPad, H - hudPad);
+  ctx.fillText(uiText("ui.fps") + fps, hudPad, H - hudPad);
 
   const totalLevels = gameData ? gameData.levels.length : 1;
   ctx.textAlign = "right";
-  ctx.fillText("Level " + (currentLevelIdx + 1) + " / " + totalLevels, W - hudPad, H - hudPad);
+  ctx.fillText(uiText("ui.level") + " " + (currentLevelIdx + 1) + " / " + totalLevels, W - hudPad, H - hudPad);
 }
 
 function roundRect(x, y, w, h, r) {
@@ -3958,12 +4034,12 @@ function drawVictory() {
   ctx.fillStyle = "#00ff88";
   ctx.font = "bold 56px monospace";
   ctx.textAlign = "center";
-  ctx.fillText("VICTORY!", W / 2, H / 2 - 180);
+  ctx.fillText(uiText("ui.victory"), W / 2, H / 2 - 180);
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 22px monospace";
-  ctx.fillText("Congratulations!", W / 2, H / 2 - 130);
+  ctx.fillText(uiText("ui.congrats"), W / 2, H / 2 - 130);
 
   if (victoryStats) {
     const s = victoryStats;
@@ -3991,7 +4067,7 @@ function drawVictory() {
   ctx.fillStyle = "rgba(0,255,136,0.5)";
   ctx.font = "15px monospace";
   const blink = Math.sin(t * 3) > 0;
-  if (blink) ctx.fillText("Press R to restart or choose another game", W / 2, H / 2 + 170);
+  if (blink) ctx.fillText(uiText("ui.pressRMenu"), W / 2, H / 2 + 170);
 }
 
 let lastTime = performance.now();
@@ -4064,10 +4140,31 @@ window.LimeDriveDebug = function () {
     diver: diverMode ? { o2: Math.round(diverO2 * 10) / 10, o2Max: diverO2Max,
       hp: hero ? hero.health : 0 } : null,
     grav: hero && hero._gravField ? hero._gravField : null,
-    chess: chessMode ? { turn: chessTurn, valid: chessValidMoves.length,
-      playerPieces: countChessPieces("player"), enemyPieces: countChessPieces("enemy"),
-      damkas: countChessDamkas(),
-      chainLock: chessChainLock } : null,
+    chess: chessMode ? (function () {
+      var list = [];
+      var bss = (getSettings().gridSize || 8) - 1;
+      for (var qy = 0; qy <= bss; qy++) for (var qx = 0; qx <= bss; qx++) {
+        var qp = getChessPiece(qx, qy);
+        if (qp) list.push({ x: qx, y: qy, side: qp.side, t: qp.props.pieceType });
+      }
+      return { turn: chessTurn, valid: chessValidMoves.length,
+        playerPieces: countChessPieces("player"), enemyPieces: countChessPieces("enemy"),
+        damkas: countChessDamkas(), chainLock: chessChainLock, pieces: list,
+        sel: chessSelected, msg: chessMessage, targets: chessValidMoves,
+        qi: getSettings().variant === "qi" ? (function () {
+          var pl = null, en = null;
+          for (var i2 = 0; i2 < list.length; i2++) {
+            if (list[i2].side === "player") pl = list[i2];
+            if (list[i2].side === "enemy") en = list[i2];
+          }
+          var plp = pl ? getChessPiece(pl.x, pl.y) : null;
+          var enp = en ? getChessPiece(en.x, en.y) : null;
+          return plp ? { x: pl.x, y: pl.y, pHp: plp.health,
+            pEnergy: plp.props.energy != null ? plp.props.energy : 3,
+            pTempo: plp.props.tempo || 0,
+            eHp: enp ? enp.health : 0, eTempo: enp ? (enp.props.tempo || 0) : 0 } : null;
+        })() : null };
+    })() : null,
     dark: darkMode && hero ? { r: Math.round(darkRadius()),
       ghostsVisible: entities.filter(e => (e.type === "enemy" || e.type === "boss") && e.health > 0 &&
         e.properties && (e.properties.visibleInLight || e.properties.phaseInWalls) &&

@@ -248,6 +248,8 @@ input[type=range]::-moz-range-thumb{
       <button class="btn btn-sm" onclick="redo()" title="Redo (Ctrl+Y)">Redo</button>
       <button class="btn btn-sm btn-primary" onclick="generateJSON()">JSON</button>
       <button class="btn btn-sm btn-accent" onclick="exportHTML()">Export</button>
+      <button class="btn btn-sm" onclick="fixPriority()" title="Зафиксировать приоритет в реестре хеш-фиксаций">⚖ Fix</button>
+      <button class="btn btn-sm" onclick="exportToCollection()" title="game.json + meta.json для копилки игр">To collection</button>
       <button class="btn btn-sm" onclick="saveProject()">Save</button>
       <button class="btn btn-sm" onclick="document.getElementById('loadInput').click()">Load</button>
       <input type="file" id="loadInput" accept=".ldproject" style="display:none" onchange="loadProject(event)">
@@ -270,6 +272,8 @@ input[type=range]::-moz-range-thumb{
 </div>
 <div id="undo-indicator"></div>
 
+<script src="patent-docs/hash.js"></script>
+<script src="patent-docs/registry.js"></script>
 <script>
 const GAME_NAMES=[
   'Pixel Quest','Lime Runner','Neon Blast','Crystal Caverns','Shadow Chase',
@@ -1591,8 +1595,47 @@ function buildJSON(){
   return result;
 }
 
-function generateJSON(){
+function fixPriority(){
+  if(!window.LimeHash||!window.LimeRegistry){showToast('Patent modules not loaded');return null;}
   const json=buildJSON();
+  const sha=LimeHash.sha256Hex(LimeHash.canonicalize(json));
+  const rec=new LimeRegistry.Registry().fix({
+    sha256:sha,
+    title:json.name||GAME_NAMES[project.nameIdx],
+    author:(project.author||'').trim(),
+    engineVersion:'1.0.0'
+  });
+  showToast('Priority fixed: '+sha.slice(0,12)+'…');
+  return rec;
+}
+
+function exportToCollection(){
+  if(!window.LimeHash||!window.LimeRegistry){showToast('Patent modules not loaded');return;}
+  const json=buildJSON();
+  const fname=GAME_NAMES[project.nameIdx].toLowerCase().replace(/\s+/g,'_');
+  const sha=LimeHash.sha256Hex(LimeHash.canonicalize(json));
+  const now=new Date();
+  const author=(project.author||'').trim()||'[АВТОР]';
+  new LimeRegistry.Registry().fix({sha256:sha,title:json.name||GAME_NAMES[project.nameIdx],author:author,engineVersion:'1.0.0'});
+  const meta={
+    title:json.name||GAME_NAMES[project.nameIdx],
+    author:author,
+    date:now.toISOString().slice(0,10),
+    engineVersion:'1.0.0',
+    origin:{
+      method:'manual',
+      prompts:[{text:(project.promptHistory&&project.promptHistory.length?project.promptHistory.join('\n'):'(промпты не записывались при создании проекта)'),iteration:1}],
+      manualEdits:[]
+    },
+    fixation:{sha256:sha,fixedAt:now.toISOString(),evmRegistration:{filed:false,certNumber:null}},
+    rights:'Творческий вклад принадлежит автору. Совпадение результатов генератора у разных пользователей не является нарушением (см. docs/legal/04).'
+  };
+  downloadFile(fname+'.json',JSON.stringify(json,null,2),'application/json');
+  downloadFile(fname+'.meta.json',JSON.stringify(meta,null,2),'application/json');
+  showToast('Exported game + meta (priority fixed)');
+}
+
+function generateJSON(){  const json=buildJSON();
   const formatted=JSON.stringify(json,null,2);
   navigator.clipboard.writeText(formatted).catch(()=>{});
   const modal=document.getElementById('modalContent');

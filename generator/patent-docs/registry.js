@@ -1,8 +1,13 @@
 "use strict";
 
-const { sha256Hex } = require("./hash");
-
 const DEFAULT_KEY = "limedrive-patent-registry";
+
+const sha256HexRef =
+  typeof module !== "undefined" && module.exports
+    ? require("./hash").sha256Hex
+    : typeof globalThis !== "undefined" && globalThis.LimeHash
+      ? globalThis.LimeHash.sha256Hex
+      : null;
 
 function memoryStorage() {
   let data = [];
@@ -67,7 +72,7 @@ class Registry {
   }
 
   seal() {
-    return sha256Hex(JSON.stringify(this._records));
+    return sha256HexRef(JSON.stringify(this._records));
   }
 
   exportState() {
@@ -79,8 +84,8 @@ class Registry {
   }
 
   static verify(state) {
-    if (!state || !Array.isArray(state.records)) return false;
-    return sha256Hex(JSON.stringify(state.records)) === state.seal;
+    if (!state || !Array.isArray(state.records) || !sha256HexRef) return false;
+    return sha256HexRef(JSON.stringify(state.records)) === state.seal;
   }
 
   importState(state) {
@@ -90,4 +95,7 @@ class Registry {
   }
 }
 
-module.exports = { Registry, DEFAULT_KEY };
+const LimeRegistry = { Registry, DEFAULT_KEY };
+
+if (typeof module !== "undefined" && module.exports) module.exports = LimeRegistry;
+if (typeof globalThis !== "undefined") globalThis.LimeRegistry = LimeRegistry;
