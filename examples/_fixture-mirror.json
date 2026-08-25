@@ -1,0 +1,68 @@
+{
+  "name": "Fixture Mirror",
+  "version": "1.0.0",
+  "type": "turn-based-strategy",
+  "description": "Минимальные зеркальные шахматы для mode-mirror.test.js: контратака призрака, закрытое зеркало, победа через короля (4,7)",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 0, "friction": 1, "airResistance": 1, "jumpForce": 0, "maxSpeed": 1,
+    "worldWidth": 640, "worldHeight": 640,
+    "theme": "chess-board",
+    "variant": "mirror", "gridSize": 8, "cellSize": 80,
+    "lightColor": "#243047", "darkColor": "#16202f",
+    "highlightMoves": true,
+    "seed": 19
+  },
+  "levels": [
+    {
+      "id": "mirror-fix-1",
+      "name": "Три сценария",
+      "worldWidth": 640, "worldHeight": 640,
+      "entities": [
+        { "id": "grid", "type": "grid", "x": 0, "y": 0, "z": 0, "width": 640, "height": 640,
+          "components": ["Grid", "ChessBoard"],
+          "properties": { "gridSize": 8, "cellSize": 80, "lightColor": "#243047", "darkColor": "#16202f" } },
+
+        { "id": "p_rook_r", "type": "piece", "x": 6, "y": 0, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 3, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "rook", "movePattern": "straight", "maxMoveDistance": 7 } },
+        { "id": "p_knight_a", "type": "piece", "x": 5, "y": 2, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 2, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "knight", "movePattern": "l-shape" } },
+        { "id": "p_rook_c", "type": "piece", "x": 4, "y": 1, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 3, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "rook", "movePattern": "straight", "maxMoveDistance": 7 } },
+        { "id": "p_knight_b", "type": "piece", "x": 4, "y": 3, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 2, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "knight", "movePattern": "l-shape" } },
+        { "id": "p_king", "type": "piece", "x": 0, "y": 7, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 5, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "king", "movePattern": "any-direction" } },
+
+        { "id": "e_queen", "type": "piece", "x": 6, "y": 3, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 3, "damage": 0,
+          "components": ["Piece", "AIControlled"],
+          "properties": { "pieceType": "queen", "movePattern": "any-direction", "maxMoveDistance": 7 } },
+        { "id": "e_rook_b", "type": "piece", "x": 3, "y": 3, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 2, "damage": 0,
+          "components": ["Piece", "AIControlled"],
+          "properties": { "pieceType": "rook", "movePattern": "straight", "maxMoveDistance": 7 } },
+        { "id": "e_pawn", "type": "piece", "x": 1, "y": 6, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 1, "damage": 0,
+          "components": ["Piece", "AIControlled"],
+          "properties": { "pieceType": "pawn", "movePattern": "forward", "canCaptureDiagonal": true } },
+        { "id": "e_king", "type": "piece", "x": 4, "y": 7, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 5, "damage": 0,
+          "components": ["Piece", "AIControlled"],
+          "properties": { "pieceType": "king", "movePattern": "any-direction" } }
+      ],
+      "cameras": [{ "type": "fixed", "target": "grid" }]
+    }
+  ],
+  "ai": { "pattern": "chess-ai", "globalDifficulty": "hard" }
+}

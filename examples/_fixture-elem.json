@@ -1,0 +1,57 @@
+{
+  "name": "Fixture Elem",
+  "version": "1.0.0",
+  "type": "turn-based-strategy",
+  "description": "Минимальный элиминтали для mode-elem.test.js: слияние огней, рыцарь, ядро врага (7,0)",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 0, "friction": 1, "airResistance": 1, "jumpForce": 0, "maxSpeed": 1,
+    "worldWidth": 640, "worldHeight": 640,
+    "theme": "chess-board",
+    "variant": "elem", "gridSize": 8, "cellSize": 80,
+    "lightColor": "#2a2a3a", "darkColor": "#1a1a28",
+    "highlightMoves": true,
+    "seed": 5
+  },
+  "levels": [
+    {
+      "id": "elem-fix-1",
+      "name": "Слияние и ядро",
+      "worldWidth": 640, "worldHeight": 640,
+      "entities": [
+        { "id": "grid", "type": "grid", "x": 0, "y": 0, "z": 0, "width": 640, "height": 640,
+          "components": ["Grid", "ChessBoard"],
+          "properties": { "gridSize": 8, "cellSize": 80, "lightColor": "#2a2a3a", "darkColor": "#1a1a28" } },
+
+        { "id": "p_fire_1", "type": "piece", "x": 2, "y": 5, "z": 1, "width": 70, "height": 70,
+          "color": "#ff7043", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"],
+          "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1,
+            "elem": "fire", "tier": 1 } },
+        { "id": "p_fire_2", "type": "piece", "x": 3, "y": 5, "z": 1, "width": 70, "height": 70,
+          "color": "#ff7043", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"],
+          "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1,
+            "elem": "fire", "tier": 1 } },
+        { "id": "p_fire_k", "type": "piece", "x": 6, "y": 2, "z": 1, "width": 70, "height": 70,
+          "color": "#ff7043", "health": 4, "damage": 0,
+          "components": ["Piece", "Elemental", "PlayerControlled"],
+          "properties": { "pieceType": "elemental", "movePattern": "l-shape", "maxMoveDistance": 1,
+            "elem": "fire", "tier": 2 } },
+
+        { "id": "e_air_1", "type": "piece", "x": 5, "y": 3, "z": 1, "width": 70, "height": 70,
+          "color": "#bdbdbd", "health": 3, "damage": 0,
+          "components": ["Piece", "Elemental", "AIControlled"],
+          "properties": { "pieceType": "elemental", "movePattern": "adjacent", "maxMoveDistance": 1,
+            "elem": "air", "tier": 1 } },
+
+        { "id": "ecore", "type": "piece", "x": 7, "y": 0, "z": 1, "width": 70, "height": 70,
+          "color": "#7ef0ff", "health": 1, "damage": 0,
+          "components": ["Piece", "Core", "AIControlled"],
+          "properties": { "pieceType": "core", "movePattern": "none", "elem": null, "tier": 0 } }
+      ],
+      "cameras": [{ "type": "fixed", "target": "grid" }]
+    }
+  ],
+  "ai": { "pattern": "chess-ai", "globalDifficulty": "hard" }
+}

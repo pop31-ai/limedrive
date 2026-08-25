@@ -1,8 +1,13 @@
 package com.limedrive.app;
 
 import android.app.Activity;
+import android.content.ContentValues;
+import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,12 +19,14 @@ import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
@@ -86,8 +93,11 @@ public class MainActivity extends Activity {
         root.addView(web, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        LinearLayout btns = new LinearLayout(this);
+        btns.setOrientation(LinearLayout.VERTICAL);
+
         Button updateBtn = new Button(this);
-        updateBtn.setText("⟳ Update");
+        updateBtn.setText("⟳ Update (Downloads ZIP)");
         updateBtn.setTextSize(11);
         updateBtn.setAllCaps(false);
         updateBtn.setOnClickListener(new View.OnClickListener() {
@@ -96,12 +106,26 @@ public class MainActivity extends Activity {
                 updateFromGitHub();
             }
         });
+        btns.addView(updateBtn);
+
+        Button zipBtn = new Button(this);
+        zipBtn.setText("📂 Import ZIP…");
+        zipBtn.setTextSize(11);
+        zipBtn.setAllCaps(false);
+        zipBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pickZip();
+            }
+        });
+        btns.addView(zipBtn);
+
         FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM | Gravity.END);
         int m = dp(10);
         bp.setMargins(0, 0, m, m);
-        root.addView(updateBtn, bp);
+        root.addView(btns, bp);
 
         setContentView(root);
 
@@ -206,9 +230,9 @@ public class MainActivity extends Activity {
                 try {
                     File zip = new File(getExternalFilesDir(null), "repo.zip");
                     download(REPO_ZIP_URL, zip);
+                    saveToDownloads(zip, "limedrive-repo.zip");
                     unzipRepo(zip, ensureOverrideRoot());
-                    zip.delete();
-                    toast("Updated! Reloading…");
+                    toast("Updated! ZIP saved to Downloads. Reloading…");
                     runOnUiThread(new Runnable() {
                         public void run() { web.loadUrl(resolveStartUrl()); }
                     });
@@ -226,6 +250,66 @@ public class MainActivity extends Activity {
         overrideRoot = new File(ext, "www");
         if (!overrideRoot.exists()) overrideRoot.mkdirs();
         return overrideRoot;
+    }
+
+    private void saveToDownloads(File src, String name) {
+        try {
+            if (Build.VERSION.SDK_INT < 29) return;
+            ContentValues cv = new ContentValues();
+            cv.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+            cv.put(MediaStore.MediaColumns.MIME_TYPE, "application/zip");
+            cv.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+            Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+            if (uri == null) return;
+            InputStream in = new FileInputStream(src);
+            OutputStream os = getContentResolver().openOutputStream(uri);
+            byte[] b = new byte[8192];
+            int n;
+            while ((n = in.read(b)) > 0) os.write(b, 0, n);
+            os.close();
+            in.close();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void pickZip() {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("*/*");
+        startActivityForResult(i, 42);
+    }
+
+    private static void copyStream(InputStream in, File out) throws Exception {
+        FileOutputStream f = new FileOutputStream(out);
+        byte[] b = new byte[8192];
+        int n;
+        while ((n = in.read(b)) > 0) f.write(b, 0, n);
+        f.close();
+        in.close();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != 42 || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        final Uri picked = data.getData();
+        toast("Unpacking…");
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    File tmp = new File(getExternalFilesDir(null), "picked.zip");
+                    copyStream(getContentResolver().openInputStream(picked), tmp);
+                    unzipRepo(tmp, ensureOverrideRoot());
+                    tmp.delete();
+                    toast("Imported! Reloading…");
+                    runOnUiThread(new Runnable() {
+                        public void run() { web.loadUrl(resolveStartUrl()); }
+                    });
+                } catch (final Exception e) {
+                    toast("Import failed: " + e.getMessage());
+                }
+            }
+        }).start();
     }
 
     private static void download(String url, File out) throws Exception {

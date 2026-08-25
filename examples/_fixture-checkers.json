@@ -1,0 +1,56 @@
+{
+  "name": "Fixture Checkers",
+  "version": "1.0.0",
+  "type": "turn-based-strategy",
+  "description": "Минимальные шашки для mode-checkers.test.js: обязательный прыжок 3x3 и превращение в дамку",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 0, "friction": 1, "airResistance": 1, "jumpForce": 0, "maxSpeed": 1,
+    "worldWidth": 640, "worldHeight": 640,
+    "theme": "chess-board",
+    "variant": "checkers", "gridSize": 8, "cellSize": 80,
+    "lightColor": "#2a2a3a", "darkColor": "#1a1a28",
+    "highlightMoves": true,
+    "seed": 11
+  },
+  "levels": [
+    {
+      "id": "checkers-fix-1",
+      "name": "Три на три",
+      "worldWidth": 640, "worldHeight": 640,
+      "entities": [
+        { "id": "grid", "type": "grid", "x": 0, "y": 0, "z": 0, "width": 640, "height": 640,
+          "components": ["Grid", "ChessBoard"],
+          "properties": { "gridSize": 8, "cellSize": 80, "lightColor": "#2a2a3a", "darkColor": "#1a1a28" } },
+
+        { "id": "p1", "type": "piece", "x": 2, "y": 2, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 1, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "pawn", "movePattern": "checkers" } },
+        { "id": "p2", "type": "piece", "x": 0, "y": 4, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 1, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "pawn", "movePattern": "checkers" } },
+        { "id": "p3", "type": "piece", "x": 6, "y": 6, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 1, "damage": 0,
+          "components": ["Piece", "PlayerControlled"],
+          "properties": { "pieceType": "pawn", "movePattern": "checkers" } },
+
+        { "id": "e1", "type": "piece", "x": 3, "y": 3, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 1, "damage": 0,
+          "components": ["Piece", "AIControlled"],
+          "properties": { "pieceType": "pawn", "movePattern": "checkers" } },
+        { "id": "e2", "type": "piece", "x": 0, "y": 6, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 1, "damage": 0,
+          "components": ["Piece", "AIControlled"],
+          "properties": { "pieceType": "pawn", "movePattern": "checkers" } },
+        { "id": "e3", "type": "piece", "x": 4, "y": 6, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 1, "damage": 0,
+          "components": ["Piece", "AIControlled"],
+          "properties": { "pieceType": "pawn", "movePattern": "checkers" } }
+      ],
+      "cameras": [{ "type": "fixed", "target": "grid" }]
+    }
+  ],
+  "ai": { "pattern": "chess-ai", "globalDifficulty": "hard" }
+}

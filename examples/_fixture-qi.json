@@ -1,0 +1,40 @@
+{
+  "name": "Fixture Qi",
+  "version": "1.0.0",
+  "type": "turn-based-strategy",
+  "description": "Минимальная дуэль на ци для mode-qi.test.js: боец игрока (1,0) против бойца ИИ (6,0)",
+  "author": "limedrive-tests",
+  "settings": {
+    "gravity": 0, "friction": 1, "airResistance": 1, "jumpForce": 0, "maxSpeed": 1,
+    "worldWidth": 640, "worldHeight": 640,
+    "theme": "chess-board",
+    "variant": "qi", "gridSize": 8, "cellSize": 80,
+    "lightColor": "#2a2a3a", "darkColor": "#1a1a28",
+    "highlightMoves": true,
+    "seed": 7
+  },
+  "levels": [
+    {
+      "id": "qi-fix-1",
+      "name": "Дуэль на восемь клеток",
+      "worldWidth": 640, "worldHeight": 640,
+      "entities": [
+        { "id": "grid", "type": "grid", "x": 0, "y": 0, "z": 0, "width": 640, "height": 640,
+          "components": ["Grid", "ChessBoard"],
+          "properties": { "gridSize": 8, "cellSize": 80, "lightColor": "#2a2a3a", "darkColor": "#1a1a28" } },
+        { "id": "you", "type": "piece", "x": 1, "y": 0, "z": 1, "width": 70, "height": 70,
+          "color": "#00ff88", "health": 60, "damage": 3,
+          "components": ["Piece", "Fighter", "PlayerControlled"],
+          "properties": { "pieceType": "fighter", "movePattern": "adjacent", "maxMoveDistance": 1,
+            "str": 3, "energy": 3, "tempo": 0 } },
+        { "id": "foe", "type": "piece", "x": 6, "y": 0, "z": 1, "width": 70, "height": 70,
+          "color": "#ff5555", "health": 50, "damage": 2,
+          "components": ["Piece", "Fighter", "AIControlled"],
+          "properties": { "pieceType": "fighter", "movePattern": "none", "maxMoveDistance": 0,
+            "str": 2, "energy": 3, "tempo": 0 } }
+      ],
+      "cameras": [{ "type": "fixed", "target": "grid" }]
+    }
+  ],
+  "ai": { "pattern": "chess-ai", "globalDifficulty": "hard" }
+}

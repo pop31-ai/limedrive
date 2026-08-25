@@ -12,10 +12,12 @@ player.html диспетчеризует по:
 Массивы `components[]` в JSON — **декорация**: движок их не читает.
 Они полезны только как документация и для будущих версий движка.
 
-## Обработанные типы сущностей (31)
+## Обработанные типы сущностей (36)
 
+- `bishop`
 - `boss`
 - `boundary`
+- `checkers`
 - `checkpoint`
 - `collectible`
 - `custom`
@@ -28,6 +30,7 @@ player.html диспетчеризует по:
 - `hazard`
 - `hero`
 - `king`
+- `knight`
 - `moving_platform`
 - `pawn`
 - `pickup`
@@ -37,7 +40,9 @@ player.html диспетчеризует по:
 - `portal`
 - `powerup`
 - `puzzle`
+- `queen`
 - `racing`
+- `rook`
 - `rpg`
 - `shooter`
 - `spawn_point`
@@ -46,7 +51,7 @@ player.html диспетчеризует по:
 - `turn-based-strategy`
 - `zone`
 
-## Читаемые свойства (102)
+## Читаемые свойства (113)
 
 - `acceleration`
 - `action`
@@ -57,11 +62,13 @@ player.html диспетчеризует по:
 - `attackDamage`
 - `attackRange`
 - `axis`
+- `bestScore`
 - `boostDuration`
 - `boostForce`
 - `bulletDamage`
 - `bulletSpeed`
 - `capitalGoal`
+- `capture`
 - `cellSize`
 - `col`
 - `color`
@@ -72,7 +79,10 @@ player.html диспетчеризует по:
 - `doubleJump`
 - `duration`
 - `effect`
+- `elem`
 - `enemies`
+- `energy`
+- `entity`
 - `fireRate`
 - `flyAmplitude`
 - `flyPattern`
@@ -85,6 +95,7 @@ player.html диспетчеризует по:
 - `health`
 - `height`
 - `hp`
+- `hybrid`
 - `interval`
 - `jumps`
 - `keyId`
@@ -112,6 +123,7 @@ player.html диспетчеризует по:
 - `powerupScore`
 - `powerupType`
 - `properties`
+- `props`
 - `pushable`
 - `racerName`
 - `radius`
@@ -129,15 +141,19 @@ player.html диспетчеризует по:
 - `sneakMultiplier`
 - `spawnInterval`
 - `speedMultiplier`
+- `str`
 - `surface`
 - `swimForce`
 - `switchColor`
 - `target`
 - `targetId`
+- `tempo`
+- `tier`
 - `topSpeed`
 - `towerTypes`
 - `turnSpeed`
 - `type`
+- `unlockedLevel`
 - `value`
 - `visibleInLight`
 - `visionAngle`
@@ -171,6 +187,10 @@ player.html диспетчеризует по:
 | 12-cyber-heist (platformer) | 12 | — все живые | `coyoteTime`, `delay`, `enemyType`, `amplitude`, `frequency`, `glowColor`, `parallaxLayer`, `lightRadius`, `turret`, `projectileSpeed`, `animation`, `rotateSpeed`, `phases`, `attacks`, `bossName`, `laserDamage`, `shockwaveDamage`, `bossMinion`, `bossId`, `lockCamera`, `driftSpeed`, `victoryScreen` |
 | 13-quantum-puzzle (puzzle) | 12 | — все живые | `coyoteTime`, `linkId`, `exitId`, `glowColor`, `amplitude`, `frequency`, `enemyType`, `gemType`, `parallaxLayer`, `driftSpeed`, `delay`, `patrolAxis` |
 | 15-dungeon-crawl (platformer) | 7 | — все живые | `static`, `healAmount` |
+| 16-checkers-rivalry (turn-based-strategy) | 3 | ⚠️ `highlight`×2 | `highlightColor`, `attackColor`, `movePattern`, `maxMoveDistance` |
+| 17-qi-duel (turn-based-strategy) | 2 | — все живые | `movePattern`, `maxMoveDistance` |
+| 18-elimintali (turn-based-strategy) | 2 | — все живые | `movePattern`, `maxMoveDistance` |
+| 19-mirror-chess (turn-based-strategy) | 2 | — все живые | `movePattern`, `maxMoveDistance` |
 
 ## Глобально неиспользуемые движком типы из игр
 
