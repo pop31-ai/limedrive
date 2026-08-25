@@ -7,7 +7,7 @@ RPG, раннеры, Tower Defense и пошаговые стратегии (ш�
 
 | Слой | Где | Статус |
 |------|-----|--------|
-| **Production runtime** | `examples/player.html` | Единственный исполняемый рантайм. Монолит ~4200 строк, покрыт puppeteer-тестами. Все 16 игр работают здесь. |
+| **Production runtime** | `examples/player.html` | Единственный исполняемый рантайм. Монолит ~4700 строк, покрыт puppeteer-тестами. Все 18 игр работают здесь. |
 | **Reference library** | `engine/*.js` | Экспериментальная ECS-библиотека (6 файлов). **Ни одна страница её не подключает.** Годится как основа для будущего рефакторинга или для встраивания в свои страницы. |
 
 ## Production runtime — examples/player.html
@@ -125,7 +125,7 @@ limedrive/
 ├── PROMPT.md                # промпты для создания игр + спецификация режимов v1.2
 ├── manifest.json, sw.js     # PWA
 ├── engine/                  # reference-библиотека (см. выше)
-├── examples/                # player.html + 16 игр + _fixture-* (тестовые)
+├── examples/                # player.html + 18 игр + _fixture-* (14 тестовых фикстур)
 ├── games/                   # пользовательская коллекция (конвенция game.json+meta.json)
 ├── generator/               # generator.html + патентные генераторы
 ├── articles/                # альманах «Деловая этика в играх»
@@ -167,8 +167,8 @@ node tools/patent-package.js examples/01-lime-platformer.json --author "Имя"
 
 ## Roadmap
 
-- [ ] Звук: WebAudio-синтез событий (в играх сейчас нет аудио)
-- [ ] Сохранение прогресса/рекордов (localStorage), экспорт сейва
-- [ ] Авто-пауза по `visibilitychange`
-- [ ] Fullscreen API
+- [x] Звук: WebAudio-синтез событий, mute по M
+- [x] Сохранение прогресса/рекордов (localStorage, `limedrive_progress_*`)
+- [x] Авто-пауза по `visibilitychange`
+- [x] Fullscreen API (клавиша F)
 - [ ] Постепенный перенос проверенных кусков engine/ (save/UI/AI) в player.html

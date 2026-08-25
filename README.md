@@ -19,7 +19,7 @@ python -m http.server 8080     # любой статический сервер
 # открыть http://localhost:8080
 ```
 
-Каталог из 17 игр — на главной, плеер — `examples/player.html?game=…`.
+Каталог из 18 игр — на главной, плеер — `examples/player.html?game=…`.
 
 ## Лицензии (выбери свою)
 
