@@ -230,9 +230,9 @@ public class MainActivity extends Activity {
                 try {
                     File zip = new File(getExternalFilesDir(null), "repo.zip");
                     download(REPO_ZIP_URL, zip);
-                    saveToDownloads(zip, "limedrive-repo.zip");
-                    unzipRepo(zip, ensureOverrideRoot());
-                    toast("Updated! ZIP saved to Downloads. Reloading…");
+                    boolean savedDl = saveToDownloads(zip, "limedrive-repo.zip");
+                    int n = unzipRepo(zip, ensureOverrideRoot());
+                    toast("OK: " + n + " файлов → private/www" + (savedDl ? " · ZIP → Downloads/limedrive-repo.zip" : "") + ". Reloading…");
                     runOnUiThread(new Runnable() {
                         public void run() { web.loadUrl(resolveStartUrl()); }
                     });
@@ -252,15 +252,15 @@ public class MainActivity extends Activity {
         return overrideRoot;
     }
 
-    private void saveToDownloads(File src, String name) {
+    private boolean saveToDownloads(File src, String name) {
         try {
-            if (Build.VERSION.SDK_INT < 29) return;
+            if (Build.VERSION.SDK_INT < 29) return false;
             ContentValues cv = new ContentValues();
             cv.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
             cv.put(MediaStore.MediaColumns.MIME_TYPE, "application/zip");
             cv.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
             Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
-            if (uri == null) return;
+            if (uri == null) return false;
             InputStream in = new FileInputStream(src);
             OutputStream os = getContentResolver().openOutputStream(uri);
             byte[] b = new byte[8192];
@@ -268,7 +268,9 @@ public class MainActivity extends Activity {
             while ((n = in.read(b)) > 0) os.write(b, 0, n);
             os.close();
             in.close();
-        } catch (Exception ignored) {
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -299,9 +301,9 @@ public class MainActivity extends Activity {
                 try {
                     File tmp = new File(getExternalFilesDir(null), "picked.zip");
                     copyStream(getContentResolver().openInputStream(picked), tmp);
-                    unzipRepo(tmp, ensureOverrideRoot());
+                    int n = unzipRepo(tmp, ensureOverrideRoot());
                     tmp.delete();
-                    toast("Imported! Reloading…");
+                    toast("OK: " + n + " файлов → private/www. Reloading…");
                     runOnUiThread(new Runnable() {
                         public void run() { web.loadUrl(resolveStartUrl()); }
                     });
@@ -335,7 +337,14 @@ public class MainActivity extends Activity {
         if (f.exists()) f.delete();
     }
 
-    private static void unzipRepo(File zip, File destRoot) throws Exception {
+    private static int countFiles(File dir) {
+        int n = 0;
+        File[] kids = dir.listFiles();
+        if (kids != null) for (File k : kids) n += k.isDirectory() ? countFiles(k) : 1;
+        return n;
+    }
+
+    private static int unzipRepo(File zip, File destRoot) throws Exception {
         File tmp = new File(destRoot.getParentFile(), "www_incoming");
         deleteRecursive(tmp);
         if (!tmp.mkdirs()) throw new Exception("cannot create temp dir");
@@ -359,8 +368,14 @@ public class MainActivity extends Activity {
             f.close();
         }
         z.close();
+        File idx = new File(tmp, "index.html");
+        if (!idx.exists()) {
+            deleteRecursive(tmp);
+            throw new Exception("в архиве нет index.html — нужен ZIP репозитория (GitHub → Code → Download ZIP)");
+        }
         File old = destRoot;
         if (old.exists()) deleteRecursive(old);
         if (!tmp.renameTo(destRoot)) throw new Exception("rename failed");
+        return countFiles(destRoot);
     }
 }
