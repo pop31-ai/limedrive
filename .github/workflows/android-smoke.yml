@@ -1,0 +1,120 @@
+name: android-smoke
+
+on:
+  push:
+    paths:
+      - "platforms/android/**"
+      - "examples/**"
+      - "engine/**"
+      - "lang/**"
+      - ".github/workflows/android-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  emulator-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP: com.limedrive.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build APK (no Gradle)
+        run: |
+          set -e
+          ROOT="$PWD"
+          SDK="$ANDROID_HOME"
+          BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)
+          SYS_JAR=$(ls "$SDK"/platforms/android-*/android.jar | sort -V | tail -1)
+          OBJ="$ROOT/platforms/android/obj"
+          PROJ="$ROOT/platforms/android"
+          DIST="$PROJ/dist"
+          export ROOT OBJ
+          rm -rf "$OBJ"; mkdir -p "$OBJ/assets" "$OBJ/dex" "$OBJ/classes" "$DIST" "$PROJ/res/drawable-nodpi"
+          cp "$ROOT/icons/icon-512.png" "$PROJ/res/drawable-nodpi/icon.png"
+          mkdir -p "$OBJ/assets/www"
+          rsync -a \
+            --exclude node_modules --exclude .git --exclude tests --exclude reports \
+            --exclude platforms --exclude .github --exclude obj --exclude dist \
+            --exclude articles --exclude package-lock.json --exclude '*.patent.txt' \
+            "$ROOT/" "$OBJ/assets/www/"
+          ASSET_COUNT=$(find "$OBJ/assets/www" -type f | wc -l)
+          echo "asset files: $ASSET_COUNT"
+          "$BT/aapt2" compile --dir "$PROJ/res" -o "$OBJ/res.zip"
+          "$BT/aapt2" link -o "$OBJ/base.apk" -I "$SYS_JAR" \
+            --manifest "$PROJ/AndroidManifest.xml" "$OBJ/res.zip" --auto-add-overlay
+          find "$PROJ/java" -name '*.java' > "$OBJ/sources.txt"
+          javac --release 8 -cp "$SYS_JAR" -d "$OBJ/classes" "@$OBJ/sources.txt"
+          jar cf "$OBJ/classes.jar" -C "$OBJ/classes" .
+          "$BT/d8" --release --lib "$SYS_JAR" --output "$OBJ/dex" "$OBJ/classes.jar"
+          python3 - <<'PY'
+          import zipfile, os
+          base = os.environ['OBJ'] + '/base.apk'
+          root = os.environ['ROOT']
+          assets = os.path.join(root, 'platforms/android/obj/assets/www')
+          dex = os.path.join(root, 'platforms/android/obj/dex/classes.dex')
+          with zipfile.ZipFile(base, 'a') as z:
+              for dirpath, _, files in os.walk(assets):
+                  for fn in files:
+                      fp = os.path.join(dirpath, fn)
+                      rel = 'assets/www/' + os.path.relpath(fp, assets).replace(os.sep, '/')
+                      z.write(fp, rel)
+              z.write(dex, 'classes.dex')
+          PY
+          "$BT/zipalign" -f 4 "$OBJ/base.apk" "$OBJ/aligned.apk"
+          KS="$PROJ/debug.keystore"
+          keytool -genkeypair -keystore "$KS" -alias limedrive -storepass android -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=LimeDrive,O=LimeDrive,C=US"
+          "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android \
+            --out "$DIST/LimeDrive.apk" "$OBJ/aligned.apk"
+          "$BT/apksigner" verify "$DIST/LimeDrive.apk"
+          echo "APK built: $(stat -c%s $DIST/LimeDrive.apk) bytes"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LimeDrive-apk
+          path: platforms/android/dist/LimeDrive.apk
+
+      - name: Emulator smoke (Android 11 / API 30)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          profile: pixel_4
+          script: |
+            set -e
+            adb install -r platforms/android/dist/LimeDrive.apk
+            adb shell am start -n $APP/.MainActivity
+            sleep 7
+            adb shell pidof $APP > /dev/null || { echo "FAIL: app process died"; exit 1; }
+            if adb logcat -d | grep -q "FATAL EXCEPTION"; then echo "FAIL: FATAL in menu"; exit 1; fi
+            adb exec-out screencap -p > menu.png
+            MENU_SIZE=$(stat -c%s menu.png); echo "menu.png: $MENU_SIZE bytes"
+            [ "$MENU_SIZE" -gt 30000 ] || { echo "FAIL: menu looks blank"; exit 1; }
+
+            adb shell am force-stop $APP
+            adb shell am start -n $APP/.MainActivity --es loadUrl \
+              "file:///android_asset/www/examples/player.html?game=01-lime-platformer.json"
+            sleep 10
+            if adb logcat -d | grep -q "FATAL EXCEPTION"; then echo "FAIL: FATAL in player"; exit 1; fi
+            adb exec-out screencap -p > game.png
+            GAME_SIZE=$(stat -c%s game.png); echo "game.png: $GAME_SIZE bytes"
+            [ "$GAME_SIZE" -gt 30000 ] || { echo "FAIL: player looks blank"; exit 1; }
+
+            echo "SMOKE OK"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: |
+            menu.png
+            game.png
+          if-no-files-found: ignore
