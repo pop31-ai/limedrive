@@ -46,45 +46,65 @@ jobs:
           name: LimeDrive-apk
           path: platforms/android/dist/LimeDrive.apk
 
-      - name: Install system image (verbose)
+      - name: KVM check
+        run: |
+          ls -la /dev/kvm || true
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -la /dev/kvm
+
+      - name: Emulator smoke (Android 11 / API 30) — explicit
         run: |
           set -e
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          [ -f "$SDKM" ] || SDKM="$ANDROID_HOME/tools/bin/sdkmanager"
-          yes | "$SDKM" --licenses > /dev/null 2>&1 || true
-          "$SDKM" --install "system-images;android-30;google_apis;x86_64" 2>&1 | tail -3
+          AVDM="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          EMU="$ANDROID_HOME/emulator/emulator"
 
-      - name: Emulator smoke (Android 11 / API 30)
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 30
-          arch: x86_64
-          profile: pixel_4
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-audio -no-boot-anim
-          disable-animations: true
-          script: |
-            set -e
-            echo "== PHASE 1: install =="
-            adb install -r platforms/android/dist/LimeDrive.apk
-            adb shell am start -n $APP/.MainActivity
-            sleep 7
-            adb shell pidof $APP > /dev/null || { echo "FAIL: app process died"; exit 1; }
-            if adb logcat -d | grep -q "FATAL EXCEPTION"; then echo "FAIL: FATAL in menu"; exit 1; fi
-            adb exec-out screencap -p > menu.png
-            MENU_SIZE=$(stat -c%s menu.png); echo "menu.png: $MENU_SIZE bytes"
-            [ "$MENU_SIZE" -gt 30000 ] || { echo "FAIL: menu looks blank"; exit 1; }
-            echo "== PHASE 1 OK =="
+          echo "== create AVD =="
+          echo "no" | "$AVDM" create avd -n ci -k "system-images;android-30;google_apis;x86_64" -d pixel_4 --force
 
-            echo "== PHASE 2: real game =="
-            adb shell am force-stop $APP
-            adb shell am start -n $APP/.MainActivity --es loadUrl \
-              "file:///android_asset/www/examples/player.html?game=01-lime-platformer.json"
-            sleep 10
-            if adb logcat -d | grep -q "FATAL EXCEPTION"; then echo "FAIL: FATAL in player"; exit 1; fi
-            adb exec-out screencap -p > game.png
-            GAME_SIZE=$(stat -c%s game.png); echo "game.png: $GAME_SIZE bytes"
-            [ "$GAME_SIZE" -gt 30000 ] || { echo "FAIL: player looks blank"; exit 1; }
-            echo "== SMOKE OK =="
+          echo "== boot emulator (headless) =="
+          "$EMU" -avd ci -no-window -gpu swiftshader_indirect -no-snapshot \
+            -no-audio -no-boot-anim -port 5554 > emulator.log 2>&1 &
+          EMU_PID=$!
+          adb wait-for-device
+          OK=""
+          for i in $(seq 1 100); do
+            B=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
+            if [ "$B" = "1" ]; then OK=1; echo "boot completed at attempt $i"; break; fi
+            [ $((i % 10)) -eq 0 ] && echo "waiting… attempt $i"
+            sleep 3
+          done
+          if [ -z "$OK" ]; then
+            echo "FAIL: boot timeout"; tail -40 emulator.log
+            kill $EMU_PID || true
+            exit 1
+          fi
+
+          echo "== PHASE 1: install & menu =="
+          adb install -r platforms/android/dist/LimeDrive.apk
+          adb shell am start -n $APP/.MainActivity
+          sleep 7
+          adb shell pidof $APP > /dev/null || { echo "FAIL: app process died"; tail -30 emulator.log; exit 1; }
+          if adb logcat -d | grep -q "FATAL EXCEPTION"; then echo "FAIL: FATAL in menu"; exit 1; fi
+          adb exec-out screencap -p > menu.png
+          MENU_SIZE=$(stat -c%s menu.png); echo "menu.png: $MENU_SIZE bytes"
+          [ "$MENU_SIZE" -gt 30000 ] || { echo "FAIL: menu looks blank"; exit 1; }
+          echo "== PHASE 1 OK =="
+
+          echo "== PHASE 2: real game =="
+          adb shell am force-stop $APP
+          adb shell am start -n $APP/.MainActivity --es loadUrl \
+            "file:///android_asset/www/examples/player.html?game=01-lime-platformer.json"
+          sleep 10
+          if adb logcat -d | grep -q "FATAL EXCEPTION"; then echo "FAIL: FATAL in player"; exit 1; fi
+          adb exec-out screencap -p > game.png
+          GAME_SIZE=$(stat -c%s game.png); echo "game.png: $GAME_SIZE bytes"
+          [ "$GAME_SIZE" -gt 30000 ] || { echo "FAIL: player looks blank"; exit 1; }
+          echo "== SMOKE OK =="
+
+          kill $EMU_PID || true
 
       - name: Upload screenshots
         if: always()
