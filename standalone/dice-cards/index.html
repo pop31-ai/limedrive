@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кубик-Карты — настольная игра для 5 игроков</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>🎲 Кубик-Карты</h1>
+    <p class="subtitle">Настольная игра для пяти человек · канва, кубики, карточки</p>
+  </header>
+
+  <main>
+    <section class="board-wrap">
+      <canvas id="board" width="664" height="576"></canvas>
+      <div id="message" class="message"></div>
+    </section>
+
+    <aside class="side">
+      <div id="turnInfo" class="turn-info"></div>
+
+      <section class="panel dice-panel">
+        <h2>Кубики</h2>
+        <div id="dice" class="dice"></div>
+        <p id="diceHint" class="hint"></p>
+        <div class="btn-row">
+          <button id="btnRoll" class="btn primary" type="button">Бросить кубики</button>
+          <button id="btnMove" class="btn" type="button" disabled>Ходить</button>
+        </div>
+        <p class="hint small">Можно перебросить до двух кубиков: просто кликни по ним.</p>
+      </section>
+
+      <section class="panel card-panel">
+        <h2>Карта</h2>
+        <div id="cardBox" class="card-box">
+          <p class="card-empty">Здесь появится карточка задания.<br>Попади на клетку — и возьми карту.</p>
+        </div>
+      </section>
+
+      <section class="panel rating-panel">
+        <h2>Рейтинг</h2>
+        <ol id="rating" class="rating"></ol>
+      </section>
+
+      <button id="btnRestart" class="btn wide" type="button">🔄 Начать заново</button>
+    </aside>
+  </main>
+</div>
+
+<!-- Окно старта: имена игроков -->
+<div id="setup" class="overlay">
+  <div class="overlay-card">
+    <h2>🎲 Кубик-Карты</h2>
+    <p class="overlay-sub">Настольная игра для 5 игроков</p>
+    <div class="setup-rules">
+      <p>📜 <b>Правила:</b></p>
+      <ul>
+        <li>Бросай 3 кубика, можно перебросить до двух.</li>
+        <li>Сумма кубиков — сколько шагов ты делаешь.</li>
+        <li>Попал на обычную клетку — возьми карту, прочитай её вслух и выполни задание за отведённое время.</li>
+        <li>Очки = время выполнения (быстрее — больше, до 10). Пропуск = −2, время вышло = 0.</li>
+        <li>Клетки «+2» и «−2» начисляют очки сразу.</li>
+        <li>Кто первый дошёл до финиша — победитель; при равенстве очков выше тот, кто пришёл раньше.</li>
+      </ul>
+    </div>
+    <label class="field-label">Введите имена игроков:</label>
+    <div id="nameList" class="name-list"></div>
+    <button id="btnStart" class="btn primary big" type="button">▶ Начать игру</button>
+  </div>
+</div>
+
+<!-- Окно финала -->
+<div id="final" class="overlay hidden">
+  <div class="overlay-card">
+    <h2>🏁 Игра окончена!</h2>
+    <div id="finalList" class="final-list"></div>
+    <button id="btnAgain" class="btn primary big" type="button">Играть ещё раз</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

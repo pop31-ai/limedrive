@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ПОЛИАРТ Φ · сетка золотого сечения</title>
+<style>
+  :root{
+    --bg:#14120f; --panel:#221d18; --line:#c9a86a; --gold:#f2c94c;
+    --text:#f0e6d0; --muted:#a0916f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 700px at 50% -10%, #2a2218, var(--bg));
+       color:var(--text);font:15px/1.5 system-ui, sans-serif;min-height:100vh}
+  header{padding:18px 28px;border-bottom:1px solid #3a3226}
+  h1{font-size:22px;margin:0;letter-spacing:.04em}
+  h1 b{color:var(--gold)}
+  h1 small{font-size:12px;color:var(--muted);font-weight:400;display:block;margin-top:4px}
+  main{display:grid;grid-template-columns:1fr 320px;gap:20px;padding:20px 28px}
+  .canvas-wrap{position:relative;background:#000;border:1px solid #3a3226;
+               border-radius:10px;overflow:hidden;min-height:340px}
+  #stage{display:block;width:100%;max-height:74vh}
+  #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        color:var(--muted);cursor:pointer;background:#000;font-size:15px;text-align:center;
+        padding:20px;border:2px dashed #5a4a30;border-radius:10px}
+  #drop.hidden{display:none}
+  aside{display:flex;flex-direction:column;gap:14px}
+  .panel{background:var(--panel);border:1px solid #3a3226;border-radius:10px;padding:14px}
+  .panel h2{font-size:13px;margin:0 0 10px;color:var(--gold);letter-spacing:.08em}
+  label{display:flex;align-items:center;justify-content:space-between;gap:10px;
+        margin:8px 0;font-size:13px;color:var(--muted)}
+  input[type=range]{flex:1}
+  .swatches{display:flex;gap:8px;flex-wrap:wrap}
+  .sw{border:2px solid transparent;border-radius:6px;height:26px;flex:1 0 26px;cursor:pointer}
+  .sw.on{border-color:#fff}
+  .row{display:flex;gap:8px;margin-top:10px}
+  button{flex:1;border:0;border-radius:8px;padding:9px 8px;cursor:pointer;font-size:13px;
+         background:linear-gradient(#8a6a2f,#6d5224);color:#fff}
+  button:hover{filter:brightness(1.15)}
+  button.ghost{background:#33302a;color:var(--text)}
+  #phi{font-size:13px;color:var(--muted);line-height:1.6}
+  #phi b{color:var(--gold)}
+  #status{font-size:12px;color:var(--muted)}
+  a{color:var(--gold)}
+</style>
+</head>
+<body>
+<header>
+  <h1>ПОЛИАРТ <b>Φ</b> <small>сетка золотого сечения 1.618 · композиция кадра · спираль</small></h1>
+</header>
+<main>
+  <div class="canvas-wrap">
+    <canvas id="stage" width="800" height="600"></canvas>
+    <div id="drop">Перетащи сюда фотографию<br>или кликни, чтобы выбрать файл</div>
+    <input type="file" id="file" accept="image/*" hidden>
+  </div>
+  <aside>
+    <div class="panel">
+      <h2>СЕТКА Φ-КОМПОЗИЦИИ</h2>
+      <label>Точность
+        <input type="range" id="pix" min="0" max="1" step="1" value="0">
+      </label>
+      <label>Показывать сетку <input type="checkbox" id="showGrid" checked></label>
+      <label>Показывать спираль <input type="checkbox" id="showSpiral" checked></label>
+      <label>Спрятать исходник <input type="checkbox" id="hideImg"></label>
+      <div class="row">
+        <button id="btnPhi" class="ghost">Кадр φ</button>
+        <button id="btnCrop" class="ghost">Обрезать</button>
+        <button id="btnSave">Скачать</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>ЛИНИИ (1/φ, 1/φ²)</h2>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <div class="panel" id="phi">
+      <b>φ = (1 + √5) / 2 ≈ 1.6180339887</b><br>
+      Вертикали: x = 0.382W, 0.618W, 0.236W, 0.764W<br>
+      Горизонтали: y = 0.382H, 0.618H, 0.236H, 0.764H<br>
+      Спираль: золотая дуга в крайнем квадрате.<br>
+      Идеал: главный объект на пересечении x·y = 0.382 × 0.618.
+    </div>
+    <div id="status"></div>
+  </aside>
+</main>
+<script>
+const PHI = (1 + Math.sqrt(5)) / 2;
+const cv = document.getElementById('stage');
+const ctx = cv.getContext('2d');
+const drop = document.getElementById('drop');
+const file = document.getElementById('file');
+const statusEl = document.getElementById('status');
+
+let img = null;
+let srcW = 0, srcH = 0;
+
+const GOLD = '#f2c94c', WHITE = '#ffffff', RED = '#e05b4a';
+const SWATCHES = [GOLD, WHITE, RED, '#7ad0ff', '#000000', '#7cff7c'];
+const swWrap = document.getElementById('swatches');
+let lineColor = GOLD;
+
+function buildSwatches(){
+  SWATCHES.forEach((c,i)=>{
+    const b=document.createElement('div');
+    b.className='sw'+(i===0?' on':'');
+    b.style.background=c;
+    b.onclick=()=>{lineColor=c; swWrap.querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); b.classList.add('on'); draw();};
+    swWrap.appendChild(b);
+  });
+}
+buildSwatches();
+
+function loadFromFile(f){
+  const rd = new FileReader();
+  rd.onload = ()=>{ const im=new Image(); im.onload=()=>{ img=im; srcW=im.naturalWidth; srcH=im.naturalHeight;
+    fitStage(); drop.classList.add('hidden'); draw(); }; im.src=rd.result; };
+  rd.readAsDataURL(f);
+}
+drop.onclick=()=>file.click();
+drop.ondragover=e=>e.preventDefault();
+drop.ondrop=e=>{e.preventDefault(); loadFromFile(e.dataTransfer.files[0]);};
+file.onchange=e=>{ if(e.target.files[0]) loadFromFile(e.target.files[0]); };
+
+function fitStage(){
+  const w = cv.parentElement.clientWidth;
+  const h = Math.min(w, window.innerHeight*0.74);
+  const scale = Math.min(w/srcW, h/srcH);
+  cv.width = Math.round(srcW*scale);
+  cv.height = Math.round(srcH*scale);
+}
+
+function gx(x){ return cv.width*x; }
+function gy(y){ return cv.height*y; }
+function goldenLines(){
+  const lines=[];
+  for(const f of [1/PHI, 1-1/PHI, 1/(PHI*PHI), 1-1/(PHI*PHI)]){
+    lines.push({axis:'x', v:gx(f)});
+    lines.push({axis:'y', v:gy(f)});
+  }
+  return lines;
+}
+function drawGoldenSpiral(){
+  // золотые квадраты, уменьшающиеся в φ
+  let x=0, y=0, w=cv.width, h=cv.height;
+  // отсекаем "высокий" квадрат до квадрата
+  if(w>h){ x=(w-h)/2; w=h; }
+  else if(h>w){ y=(h-w)/2; h=w; }
+  ctx.lineWidth=2;
+  for(let i=0;i<8;i++){
+    ctx.strokeStyle=lineColor;
+    if(w<=2) break;
+    // дуга из угла
+    if(i%2===0){ ctx.beginPath(); ctx.arc(x+w, y+w, w, Math.PI, Math.PI*1.5); ctx.stroke(); }
+    else{ ctx.beginPath(); ctx.arc(x, y, w, Math.PI*1.5, Math.PI*2); ctx.stroke(); }
+    // следующий квадрат: φ-уменьшение, чередование стороны
+    const ns = w/PHI;
+    if(i%2===0){ x += w-ns; y += w-ns; }
+    else{ x += 0; y += 0; }
+    if(i%2===0){ w=ns; } else { w=ns; }
+  }
+}
+function draw(){
+  if(!img) return;
+  ctx.fillStyle='#000';
+  ctx.fillRect(0,0,cv.width,cv.height);
+  if(!document.getElementById('hideImg').checked){
+    ctx.drawImage(img,0,0,cv.width,cv.height);
+  }
+  if(!document.getElementById('showGrid').checked) return;
+  ctx.lineWidth=1.5;
+  ctx.strokeStyle=lineColor;
+  for(const l of goldenLines()){
+    ctx.beginPath();
+    if(l.axis==='x'){ ctx.moveTo(l.v,0); ctx.lineTo(l.v,cv.height); }
+    else{ ctx.moveTo(0,l.v); ctx.lineTo(cv.width,l.v); }
+    ctx.stroke();
+  }
+  if(document.getElementById('showSpiral').checked) drawGoldenSpiral();
+}
+// перерисовка при изменении настроек
+for(const id of ['pix','showGrid','showSpiral','hideImg']){
+  document.getElementById(id).addEventListener('input',draw);
+}
+function zoomedScale(){
+  return {x:cv.width/srcW, y:cv.height/srcH};
+}
+document.getElementById('btnCrop').onclick=()=>{
+  if(!img) return;
+  // обрезаем канву до золотого кадра: левый 0.618 ширины
+  const cw = cv.width/PHI;
+  const ch = cv.height;
+  const ocv=document.createElement('canvas');
+  ocv.width=cw; ocv.height=ch;
+  const o=ocv.getContext('2d');
+  o.drawImage(cv,0,0,cw,ch,0,0,cw,ch);
+  cv.width=cw; cv.height=ch;
+  ctx.drawImage(ocv,0,0);
+  draw();
+};
+document.getElementById('btnPhi').onclick=()=>{
+  if(!img) return;
+  // показать пример: объект на пересечении 0.382/0.618
+  draw();
+  ctx.lineWidth=4; ctx.strokeStyle=RED;
+  ctx.beginPath(); ctx.arc(gx(0.382),gy(0.618),Math.max(8,cv.width*0.02),0,7); ctx.stroke();
+  statusEl.textContent='Пример: ключевая точка в φ-пересечении.';
+};
+document.getElementById('btnSave').onclick=()=>{
+  const a=document.createElement('a');
+  a.download='poliart-phi.png';
+  a.href=cv.toDataURL('image/png');
+  a.click();
+};
+// тестовое изображение при первом запуске (φ-спираль и сетка на тёмном фоне)
+(function seed(){
+  if(!img){
+    const w=800,h=560;
+    cv.width=w; cv.height=h;
+    ctx.fillStyle='#1c1712'; ctx.fillRect(0,0,w,h);
+    // рисовать спираль и сетку как "тестовый фон"
+    img=document.createElement('canvas'); img.width=w; img.height=h;
+    const ic=img.getContext('2d');
+    ic.fillStyle='#1c1712'; ic.fillRect(0,0,w,h);
+    const dots=[];
+    for(let i=0;i<60;i++){
+      const t=i*0.28;
+      const r=Math.pow(PHI,t*0.35);
+      const xx=w/2+r*Math.cos(t)*14, yy=h/2+r*Math.sin(t)*14;
+      dots.push([xx,yy]);
+    }
+    dots.forEach(([x,y],i)=>{
+      ic.fillStyle=i%2? '#f2c94c':'#c9a86a';
+      ic.beginPath(); ic.arc(x,y,i%3?3:5,0,7); ic.fill();
+    });
+    srcW=w; srcH=h;
+    // тоже считаем картинкой
+    draw();
+    statusEl.textContent='Демо-фон. Перетащи фото для анализа композиции.';
+  }
+})();
+</script>
+</body>
+</html>

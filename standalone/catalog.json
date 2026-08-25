@@ -1,0 +1,116 @@
+[
+  {
+    "file": "standalone/basketball.html",
+    "title": "Баскетбол ПолиАрт",
+    "category": "спорт",
+    "kb": 12
+  },
+  {
+    "file": "standalone/poliart-holo.html",
+    "title": "Голоциадель — Архитектор голограмм",
+    "category": "настолка",
+    "kb": 251
+  },
+  {
+    "file": "standalone/poliart-grumble.html",
+    "title": "Грумбл — Грустные портреты",
+    "category": "настолка",
+    "kb": 46
+  },
+  {
+    "file": "standalone/poliart-dragon.html",
+    "title": "Дракон — Змеиные Врата",
+    "category": "викторина",
+    "kb": 55
+  },
+  {
+    "file": "standalone/builders-star.html",
+    "title": "Звезда Строителей",
+    "category": "настолка",
+    "kb": 48
+  },
+  {
+    "file": "standalone/dice-cards/",
+    "title": "Кубик-Карты",
+    "category": "настолка",
+    "kb": 251
+  },
+  {
+    "file": "standalone/poliart-lotto.html",
+    "title": "Лотто — Золотая викторина",
+    "category": "викторина",
+    "kb": 46
+  },
+  {
+    "file": "standalone/meridian/",
+    "title": "Меридиан — Золотое Сечение",
+    "category": "арт",
+    "kb": 90
+  },
+  {
+    "file": "standalone/poliart-ogon.html",
+    "title": "Огонь — Викторина огня",
+    "category": "викторина",
+    "kb": 46
+  },
+  {
+    "file": "standalone/poliart-operator.html",
+    "title": "Оператор ночного объекта",
+    "category": "3D",
+    "kb": 44
+  },
+  {
+    "file": "standalone/polygray/",
+    "title": "ПолиГрей — шаблон настолки",
+    "category": "настолка",
+    "kb": 56
+  },
+  {
+    "file": "standalone/safari-marathon.html",
+    "title": "Сафари-Марафон",
+    "category": "аркада",
+    "kb": 73
+  },
+  {
+    "file": "standalone/poliart-fotosafari.html",
+    "title": "Фотосафари",
+    "category": "аркада",
+    "kb": 39
+  },
+  {
+    "file": "standalone/fingerdraw.html",
+    "title": "FingerDraw — рисование",
+    "category": "тул",
+    "kb": 4
+  },
+  {
+    "file": "standalone/grimart/",
+    "title": "GrimArt — генератор грима (эксперимент)",
+    "category": "арт",
+    "kb": 15
+  },
+  {
+    "file": "standalone/kandinsky-train.html",
+    "title": "Kandinsky Train — паровозик",
+    "category": "раннер",
+    "kb": 8
+  },
+  {
+    "file": "standalone/polyart-live/",
+    "title": "PolyArt Live — 49 живых галерей",
+    "category": "арт",
+    "kb": 1457
+  },
+  {
+    "file": "standalone/poliart-phi.html",
+    "title": "Φ — Сетка золотого сечения",
+    "category": "арт-тул",
+    "kb": 10
+  },
+  {
+    "file": "standalone/poliart-atlet.html",
+    "title": "Φ-Атлет — Корпус в движении",
+    "category": "арт-3D",
+    "kb": 53
+  }
+]

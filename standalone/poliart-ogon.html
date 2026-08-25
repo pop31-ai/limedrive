@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ПОЛИАРТ · ОГОНЬ «Викторина огня»</title>
+<style>
+/* ================= НОЧНАЯ ОГНЕННАЯ ТЕМА ================= */
+:root{
+  --night:#181008; --night2:#241710; --ember:#782c1a; --ember2:#a03c20;
+  --red:#b0392b; --orange:#c9822a; --amber:#d6a02e; --gold:#c4a023;
+  --gold2:#e0ba4a; --gold3:#96701a; --cream:#faf0dc; --dim:#d8c4a8;
+  --line:#8a5f2e; --card:#faf2e2; --ink:#462a1a; --blue:#3f8fb0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:Georgia,"Times New Roman",serif;color:var(--cream);
+  background:
+    radial-gradient(120% 90% at 50% -10%, #3a1d10 0%, var(--night) 55%, #0d0804 100%);
+  background-attachment:fixed;
+}
+/* летящие тлеющие угли-фон */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    repeating-linear-gradient(0deg, rgba(180,110,40,.05) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(90deg, rgba(180,110,40,.04) 0 2px, transparent 2px 9px);
+}
+#app{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:16px}
+[hidden]{display:none !important}
+
+/* ---- типографика ---- */
+.orn{text-align:center;color:var(--amber);font-size:18px;letter-spacing:8px;margin:4px 0;text-shadow:0 0 12px rgba(214,160,46,.6)}
+.title{
+  text-align:center;font-size:clamp(30px,5vw,58px);font-weight:800;letter-spacing:.06em;
+  color:var(--cream);text-shadow:0 2px 0 rgba(0,0,0,.6), 0 0 30px rgba(214,120,40,.4);
+}
+.title .ph{color:var(--amber)}
+.subtitle{text-align:center;font-style:italic;color:var(--dim);font-size:16px;margin:6px 0 2px}
+.tagline{
+  text-align:center;font-size:12px;letter-spacing:4px;text-transform:uppercase;
+  color:var(--amber);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:6px 0;max-width:520px;margin:8px auto;
+}
+h2.label{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--amber);
+  border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:12px;font-family:Georgia,serif}
+
+/* ---- панели ---- */
+.panel{
+  background:linear-gradient(160deg,#2c1a10,#1e1109);
+  border:1px solid var(--line);border-radius:6px;padding:16px;
+  box-shadow:0 6px 22px rgba(0,0,0,.5), inset 0 1px 0 rgba(214,160,46,.15);
+  position:relative;
+}
+.panel::after{
+  content:"";position:absolute;inset:4px;border:1px solid rgba(214,160,46,.25);
+  border-radius:4px;pointer-events:none;
+}
+.panel .in{position:relative;z-index:1}
+
+/* ---- кнопки (огненные) ---- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-family:Georgia,serif;font-size:16px;font-weight:700;letter-spacing:.03em;
+  color:#fff6e3;cursor:pointer;border:1px solid #3a1a08;
+  border-radius:4px;padding:13px 24px;position:relative;
+  background:linear-gradient(180deg,var(--orange),var(--red));
+  box-shadow:0 3px 0 #4a1406, 0 8px 18px rgba(160,60,20,.35);
+  transition:transform .12s, box-shadow .12s;
+}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #4a1406}
+.btn.ghost{background:linear-gradient(180deg,#3f4a5c,#2a3444);box-shadow:0 3px 0 #171f2c, 0 8px 18px rgba(20,30,60,.3)}
+.btn.teal{background:linear-gradient(180deg,var(--blue),#2a5a70);box-shadow:0 3px 0 #173b4a, 0 8px 18px rgba(20,60,80,.3)}
+.btn.gold{background:linear-gradient(180deg,var(--gold2),var(--gold3));box-shadow:0 3px 0 #5a4208, 0 8px 18px rgba(160,130,20,.3)}
+.btn.big{font-size:20px;padding:17px 38px;width:100%;margin-top:4px;animation:pulse 2s infinite}
+.btn.small{padding:9px 16px;font-size:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:grayscale(.5)}
+@keyframes pulse{0%,100%{box-shadow:0 3px 0 #4a1406, 0 0 12px rgba(214,160,46,.3)}
+  50%{box-shadow:0 3px 0 #4a1406, 0 0 30px rgba(240,170,60,.75)}}
+
+/* ---- настройки ---- */
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.modeBtn{
+  flex:1;min-width:230px;padding:14px;border-radius:4px;cursor:pointer;text-align:left;
+  border:1px solid var(--line);background:#241710;color:var(--cream);
+  transition:all .18s;font-size:15px;font-family:Georgia,serif;
+}
+.modeBtn:hover{border-color:var(--amber);transform:translateY(-2px)}
+.modeBtn.sel{border-color:var(--amber);background:linear-gradient(135deg,#3a2412,#2a1a0e);
+  box-shadow:0 0 0 2px rgba(214,160,46,.35), 0 6px 18px rgba(180,100,20,.25)}
+.modeBtn b{display:block;color:var(--amber);font-size:17px;letter-spacing:.04em}
+.playerRow{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px;margin:6px 0;
+  border:1px solid var(--line);border-radius:4px;background:rgba(36,23,16,.6);
+}
+.playerRow .pcol{width:20px;height:20px;border-radius:50%;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.playerRow input{flex:1;min-width:130px;background:#1a1008;border:1px solid var(--line);
+  color:var(--cream);border-radius:4px;padding:8px 10px;font-size:14px;font-family:Georgia,serif}
+.playerRow label{font-size:12px;color:var(--dim);min-width:70px;letter-spacing:.05em}
+.pawnSel{display:flex;gap:6px;flex-wrap:wrap}
+.pawnBtn{width:48px;height:48px;border-radius:50%;cursor:pointer;font-size:24px;
+  border:1px solid var(--line);background:#241710;transition:all .15s}
+.pawnBtn:hover{border-color:var(--amber);transform:scale(1.08)}
+.pawnBtn.sel{border-color:var(--amber);background:linear-gradient(135deg,#3a2412,#5a2c12);
+  box-shadow:0 0 0 2px rgba(214,160,46,.4)}
+.pawnBtn:disabled{opacity:.25;cursor:not-allowed}
+
+/* ---- игровой экран ---- */
+#gameTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+#gameTop .title{font-size:clamp(18px,3vw,28px)}
+.boardWrap{flex:1 1 480px;min-width:300px;display:flex;justify-content:center}
+#board{width:100%;max-width:560px;filter:drop-shadow(0 14px 26px rgba(0,0,0,.55))}
+#board .glow{animation:cellpulse 1.5s infinite}
+@keyframes cellpulse{0%,100%{filter:drop-shadow(0 0 2px rgba(255,255,255,0))}
+  50%{filter:drop-shadow(0 0 14px var(--glowc,#d6a02e))}}
+#board .pawnPulse{animation:pp 1.5s infinite}
+@keyframes pp{0%,100%{filter:drop-shadow(0 0 1px #fff)}50%{filter:drop-shadow(0 0 12px #fff)}}
+
+.side{flex:1 1 420px;min-width:300px;display:flex;flex-direction:column;gap:12px}
+.diceArea{display:flex;align-items:center;gap:16px;justify-content:center;min-height:104px;padding:10px}
+.die{
+  width:78px;height:78px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#fff8e8,#e8d8b8);color:#b0392b;
+  box-shadow:0 6px 0 #7a4a24, inset 0 -6px 12px rgba(0,0,0,.12), inset 0 4px 8px rgba(255,255,255,.8);
+  border:1px solid #b08040;font-weight:900;font-size:34px;font-family:Georgia,serif;
+}
+.die.spin{animation:diespin .55s cubic-bezier(.2,.8,.3,1.2)}
+@keyframes diespin{0%{transform:translateY(-44px) rotate(-540deg) scale(.3);opacity:0}
+  100%{transform:translateY(0) rotate(0) scale(1);opacity:1}}
+.diePlaceholder{width:78px;height:78px;border:2px dashed var(--line);border-radius:10px;
+  display:grid;place-items:center;color:var(--dim);font-size:28px}
+.rollSum{font-size:22px;font-weight:900;color:var(--amber);min-width:40px;text-align:center;text-shadow:0 0 8px rgba(214,160,46,.5)}
+.actionArea{text-align:center}
+.actionArea .turnName{font-size:14px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.actionArea .prompt{font-size:18px;font-weight:700;color:var(--amber);margin:8px 0;text-shadow:0 0 10px rgba(214,160,46,.35)}
+#players{display:flex;flex-direction:column;gap:10px}
+.pcard{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:4px;
+  background:rgba(36,23,16,.7);border:1px solid var(--line);transition:all .2s;
+}
+.pcard.active{border-color:var(--amber);box-shadow:0 0 0 2px rgba(214,160,46,.35)}
+.pcard .ico{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:24px;
+  border:2px solid rgba(255,255,255,.35);flex:none;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.pcard .nm{flex:1}
+.pcard .nm b{display:block;font-size:15px;color:var(--cream)}
+.pcard .nm span{font-size:12px;color:var(--dim);font-style:italic}
+.card{
+  display:grid;grid-template-columns:repeat(3,34px);gap:4px;margin-top:6px;
+}
+.card .cell{
+  width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--amber);background:#241710;color:var(--cream);font-weight:700;font-size:15px;
+  font-family:Georgia,serif;
+}
+.card .cell.closed{background:radial-gradient(circle at 35% 30%,#e8a04a,#c04020);
+  color:#fff;border-color:var(--red);box-shadow:0 0 10px rgba(214,120,40,.6)}
+.card .cell.free{background:#3a2412;color:var(--dim)}
+.stars{font-size:13px;color:var(--amber);letter-spacing:2px}
+.stars b{color:var(--red)}
+#log{max-height:170px;overflow-y:auto;font-size:13.5px;line-height:1.6;color:var(--dim)}
+#log div{border-bottom:1px dashed rgba(214,160,46,.25);padding:3px 0}
+#log div:first-child{color:var(--cream);font-weight:700}
+#log .good{color:#7db35a}#log .bad{color:var(--red)}
+
+/* ---- модальные окна ---- */
+.overlay{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;
+  background:rgba(10,5,2,.72);backdrop-filter:blur(4px)}
+.cardModal{
+  max-width:560px;width:92%;padding:26px 30px;border-radius:8px;text-align:center;
+  background:linear-gradient(160deg,#3a2412,#241710);border:2px solid var(--amber);
+  box-shadow:0 0 60px rgba(0,0,0,.7), inset 0 0 40px rgba(214,120,40,.18);
+  animation:pop .45s cubic-bezier(.2,1.3,.4,1);
+}
+@keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+.cardModal h2{font-size:15px;letter-spacing:4px;color:var(--amber);text-transform:uppercase;margin-bottom:10px}
+.cardModal .q{font-size:22px;font-weight:700;line-height:1.35;margin:10px 0 18px;color:var(--cream)}
+.cardModal .opts{display:flex;flex-direction:column;gap:9px}
+.opt{
+  font-family:Georgia,serif;font-size:16px;text-align:left;padding:12px 16px;border-radius:4px;
+  border:1px solid var(--line);background:#241710;color:var(--cream);cursor:pointer;transition:all .12s;
+}
+.opt:hover{border-color:var(--amber);transform:translateX(4px)}
+.opt.correct{background:#233a12;border-color:#5a9a3a;color:#9bd06a}
+.opt.wrong{background:#3a1410;border-color:var(--red);color:#e07a5a}
+.opt:disabled{cursor:default;transform:none}
+.routeBtns{display:flex;flex-direction:column;gap:9px}
+.routeBtn{font-family:Georgia,serif;font-size:16px;padding:14px 16px;border-radius:4px;
+  border:1px solid var(--amber);background:#2a1a0e;color:var(--cream);cursor:pointer;transition:all .12s;text-align:left}
+.routeBtn:hover{transform:scale(1.02);box-shadow:0 4px 14px rgba(200,120,30,.4)}
+.routeBtn b{color:var(--amber);display:block;font-size:15px}
+.routeBtn span{font-size:13px;color:var(--dim);font-style:italic}
+.sparkShow{width:120px;height:120px;margin:6px auto 14px;border-radius:50%;
+  display:grid;place-items:center;font-size:54px;font-weight:900;color:#fff;
+  background:radial-gradient(circle at 32% 28%,#e88040,#a03c20);border:3px solid #5c1a08;
+  box-shadow:inset 0 -12px 20px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.5);
+  animation:pop .5s cubic-bezier(.2,1.5,.4,1);
+}
+.starsLine{font-size:20px;letter-spacing:4px;color:var(--amber)}
+.winDice{font-size:64px;margin-bottom:8px;animation:wobble 1.4s infinite}
+@keyframes wobble{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.confetti{position:fixed;top:-22px;z-index:29;width:12px;height:18px;border-radius:2px;
+  animation:fall linear infinite}
+@keyframes fall{0%{transform:translateY(-5vh) rotate(0deg);opacity:1}
+  100%{transform:translateY(116vh) rotate(720deg);opacity:.75}}
+
+/* ---- печать / память ---- */
+#printLinks a{text-decoration:none;display:block;margin:5px 0}
+#memList{font-size:13px;color:var(--dim)}
+#memList div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:6px 0}
+#memList b{color:var(--amber)}
+.printHint{font-size:12px;color:var(--dim);font-style:italic}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ НАСТРОЙКИ ============ -->
+  <div id="screenSetup">
+    <div class="orn">✦ 🔥 ✦</div>
+    <div class="title">ПОЛИАРТ <span class="ph">ОГОНЬ</span></div>
+    <div class="subtitle">«Викторина огня» — искры, кубик и маршрут за правильный ответ</div>
+    <div class="tagline">стиль ПОЛИГРЕЙ · викторина · огненная спираль · рубашка с пламенем</div>
+    <div style="height:14px"></div>
+
+    <div class="panel"><div class="in">
+      <h2 class="label">I. Режим игры</h2>
+      <div class="row">
+        <div class="modeBtn" data-mode="ai" id="modeAi">
+          <b>Против компьютера</b>
+          1 человек + 3 компьютера. Играй один.
+        </div>
+        <div class="modeBtn" data-mode="local" id="modeLocal">
+          <b>За одним экраном</b>
+          2–4 человека передают устройство по кругу.
+        </div>
+      </div>
+    </div></div>
+
+    <div class="panel"><div class="in">
+      <h2 class="label">II. Выбери фишку и имя</h2>
+      <div id="playerRows"></div>
+    </div></div>
+
+    <div class="panel"><div class="in" style="text-align:center">
+      <button class="btn big" id="btnStart">НАЧАТЬ ПАРТИЮ</button>
+    </div></div>
+
+    <div class="panel"><div class="in">
+      <h2 class="label">III. Печать настольной версии</h2>
+      <div class="row" id="printLinks"></div>
+      <div class="printHint">Файлы лежат в папке <b>print/</b>. Если их нет — запусти <b>python generate_print.py</b>.
+      Карточки викторины печатай <b>двусторонне</b> — на обороте огненная рубашка.</div>
+    </div></div>
+
+    <div class="panel"><div class="in">
+      <h2 class="label">IV. Память побед</h2>
+      <div id="memList"></div>
+      <button class="btn ghost small" id="btnClearMem" style="margin-top:10px">Очистить память</button>
+    </div></div>
+  </div>
+
+  <!-- ============ ИГРА ============ -->
+  <div id="screenGame" hidden>
+    <div id="gameTop">
+      <div class="title" style="font-size:22px">ПОЛИАРТ <span class="ph">ОГОНЬ</span></div>
+      <button class="btn ghost small" id="btnNew">Новая игра</button>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div class="boardWrap">
+        <svg id="board" viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="side">
+        <div class="panel"><div class="in">
+          <h2 class="label">Кубик</h2>
+          <div class="diceArea">
+            <div class="diePlaceholder" id="dph">?</div>
+            <div class="die" id="die1" hidden></div>
+            <div class="rollSum" id="rollSum"></div>
+          </div>
+        </div></div>
+        <div class="panel actionArea"><div class="in">
+          <div class="turnName" id="turnName"></div>
+          <div class="prompt" id="prompt"></div>
+          <div id="actionBtns"></div>
+        </div></div>
+        <div class="panel"><div class="in">
+          <h2 class="label">Игроки и карточки искр</h2>
+          <div id="players"></div>
+        </div></div>
+        <div class="panel"><div class="in">
+          <h2 class="label">Ход игры</h2>
+          <div id="log"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКИ ============ -->
+<div id="quizModal" class="overlay" hidden>
+  <div class="cardModal">
+    <h2>🔥 Викторина огня 🔥</h2>
+    <div class="q" id="qText"></div>
+    <div class="opts" id="qOpts"></div>
+    <div style="margin-top:14px;font-size:13px;color:var(--dim);font-style:italic" id="qExpl"></div>
+  </div>
+</div>
+
+<div id="routeModal" class="overlay" hidden>
+  <div class="cardModal">
+    <h2>✧ Верно! Выбери маршрут ✧</h2>
+    <div class="q" id="rText">Куда направишься?</div>
+    <div class="routeBtns" id="routeBtns"></div>
+  </div>
+</div>
+
+<div id="bonfireModal" class="overlay" hidden>
+  <div class="cardModal">
+    <h2>🪵 КОСТЁР 🪵</h2>
+    <div class="sparkShow" id="sparkNo">✨</div>
+    <div id="bonfireText" style="font-size:16px;color:var(--dim);font-style:italic"></div>
+    <div style="margin-top:16px"><button class="btn" id="btnBonfireOk">Хорошо</button></div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="cardModal">
+    <div class="winDice">🔥</div>
+    <h2 id="winTitle" style="font-size:34px;letter-spacing:6px">ПЛАМЯ!</h2>
+    <p id="winText" style="font-size:18px;margin:12px 0 18px;color:var(--cream)"></p>
+    <div class="starsLine" id="winStars"></div>
+    <button class="btn big" id="btnAgain" style="margin-top:18px">Играть ещё</button>
+  </div>
+</div>
+<script>
+"use strict";
+/* ================= КОНСТАНТЫ И ГЕОМЕТРИЯ ================= */
+const N = 24;                       // клеток на спирали
+const SPARK_NUMS = [];              // номера искр
+const CELLS = [];                   // {i,type,num,x,y}
+
+/* типы клеток по индексам (0..23) */
+const CELL_TYPE = [
+  "START",
+  "SPARK","SPARK","QUIZ","SPARK","SPARK","BONFIRE","SPARK",
+  "QUIZ","SPARK","SPARK","SPARK","QUIZ",
+  "SPARK","SPARK","BONFIRE","SPARK",
+  "QUIZ","SPARK","SPARK","SPARK","QUIZ",
+  "SPARK","SPARK"
+];
+/* номера искр: 1..16 последовательно на SPARK */
+(function(){
+  let sn = 1;
+  for(let i=0;i<N;i++){
+    if(CELL_TYPE[i]==="SPARK"){ SPARK_NUMS[i]=sn; sn++; }
+    else SPARK_NUMS[i]=0;
+  }
+})();
+const SPARK_COUNT = 16;             // всего искр с номерами
+const CARD_SIZE = 6;                // искр на карточке игрока
+
+/* ---- огненная спираль (та же геометрия, что и на поле) ---- */
+const CX = 250, CY = 320, RMIN = 62, RMAX = 238, TURNS = 1.45;
+function spiralSample(){
+  const thetaMax = TURNS*2*Math.PI, S=2600;
+  const pts=[], cum=[0];
+  for(let j=0;j<=S;j++){
+    const th = thetaMax*j/S;
+    const r = RMIN + (RMAX-RMIN)*(th/thetaMax);
+    const x = CX + r*Math.cos(th - Math.PI/2);
+    const y = CY + r*Math.sin(th - Math.PI/2);
+    pts.push([x,y]);
+    if(j>0) cum.push(cum[j-1] + Math.hypot(pts[j][0]-pts[j-1][0], pts[j][1]-pts[j-1][1]));
+  }
+  const total=cum[S];
+  const out=[];
+  for(let i=0;i<N;i++){
+    const target = total*i/(N-1);
+    let lo=0,hi=S;
+    while(lo<hi){ const mid=(lo+hi)>>1; if(cum[mid]<target) lo=mid+1; else hi=mid; }
+    lo=Math.max(1,lo);
+    const t=(target-cum[lo-1])/(cum[lo]-cum[lo-1]||1);
+    out.push([
+      pts[lo-1][0]+(pts[lo][0]-pts[lo-1][0])*t,
+      pts[lo-1][1]+(pts[lo][1]-pts[lo-1][1])*t
+    ]);
+  }
+  return {pts, cum, total, cells:out};
+}
+const SPIRAL = spiralSample();
+for(let i=0;i<N;i++) CELLS.push({i, type:CELL_TYPE[i], num:SPARK_NUMS[i], x:SPIRAL.cells[i][0], y:SPIRAL.cells[i][1]});
+
+/* ================= ВИКТОРИНА ================= */
+const QUIZ_BANK=[
+  {q:"Какой газ поддерживает горение?",o:["кислород","азот","углекислый газ","водород"],c:0},
+  {q:"Что такое «треугольник огня»?",o:["три условия горения","три полена","три спички","три искры"],c:0},
+  {q:"Какого цвета самое горячее пламя?",o:["голубое","красное","оранжевое","жёлтое"],c:0},
+  {q:"Что остаётся после сгорания дров?",o:["зола, пепел и угли","вода","лёд","стекло"],c:0},
+  {q:"Чем тушат пожар чаще всего?",o:["водой","бензином","маслом","спиртом"],c:0},
+  {q:"Как называется неконтролируемое горение?",o:["пожар","костёр","очаг","факел"],c:0},
+  {q:"Сколько граней у игрального кубика?",o:["6","8","4","12"],c:0},
+  {q:"Что нужно, чтобы спичка зажглась?",o:["тепло и кислород","только вода","только песок","только ветер"],c:0},
+  {q:"Какая температура пламени спички (примерно)?",o:["600–900°C","50°C","0°C","2000°C"],c:0},
+  {q:"Что такое искра?",o:["маленькая горящая частица","капля воды","песчинка","снежинка"],c:0},
+  {q:"Как называют человека, который тушит пожары?",o:["пожарный","повар","доктор","учитель"],c:0},
+  {q:"Из чего древние люди добывали огонь трением?",o:["из дерева","из камня","из песка","из снега"],c:0},
+  {q:"Что является источником тепла в костре?",o:["пламя","дым","зола","ветер"],c:0},
+  {q:"Какой цвет пламени самый холодный?",o:["красный","белый","голубой","зелёный"],c:0},
+  {q:"Что такое очаг?",o:["место разведения огня","посуда","одежда","инструмент"],c:0},
+  {q:"Какой газ «подкармливает» огонь?",o:["кислород","азот","гелий","метан"],c:0},
+  {q:"Что даёт огонь человеку?",o:["свет и тепло","только звук","только запах","только цвет"],c:0},
+  {q:"Что такое «головня»?",o:["горящее полено","вода","камень","песок"],c:0},
+  {q:"Как называется мифическая птица, возрождающаяся из огня?",o:["феникс","ворона","сова","орёл"],c:0},
+  {q:"Чем опасно горячее масло?",o:["вспыхивает","замерзает","пахнет","светится"],c:0},
+  {q:"Что не относится к «треугольнику огня»?",o:["вода","топливо","тепло","кислород"],c:0},
+  {q:"Какого цвета пламя обычной свечи у основания?",o:["голубое","зелёное","фиолетовое","чёрное"],c:0},
+  {q:"Что остаётся от спички после сгорания?",o:["головешка и пепел","вода","стекло","пластмасса"],c:0},
+  {q:"Как называется тлеющий уголь?",o:["жар","дым","пар","туман"],c:0},
+  {q:"Что делать, если загорелась одежда?",o:["кататься по земле","бежать","дуть","обливать бензином"],c:0},
+  {q:"Какой цвет имеет самый горячий участок пламени?",o:["белый и голубой","красный","чёрный","зелёный"],c:0},
+  {q:"Что такое «сажа»?",o:["продукт неполного сгорания","вода","лёд","песок"],c:0},
+  {q:"Чем тушат горящий бензин?",o:["песком","водой","молоком","маслом"],c:0},
+  {q:"Как называется кубик с точками для игр?",o:["d6","d4","d8","d20"],c:0},
+  {q:"Что делает вода с пламенем?",o:["охлаждает и гасит","разжигает","окрашивает","взрывает"],c:0},
+  {q:"Что такое «тлеющее горение»?",o:["медленное без пламени","быстрое","взрывное","холодное"],c:0},
+  {q:"Какой праздник называют «праздником огня»?",o:["Иван Купала","Новый год","Пасха","8 Марта"],c:0}
+];
+const EASY_BANK=[
+  {q:"Сколько будет 2 + 3?",o:["5","6","4","7"],c:0},
+  {q:"Какого цвета огонь?",o:["оранжевый","синий","зелёный","фиолетовый"],c:0},
+  {q:"Что светит днём на небе?",o:["солнце","луна","звезда","облако"],c:0},
+  {q:"Сколько ушей у кота?",o:["2","1","3","4"],c:0},
+  {q:"Какая цифра идёт после семи?",o:["8","6","9","10"],c:0},
+  {q:"Что делает вода с огнём?",o:["гасит","разжигает","красит","греет"],c:0}
+];
+function pickQuiz(){
+  const pool = Math.random()<0.25 ? EASY_BANK : QUIZ_BANK;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+/* ================= ПАУНЫ ================= */
+const PAWN_DEFS=[
+  {n:"Пламя",ic:"🔥"},
+  {n:"Искра",ic:"✨"},
+  {n:"Головня",ic:"🪵"},
+  {n:"Уголь",ic:"⚫"}
+];
+const PLAYER_COLORS=["#b0392b","#c9822a","#c4a023","#3f8fb0"];
+
+/* ================= СОСТОЯНИЕ ================= */
+let G=null;
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function $(id){return document.getElementById(id);}
+function el(tag,attrs,html){const e=document.createElement(tag);
+  for(const k in attrs)e.setAttribute(k,attrs[k]);
+  if(html!==undefined)e.innerHTML=html;return e;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+function current(){return G.players[G.turn];}
+
+function mkCard(){
+  const nums=[], pool=[];
+  for(let i=1;i<=SPARK_COUNT;i++)pool.push(i);
+  shuffle(pool);
+  for(let k=0;k<CARD_SIZE;k++)nums.push({n:pool[k], closed:false});
+  return nums;
+}
+function cardClosed(p){return p.card.every(c=>c.closed);}
+function closedCount(p){return p.card.filter(c=>c.closed).length;}
+
+function mkPlayer(idx,human,name,pawn){
+  return {idx,name,human,pawn,color:PLAYER_COLORS[idx],card:mkCard(),
+    pos:0,laps:0,stars:0,skip:false};
+}
+
+/* ================= ХОД ИГРЫ ================= */
+async function startGame(cfg){
+  const players=[];
+  for(let i=0;i<4;i++){
+    players.push(mkPlayer(i,cfg.humans.includes(i),cfg.names[i]||(cfg.humans.includes(i)?("Игрок "+(i+1)):("Компьютер "+(i+1))),cfg.pawns[i]));
+  }
+  G={players,turn:Math.floor(Math.random()*4),phase:"idle",dice:0,log:[],turns:0,maxTurns:60,winner:null};
+  logMsg("🔥 «Викторина огня» началась! Закрой 6 искр и вернись на СТАРТ.");
+  logMsg("❓ Вопрос — ответишь верно, выберешь маршрут сам.");
+  showGame();
+  await sleep(600);
+  beginTurn();
+}
+
+function logMsg(s,cls){
+  const d=document.createElement("div");
+  d.textContent=s;
+  if(cls)d.className=cls;
+  G.log.unshift(d.outerHTML);
+  if(G.log.length>80)G.log.length=80;
+  renderLog();
+}
+
+function nextPlayer(){
+  if(G.winner)return;
+  G.turn=(G.turn+1)%4;
+  if(G.turn===0){G.turns++; if(G.turns>=G.maxTurns){finishByScore();return;}}
+  beginTurn();
+}
+
+async function beginTurn(){
+  if(G.winner)return;
+  const p=current();
+  if(p.skip){p.skip=false;logMsg("💤 "+p.name+" пропускает ход","bad");await sleep(600);return nextPlayer();}
+  G.phase="roll";
+  renderAll();
+  if(!p.human){await sleep(850);doRoll();}
+}
+
+function doRoll(){
+  if(G.winner||G.phase!=="roll")return;
+  const p=current();
+  G.phase="moving";renderAll();
+  const d=1+Math.floor(Math.random()*6);
+  G.dice=d;animateDice();
+  logMsg("🎲 "+p.name+" бросил кубик: "+d);
+  setTimeout(()=>{
+    moveAndResolve(p,d);
+  },620);
+}
+
+async function moveAndResolve(p,steps){
+  let crossed=false;
+  for(let k=0;k<steps;k++){
+    p.pos=(p.pos+1)%N;
+    if(p.pos===0)crossed=true;
+  }
+  renderAll();
+  await sleep(420);
+  const cell=CELLS[p.pos];
+  if(cell.type==="SPARK"){
+    const cd=p.card.find(c=>c.n===cell.num);
+    if(cd&&!cd.closed){cd.closed=true;logMsg("✨ "+p.name+" зажёг искру №"+cell.num+"! ("+closedCount(p)+"/6)","good");}
+    else logMsg("✨ "+p.name+" на искре №"+cell.num);
+  }else if(cell.type==="BONFIRE"){
+    await bonfirePull();
+  }else if(cell.type==="QUIZ"){
+    await runQuiz(p);
+  }else if(cell.type==="START"){
+    p.laps++;
+    logMsg("🔥 "+p.name+" прошёл СТАРТ. Круг "+p.laps);
+  }
+  renderAll();
+  if(cardClosed(p)&&p.laps>=1){ win(p); return; }
+  await sleep(350);
+  nextPlayer();
+}
+
+async function bonfirePull(){
+  const n=1+Math.floor(Math.random()*SPARK_COUNT);
+  showBonfire(n);
+  logMsg("🪵 КОСТЁР разгорелся: искра №"+n+"!","good");
+  for(const p of G.players){
+    const cd=p.card.find(c=>c.n===n);
+    if(cd&&!cd.closed){cd.closed=true;logMsg("   "+p.name+" зажёг искру "+n+"!","good");}
+  }
+  renderPlayers();
+  await sleep(1500);
+  $("bonfireModal").hidden=true;
+}
+
+async function runQuiz(p){
+  const q=pickQuiz();
+  const ok = p.human ? await askHumanQuiz(q) : aiQuiz(q);
+  if(ok){
+    p.stars++;
+    logMsg("✅ "+p.name+" ответил верно! (+1 искра-жетон)","good");
+    if(p.human){
+      const r = await askRoute(p);
+      applyRoute(p,r);
+    }else{
+      const r = aiRoute(p);
+      applyRoute(p,r);
+      await sleep(600);
+    }
+  }else{
+    logMsg("❌ "+p.name+" ошибся. Дым в глаза: назад на 2","bad");
+    p.pos=(p.pos-2+N)%N;
+  }
+}
+
+function applyRoute(p,r){
+  if(r==="short"){
+    logMsg("🔥 "+p.name+" выбрал короткий путь: вперёд на 2","good");
+    for(let k=0;k<2;k++){p.pos=(p.pos+1)%N;if(p.pos===0)p.laps++;}
+  }else if(r==="joker"){
+    const free=p.card.filter(c=>!c.closed);
+    if(free.length){free[0].closed=true;logMsg("🃏 Джокер! Зажжена искра №"+free[0].n,"good");}
+  }else if(r==="star"){
+    p.stars++;
+    logMsg("⭐ "+p.name+" взял горячую искру (+2 жетона)","good");
+  }
+}
+
+/* ---- человеческий ввод ---- */
+let _qResolve=null, _rResolve=null;
+function askHumanQuiz(q){
+  return new Promise(res=>{
+    _qResolve=res;
+    $("qText").textContent=q.q;
+    const box=$("qOpts");box.innerHTML="";
+    $("qExpl").textContent="";
+    const order=q.o.map((o,i)=>({o,orig:i}));
+    shuffle(order);
+    order.forEach(({o,orig})=>{
+      const b=el("button",{class:"opt"},o);
+      b.onclick=()=>{
+        [...box.children].forEach(x=>x.disabled=true);
+        const good=orig===q.c;
+        b.className="opt "+(good?"correct":"wrong");
+        [...box.children].forEach((child,idx)=>{
+          if(order[idx].orig===q.c){child.className="opt correct";}
+        });
+        $("qExpl").textContent=good?"Верно!":"Правильный ответ: «"+q.o[q.c]+"»";
+        setTimeout(()=>{ $("quizModal").hidden=true; res(good); },1100);
+      };
+      box.appendChild(b);
+    });
+    $("quizModal").hidden=false;
+  });
+}
+
+function askRoute(p){
+  return new Promise(res=>{
+    _rResolve=res;
+    const free=p.card.filter(c=>!c.closed).length;
+    const box=$("routeBtns");box.innerHTML="";
+    const routes=[
+      {k:"short",t:"🔥 Короткий путь",s:"вперёд на 2 клетки по стрелке"},
+      {k:"joker",t:"🃏 Джокер",s:free?"зажечь любую искру на карточке":"(нет свободных искр)"},
+      {k:"star",t:"⭐ Горящая искра",s:"+2 искры-жетона к счёту"}
+    ];
+    routes.forEach(r=>{
+      const b=el("button",{class:"routeBtn"},`<b>${r.t}</b><span>${r.s}</span>`);
+      if(r.k==="joker"&&!free)b.disabled=true;
+      b.onclick=()=>{ $("routeModal").hidden=true; res(r.k); };
+      box.appendChild(b);
+    });
+    $("routeModal").hidden=false;
+  });
+}
+
+function showBonfire(n){
+  $("sparkNo").textContent="✨"+n;
+  $("bonfireText").textContent="Искра №"+n+" — все, у кого она есть на карточке, зажигают её.";
+  $("bonfireModal").hidden=false;
+}
+
+/* ---- ИИ ---- */
+function aiQuiz(q){
+  const r=Math.random();
+  if(r<0.62)return true;
+  if(r<0.82)return false;
+  return Math.random()<0.5;
+}
+function aiRoute(p){
+  const free=p.card.filter(c=>!c.closed).length;
+  if(free>0&&Math.random()<0.45)return "joker";
+  if(Math.random()<0.4)return "short";
+  return "star";
+}
+/* ================= ПОБЕДА ================= */
+function win(p){
+  G.winner=p.idx;G.phase="done";
+  logMsg("👑 "+p.name+" зажёг все искры и вернулся на СТАРТ — ПЛАМЯ!");
+  rememberGame(p);
+  renderAll();
+  showWin(p);
+}
+function finishByScore(){
+  const ps=[...G.players].sort((a,b)=>
+    closedCount(b)-closedCount(a)||b.stars-a.stars||b.laps-a.laps);
+  logMsg("⏳ Ходы закончились. Победа по закрытым искрам!");
+  rememberGame(ps[0]);
+  renderAll();
+  showWin(ps[0],true);
+}
+function showWin(p,byScore){
+  $("winTitle").textContent="ПЛАМЯ!";
+  $("winText").textContent=(byScore?"Лидер по очкам: ":"")+p.name+" — все искры зажжены, круг пройден!";
+  $("winStars").textContent="★ ".repeat(Math.min(p.stars,8));
+  $("overlay").hidden=false;
+  const cols=["#e0ba4a","#c9822a","#b0392b","#3f8fb0","#c4a023","#8a5f2e","#faf0dc"];
+  for(let i=0;i<110;i++){
+    const s=el("div",{class:"confetti"});
+    s.style.left=(Math.random()*100)+"vw";
+    s.style.background=cols[i%cols.length];
+    s.style.width=(6+Math.random()*8)+"px";
+    s.style.height=(9+Math.random()*13)+"px";
+    s.style.animationDuration=(2.4+Math.random()*2.6)+"s";
+    s.style.animationDelay=(Math.random()*1.6)+"s";
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(),6000);
+  }
+  try{navigator.vibrate&&navigator.vibrate([200,80,200]);}catch(e){}
+}
+$("btnAgain").onclick=()=>{ $("overlay").hidden=true; location.reload(); };
+
+/* ================= РЕНДЕР ================= */
+function showGame(){$("screenSetup").hidden=true;$("screenGame").hidden=false;}
+function renderAll(){renderBoard();renderPlayers();renderDice();renderAction();}
+
+function cellIcon(cell){
+  if(cell.type==="SPARK"){
+    return `<circle r="26" fill="#241710" stroke="#e0ba4a" stroke-width="3"/>
+      <circle r="26" fill="none" stroke="#d6a02e" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
+      <circle r="11" fill="#782c1a" stroke="#b0392b" stroke-width="1.5"/>
+      <text y="9" font-size="17" font-weight="700" text-anchor="middle" fill="#faf0dc" font-family="Georgia,serif">${cell.num}</text>
+      <text x="10" y="-16" font-size="11">✨</text>`;
+  }
+  if(cell.type==="QUIZ"){
+    return `<circle r="26" fill="#b0392b" stroke="#74241a" stroke-width="3"/>
+      <circle r="26" fill="none" stroke="#faf0dc" stroke-width="1" stroke-dasharray="3 4" opacity=".7"/>
+      <text y="9" font-size="24" font-weight="900" text-anchor="middle" fill="#fdf3d8" font-family="Georgia,serif">?</text>
+      <text y="26" font-size="8" text-anchor="middle" fill="#faf0dc" letter-spacing="2">ВОПРОС</text>`;
+  }
+  if(cell.type==="BONFIRE"){
+    return `<circle r="26" fill="#3a2412" stroke="#c9822a" stroke-width="3"/>
+      <circle r="26" fill="none" stroke="#faf0dc" stroke-width="1" stroke-dasharray="3 4" opacity=".7"/>
+      <text y="12" font-size="20" text-anchor="middle" fill="#fdf3d8">🪵</text>
+      <text y="26" font-size="8" text-anchor="middle" fill="#faf0dc" letter-spacing="2">КОСТЁР</text>`;
+  }
+  if(cell.type==="START"){
+    return `<circle r="30" fill="#e0ba4a" stroke="#96701a" stroke-width="3"/>
+      <circle r="30" fill="none" stroke="#fff6df" stroke-width="1.4" stroke-dasharray="3 4"/>
+      <text y="10" font-size="17" font-weight="800" text-anchor="middle" fill="#3a2412" font-family="Georgia,serif">СТАРТ</text>
+      <text y="26" font-size="9" text-anchor="middle" fill="#5c3a10" letter-spacing="2">🔥 ПЛАМЯ ФИНИШ</text>`;
+  }
+  return "";
+}
+
+function renderBoard(){
+  const svg=$("board");
+  let s=`<defs>
+    <linearGradient id="fireEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0ba4a"/><stop offset="50%" stop-color="#c9822a"/><stop offset="100%" stop-color="#b0392b"/>
+    </linearGradient>
+    <radialGradient id="nightGrad" cx="50%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="#3a2412"/><stop offset="100%" stop-color="#181008"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="500" height="600" rx="14" fill="url(#nightGrad)" stroke="#c9822a" stroke-width="3"/>
+  <rect x="6" y="6" width="488" height="588" rx="11" fill="none" stroke="#c9822a" stroke-width="1" stroke-dasharray="6 5" opacity=".7"/>
+  <text x="250" y="34" text-anchor="middle" font-size="17" font-weight="800" fill="#faf0dc" letter-spacing="6" font-family="Georgia,serif">ПОЛИАРТ ОГОНЬ</text>
+  <text x="250" y="50" text-anchor="middle" font-size="9" fill="#d6a02e" letter-spacing="3">ВИКТОРИНА ОГНЯ</text>
+  <path d="${spiralPath()}" fill="none" stroke="#c9822a" stroke-width="2.4" stroke-dasharray="7 5" opacity=".85"/>
+  <path d="${spiralPath()}" fill="none" stroke="#faf0dc" stroke-width="1" opacity=".5"/>
+  ${CELLS.map(c=>{
+    const glow = G&&G.players.find(p=>p.pos===c.i)?` class="glow" style="--glowc:${G.players.find(p=>p.pos===c.i).color}"`:"";
+    return `<g transform="translate(${c.x},${c.y})" ${glow}>${cellIcon(c)}</g>`;
+  }).join("")}
+  ${G?G.players.map(p=>{
+    const c=CELLS[p.pos];
+    const off=[[-20,14],[20,14],[-20,36],[20,36]][p.idx];
+    return `<g transform="translate(${c.x+off[0]},${c.y+off[1]})">
+      <circle r="13" fill="${p.color}" stroke="#faf0dc" stroke-width="2.5" ${G.turn===p.idx?'class="pawnPulse"':""}/>
+      <text y="5" font-size="14" text-anchor="middle" fill="#fff">${PAWN_DEFS[p.pawn].ic}</text></g>`;
+  }).join(""):""}
+  <g transform="translate(250,575)">
+    <circle r="26" fill="#e0ba4a" stroke="#96701a" stroke-width="2.5"/>
+    <text y="9" font-size="22" font-weight="900" text-anchor="middle" fill="#3a2412" font-family="Georgia,serif">🔥</text>
+    <text y="26" font-size="8" text-anchor="middle" fill="#5c3a10" letter-spacing="2">ОГОНЬ</text>
+  </g>`;
+  svg.innerHTML=s;
+}
+function spiralPath(){
+  const {pts}=SPIRAL;
+  let d=`M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for(let i=1;i<pts.length;i+=4){
+    d+=` L ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+  }
+  return d;
+}
+function renderPlayers(){
+  const box=$("players");box.innerHTML="";
+  for(const p of G?G.players:[]){
+    const card=el("div",{class:"pcard"+(G.turn===p.idx?" active":"")});
+    card.style.borderLeft=`5px solid ${p.color}`;
+    const ico=el("div",{class:"ico",style:`background:${p.color}`},PAWN_DEFS[p.pawn].ic);
+    const nm=el("div",{class:"nm"});
+    nm.appendChild(el("b",{},p.name+(p.human?"":" (ИИ)")));
+    nm.appendChild(el("span",{},`круг ${p.laps} · жетоны ${p.stars} · зажжено ${closedCount(p)}/6`));
+    const lc=el("div",{class:"card"});
+    for(const cnum of p.card){
+      const cell=el("div",{class:"cell"+(cnum.closed?" closed":""),style:cnum.closed?"":`border-color:${p.color}`},cnum.n);
+      lc.appendChild(cell);
+    }
+    nm.appendChild(lc);
+    card.appendChild(ico);card.appendChild(nm);
+    box.appendChild(card);
+  }
+}
+function renderDice(){
+  const d=$("die1"),ph=$("dph"),rs=$("rollSum");
+  if(G&&G.dice){
+    d.hidden=false;ph.hidden=true;
+    d.textContent=G.dice;
+    rs.textContent=G.dice;
+  }else{
+    d.hidden=true;ph.hidden=false;rs.textContent="";
+  }
+}
+function animateDice(){
+  const d=$("die1");
+  d.classList.remove("spin");void d.offsetWidth;d.classList.add("spin");
+}
+function renderAction(){
+  const p=G?current():null;
+  $("turnName").textContent=G?("Ходит: "+p.name):"";
+  const btns=$("actionBtns");btns.innerHTML="";
+  if(!G)return;
+  if(G.phase==="done"){$("prompt").textContent="Игра завершена";return;}
+  if(G.phase==="roll"){
+    $("prompt").textContent=cardClosed(p)?"Карточка зажжена! Бросай кубик и беги на СТАРТ":"Брось кубик и следуй по огненной спирали";
+    const b=el("button",{class:"btn big"},"🎲 БРОСИТЬ КУБИК");
+    b.onclick=doRoll;
+    if(!p.human)b.disabled=true;
+    btns.appendChild(b);
+  }else{
+    $("prompt").textContent="…";
+  }
+}
+function renderLog(){
+  const box=$("log");box.innerHTML="";
+  for(const h of G?G.log:[])box.insertAdjacentHTML("beforeend",h);
+}
+
+/* ================= НАСТРОЙКИ ================= */
+const CFG={mode:"ai",humans:[0],names:["","","",""],pawns:null};
+function setupScreen(){
+  $("modeAi").onclick=()=>setMode("ai");
+  $("modeLocal").onclick=()=>setMode("local");
+  renderPlayersPanel();
+  setupPrint();
+  renderMem();
+  $("btnClearMem").onclick=()=>{if(confirm("Очистить память побед?")){saveMem([]);renderMem();}};
+}
+function setMode(m){
+  CFG.mode=m;
+  $("modeAi").classList.toggle("sel",m==="ai");
+  $("modeLocal").classList.toggle("sel",m==="local");
+  CFG.humans=m==="ai"?[0]:[0,1];
+  renderPlayersPanel();
+}
+function renderPlayersPanel(){
+  const box=$("playerRows");box.innerHTML="";
+  if(CFG.mode==="local"){
+    const cntRow=el("div",{class:"row"});
+    cntRow.appendChild(el("label",{},"Игроков за экраном:"));
+    [2,3,4].forEach(n=>{
+      const b=el("button",{class:"modeBtn "+(CFG.humans.length===n?"sel":""),type:"button",
+        style:"flex:0 0 90px;min-width:90px;text-align:center;padding:8px"});
+      b.innerHTML=`<b>${n}</b>`;
+      b.onclick=()=>{CFG.humans=Array.from({length:n},(_,i)=>i);renderPlayersPanel();};
+      cntRow.appendChild(b);
+    });
+    box.appendChild(cntRow);
+  }
+  const humanCount=CFG.mode==="ai"?1:CFG.humans.length;
+  const used=[];
+  for(let i=0;i<4;i++){
+    const human=i<humanCount;
+    const row=el("div",{class:"playerRow"});
+    row.style.borderLeft=`5px solid ${PLAYER_COLORS[i]}`;
+    const col=el("div",{class:"pcol",style:`background:${PLAYER_COLORS[i]}`});
+    const nameInput=el("input",{placeholder:human?(i===0?"Ты":"Игрок "+(i+1)):"Компьютер "+(i+1),maxlength:14});
+    nameInput.oninput=e=>CFG.names[i]=e.target.value;
+    if(!human)nameInput.disabled=true;
+    const sel=el("div",{class:"pawnSel"});
+    for(let k=0;k<PAWN_DEFS.length;k++){
+      const b=el("button",{class:"pawnBtn",type:"button"},PAWN_DEFS[k].ic);
+      b.onclick=()=>{
+        if(CFG.pawns&&CFG.pawns.includes(k)&&CFG.pawns[i]!==k)return;
+        CFG.pawns=CFG.pawns||[-1,-1,-1,-1];
+        for(let j=0;j<4;j++)if(CFG.pawns[j]===k)CFG.pawns[j]=-1;
+        CFG.pawns[i]=CFG.pawns[i]===k?-1:k;
+        renderPlayersPanel();
+      };
+      if(CFG.pawns&&CFG.pawns.includes(k)&&CFG.pawns[i]!==k)b.disabled=true;
+      if(CFG.pawns&&CFG.pawns[i]===k)b.classList.add("sel");
+      sel.appendChild(b);
+    }
+    row.appendChild(col);
+    row.appendChild(el("label",{},human?(i===0?"Игрок":"Игрок "+(i+1)):"Компьютер "+(i+1)));
+    row.appendChild(nameInput);
+    row.appendChild(sel);
+    box.appendChild(row);
+  }
+  $("btnStart").onclick=start;
+}
+function start(){
+  const pawns=CFG.pawns?[...CFG.pawns]:[-1,-1,-1,-1];
+  const taken=[];
+  for(let i=0;i<4;i++){
+    if(pawns[i]<0){let k;do{k=Math.floor(Math.random()*PAWN_DEFS.length);}while(taken.includes(k));pawns[i]=k;}
+    taken.push(pawns[i]);
+  }
+  const names=[...CFG.names];
+  for(let i=0;i<4;i++)if(!names[i])names[i]=CFG.mode==="ai"?(i===0?"Ты":"Компьютер "+(i+1)):("Игрок "+(i+1));
+  const humans=CFG.mode==="ai"?[0]:[0,1,2,3].slice(0,CFG.humans.length);
+  startGame({humans,pawns,names});
+}
+/* ================= ПЕЧАТЬ ================= */
+const PRINT_FILES=[
+  ["Поле A2 (огненная спираль)","print/board_a2.pdf"],
+  ["Викторина: лица","print/cards_quiz_faces_a4.pdf"],
+  ["Викторина: огненные рубашки (оборот)","print/cards_quiz_backs_a4.pdf"],
+  ["Викторина: лица + рубашки (двусторонняя печать)","print/cards_quiz_a4.pdf"],
+  ["Кубик","print/dice_a4.pdf"],
+  ["Фишки","print/pawns_a4.pdf"],
+  ["Правила","print/rules_a4.pdf"]
+];
+function setupPrint(){
+  const box=$("printLinks");box.innerHTML="";
+  for(const[n,href]of PRINT_FILES){
+    const a=document.createElement("a");
+    a.href=href;a.target="_blank";a.rel="noopener";
+    a.className="modeBtn";a.setAttribute("style","flex:1 1 220px;min-width:220px;text-align:center;text-decoration:none;display:block");
+    a.innerHTML=`<b>${n}</b>`;
+    box.appendChild(a);
+  }
+}
+
+/* ================= ПАМЯТЬ ================= */
+const MEM_KEY="poliart_ogon_history";
+function loadMem(){try{const v=JSON.parse(localStorage.getItem(MEM_KEY));return Array.isArray(v)?v:[];}catch(e){return[];}}
+function saveMem(list){try{localStorage.setItem(MEM_KEY,JSON.stringify(list));}catch(e){}}
+function rememberGame(p){
+  const rec={date:new Date().toLocaleString(),winner:p.name,closed:closedCount(p),stars:p.stars,
+    laps:p.laps,players:(G?G.players:[]).map(x=>({name:x.name,human:x.human,closed:closedCount(x)}))};
+  const list=loadMem();list.unshift(rec);if(list.length>40)list.length=40;
+  saveMem(list);renderMem();
+}
+function renderMem(){
+  const box=$("memList");if(!box)return;box.innerHTML="";
+  const list=loadMem();
+  if(!list.length){
+    box.appendChild(el("div",{style:"color:var(--dim);font-size:13px;font-style:italic"},"Пока ни одной партии. Победители сохранятся сюда."));
+    return;
+  }
+  for(const r of list){
+    const d=el("div",{});
+    const left=el("span",{},"");
+    left.appendChild(el("b",{},r.winner));
+    left.appendChild(el("span",{},` — зажжено ${r.closed}, жетонов ${r.stars}`));
+    d.appendChild(left);
+    d.appendChild(el("span",{style:"color:var(--dim)"},r.date));
+    box.appendChild(d);
+  }
+}
+
+/* ================= ФОН-ЭФФЕКТЫ ================= */
+(function(){
+  const spark=setInterval(()=>{
+    if(document.visibilityState!=="visible")return;
+    const s=el("div",{style:`position:fixed;pointer-events:none;z-index:1;width:6px;height:6px;border-radius:50%;
+      background:radial-gradient(circle,#faf0dc,#c9822a);left:${Math.random()*100}vw;top:-12px;
+      animation:sparkfall ${3+Math.random()*4}s linear`});
+    const style=document.createElement("style");
+    style.textContent="@keyframes sparkfall{to{transform:translateY(108vh) rotate(360deg);opacity:0}}";
+    document.head.appendChild(style);
+    document.body.appendChild(s);
+    setTimeout(()=>{s.remove();style.remove();},7500);
+  },2600);
+  addEventListener("error",e=>{
+    const d=document.createElement("div");
+    d.style.cssText="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#b0392b;color:#fff;font:12px/1.4 monospace;padding:6px 10px;white-space:pre-wrap";
+    d.textContent="ОШИБКА: "+(e.message||e.type);
+    document.body.appendChild(d);
+  });
+})();
+
+$("btnNew").onclick=()=>location.reload();
+setupScreen();
+</script>
+</body>
+</html>

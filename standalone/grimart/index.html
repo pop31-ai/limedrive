@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrimArt — Генератор грима</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>GrimArt</h1>
+            <p>Генератор грима на основе полиномиального арта</p>
+        </header>
+        <main>
+            <section id="controls">
+                <h2>Параметры</h2>
+                <div class="control-group">
+                    <label for="grim-type">Тип грима</label>
+                    <select id="grim-type">
+                        <option value="pierrot">Пьеро</option>
+                        <option value="clown_sad">Грустный клоун</option>
+                        <option value="theater">Театральная маска</option>
+                        <option value="melancholy">Меланхолия</option>
+                        <option value="despair">Отчаяние</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="sadness">Грусть: <span id="sadness-val">0.7</span></label>
+                    <input type="range" id="sadness" min="0" max="1" step="0.01" value="0.7">
+                </div>
+                <div class="control-group">
+                    <label for="intensity">Интенсивность: <span id="intensity-val">0.7</span></label>
+                    <input type="range" id="intensity" min="0.1" max="1" step="0.01" value="0.7">
+                </div>
+                <div class="control-group">
+                    <label for="tear-amount">Слёзы: <span id="tear-val">2</span></label>
+                    <input type="range" id="tear-amount" min="0" max="5" step="1" value="2">
+                </div>
+                <div class="control-group">
+                    <label for="brush-size">Размер кисти: <span id="brush-val">2.0</span></label>
+                    <input type="range" id="brush-size" min="0.5" max="5" step="0.1" value="2.0">
+                </div>
+                <div class="control-group">
+                    <label for="background-type">Фон</label>
+                    <select id="background-type">
+                        <option value="none">Без фона</option>
+                        <option value="rainy_night">Дождливая ночь</option>
+                        <option value="rainy_window">Окно под дождём</option>
+                        <option value="grey_dusk">Серый сумерки</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="composition-type">�?�?�?��?�?�?�?</label>
+                    <select id="composition-type">
+                        <option value="volga_river">Volga River</option>
+                        <option value="rainy_night">Rainy Night</option>
+                        <option value="melancholy_landscape">Melancholy Landscape</option>
+                        <option value="engineering_drawing">Engineering Drawing</option>
+                        <option value="technical_draft">Technical Draft</option>
+                        <option value="annotation_scene">Annotation Scene</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="resolution">�������?��?��?���</label>
+                    <select id="resolution">
+                        <option value="512">512�-512</option>
+                        <option value="1024" selected>1024�-1024</option>
+                        <option value="2048">2048�-2048</option>
+                    </select>
+                </div>
+                <button id="generate-btn">���?��?��?��?�?�?���'�?</button>
+                <button id="random-btn">���>�?�ؐ����?�<��</button>
+            </section>
+            <section id="preview">
+                <h2>Предпросмотр</h2>
+                <canvas id="canvas" width="512" height="512"></canvas>
+                <div id="loading" style="display:none;">Генерация...</div>
+            </section>
+        </main>
+        <section id="export">
+            <h2>Экспорт</h2>
+            <button id="export-png">PNG</button>
+            <button id="export-svg">SVG</button>
+            <button id="export-json">JSON (метаданные)</button>
+        </section>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>

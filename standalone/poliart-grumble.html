@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ПОЛИАРТ · ГРУМБЛ — Грустные портреты (полиномиальный арт)</title>
+<style>
+:root{
+  --paper:#f6efdd; --paper2:#efe3c6; --ink:#3a2c1e; --ink2:#5c4a33;
+  --gold:#b8860b; --gold2:#c9a227; --gold3:#8a6a0a;
+  --ox:#8a3324; --teal:#2f6b6b; --blue:#2f446b;
+  --line:#c9b78f; --card:#fbf5e6;
+  --sad-blue:#6a8faa; --sad-gray:#8a8580; --sad-olive:#9a9a5a;
+  --sad-dark:#4a4a4a; --sad-gold:#b4a060;
+  --oil-bg:#f5eed6; --oil-dark:#3d2b1f; --oil-frame:#8b6914;
+  --oil-frame-dark:#5c4510; --oil-canvas:#faf0dc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:Georgia,"Times New Roman",serif;color:var(--ink);
+  background:
+    radial-gradient(120% 90% at 50% -10%, #fbf3de 0%, var(--oil-bg) 55%, #e8dcc0 100%);
+  background-attachment:fixed;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    repeating-linear-gradient(0deg, rgba(140,110,60,.04) 0 2px, transparent 2px 6px),
+    repeating-linear-gradient(90deg, rgba(140,110,60,.03) 0 2px, transparent 2px 8px),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+#app{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:16px}
+[hidden]{display:none !important}
+
+.orn{text-align:center;color:var(--gold);font-size:18px;letter-spacing:8px;margin:4px 0}
+.title{
+  text-align:center;font-size:clamp(30px,5vw,58px);font-weight:800;letter-spacing:.06em;
+  color:var(--ink);text-shadow:0 2px 0 rgba(255,255,255,.6), 0 0 30px rgba(200,160,60,.25);
+}
+.title .ph{color:var(--gold)}
+.subtitle{text-align:center;font-style:italic;color:var(--ink2);font-size:16px;margin:6px 0 2px}
+.tagline{
+  text-align:center;font-size:12px;letter-spacing:4px;text-transform:uppercase;
+  color:var(--gold);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:6px 0;max-width:520px;margin:8px auto;
+}
+h2.label{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);
+  border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:12px;font-family:Georgia,serif}
+
+.panel{
+  background:linear-gradient(160deg,#fdf7e8,#f4e8cd);
+  border:1px solid var(--line);border-radius:6px;padding:16px;
+  box-shadow:0 6px 22px rgba(80,60,20,.18), inset 0 1px 0 rgba(255,255,255,.7);
+  position:relative;
+}
+.panel::after{
+  content:"";position:absolute;inset:4px;border:1px solid rgba(184,134,11,.35);
+  border-radius:4px;pointer-events:none;
+}
+.panel .in{position:relative;z-index:1}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-family:Georgia,serif;font-size:16px;font-weight:700;letter-spacing:.03em;
+  color:#fdf6e3;cursor:pointer;border:1px solid var(--ink);
+  border-radius:4px;padding:13px 24px;position:relative;
+  background:linear-gradient(180deg,var(--gold2),var(--gold3));
+  box-shadow:0 3px 0 var(--ink), 0 8px 18px rgba(90,60,10,.3);
+  transition:transform .12s, box-shadow .12s;
+}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.btn.ghost{background:linear-gradient(180deg,#5c6b8c,#3a4a6b);box-shadow:0 3px 0 #232f47, 0 8px 18px rgba(20,30,60,.3)}
+.btn.teal{background:linear-gradient(180deg,var(--teal),#214d4d);box-shadow:0 3px 0 #173b3b, 0 8px 18px rgba(20,60,60,.3)}
+.btn.ox{background:linear-gradient(180deg,var(--ox),#64251a);box-shadow:0 3px 0 #481a11, 0 8px 18px rgba(90,30,15,.3)}
+.btn.big{font-size:20px;padding:17px 38px;width:100%;margin-top:4px;animation:pulse 2s infinite}
+.btn.small{padding:9px 16px;font-size:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:grayscale(.5)}
+@keyframes pulse{0%,100%{box-shadow:0 3px 0 var(--ink), 0 0 12px rgba(200,160,60,.3)}
+  50%{box-shadow:0 3px 0 var(--ink), 0 0 30px rgba(220,180,80,.75)}}
+
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.modeBtn{
+  flex:1;min-width:230px;padding:14px;border-radius:4px;cursor:pointer;text-align:left;
+  border:1px solid var(--line);background:#fbf5e6;color:var(--ink);
+  transition:all .18s;font-size:15px;font-family:Georgia,serif;
+}
+.modeBtn:hover{border-color:var(--gold);transform:translateY(-2px)}
+.modeBtn.sel{border-color:var(--gold);background:linear-gradient(135deg,#f7ecd0,#efe0ba);
+  box-shadow:0 0 0 2px rgba(184,134,11,.35), 0 6px 18px rgba(160,120,30,.25)}
+.modeBtn b{display:block;color:var(--gold);font-size:17px;letter-spacing:.04em}
+.playerRow{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px;margin:6px 0;
+  border:1px solid var(--line);border-radius:4px;background:rgba(255,251,238,.6);
+}
+.playerRow .pcol{width:20px;height:20px;border-radius:50%;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.playerRow input{flex:1;min-width:130px;background:#fff;border:1px solid var(--line);
+  color:var(--ink);border-radius:4px;padding:8px 10px;font-size:14px;font-family:Georgia,serif}
+
+.board{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:12px 0;
+}
+.cell{
+  aspect-ratio:1;border-radius:4px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid var(--line);background:var(--card);
+  transition:all .2s;font-size:12px;text-align:center;padding:2px;
+  position:relative;
+}
+.cell:hover{transform:scale(1.05);z-index:2}
+.cell.active{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,11,.5)}
+.cell.done{opacity:.5}
+.cell .ci{font-size:22px;line-height:1}
+.cell .cl{font-size:9px;color:var(--ink2);margin-top:2px}
+.cell.START{background:#c8b48c}
+.cell.DRAW{background:#8cb4c8}
+.cell.GUESS{background:#c4a0a0}
+.cell.SAD{background:#9a9a9a}
+.cell.GRUMBLE{background:#c4b460}
+.cell.current{animation:glow 1.5s infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 2px var(--gold)}
+  50%{box-shadow:0 0 12px 4px rgba(184,134,11,.6)}}
+
+.dice{
+  width:60px;height:60px;border-radius:8px;background:#fff;
+  border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:bold;cursor:pointer;user-select:none;
+  box-shadow:0 3px 0 var(--ink);transition:transform .1s;
+}
+.dice:hover{transform:translateY(-2px)}
+.dice:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.dice.rolling{animation:diceRoll .4s ease-in-out}
+@keyframes diceRoll{0%{transform:rotate(0)}25%{transform:rotate(90deg)}50%{transform:rotate(180deg)}75%{transform:rotate(270deg)}100%{transform:rotate(360deg)}}
+
+.prompt-card{
+  background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:16px;margin:12px 0;text-align:center;font-size:18px;
+  box-shadow:0 2px 8px rgba(80,60,20,.1);
+}
+.prompt-card .emoji{font-size:40px;display:block;margin-bottom:8px}
+
+.emotion-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0;
+}
+.emotion-btn{
+  padding:10px 6px;border-radius:4px;cursor:pointer;text-align:center;
+  border:1px solid var(--line);background:#fbf5e6;font-family:Georgia,serif;
+  font-size:13px;transition:all .15s;
+}
+.emotion-btn:hover{border-color:var(--gold);background:#f7ecd0}
+.emotion-btn.sel{border-color:var(--gold);background:var(--gold);color:#fff}
+
+.scoreboard{
+  display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;
+}
+.score-card{
+  flex:1;min-width:120px;padding:10px;border-radius:4px;
+  border:1px solid var(--line);background:rgba(255,251,238,.6);text-align:center;
+}
+.score-card .name{font-weight:bold;font-size:14px}
+.score-card .pts{font-size:22px;font-weight:bold;color:var(--gold)}
+
+.log{
+  max-height:200px;overflow-y:auto;font-size:12px;
+  border:1px solid var(--line);border-radius:4px;padding:8px;
+  background:rgba(255,255,255,.5);margin:8px 0;
+}
+.log .entry{padding:2px 0;border-bottom:1px solid rgba(200,180,140,.3)}
+.log .entry:last-child{border-bottom:none}
+
+.screen{display:none}
+.screen.active{display:block}
+
+.canvas-wrap{
+  border:4px solid var(--oil-frame);
+  border-radius:2px;
+  background:linear-gradient(135deg, var(--oil-frame-dark), var(--oil-frame), var(--oil-frame-dark));
+  padding:6px;
+  margin:8px auto;max-width:400px;position:relative;
+  box-shadow:0 4px 12px rgba(60,40,10,.4), inset 0 1px 0 rgba(255,255,255,.2);
+}
+.canvas-wrap canvas{cursor:crosshair;display:block;width:100%;height:auto;
+  background:var(--oil-canvas);
+  box-shadow:inset 0 0 8px rgba(0,0,0,.15);
+}
+.canvas-wrap::before{
+  content:"";position:absolute;inset:-2px;
+  border:1px solid var(--oil-frame-dark);border-radius:3px;pointer-events:none;
+}
+
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fdf6e3;padding:12px 24px;border-radius:6px;
+  font-family:Georgia,serif;font-size:16px;z-index:100;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);animation:fadeIn .3s;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}
+  to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+.poly-info{
+  background:rgba(106,143,170,.1);border:1px solid var(--sad-blue);
+  border-radius:4px;padding:8px 12px;margin:8px 0;font-size:12px;
+}
+.poly-info code{background:#f0f0f0;padding:1px 4px;border-radius:2px;font-size:11px}
+
+.poly-controls{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;
+}
+.poly-group{
+  border:1px solid var(--line);border-radius:4px;padding:8px;
+  background:rgba(255,255,255,.5);
+}
+.poly-group label{
+  display:block;font-size:11px;color:var(--ink2);margin-bottom:4px;
+  font-family:Georgia,serif;letter-spacing:.02em;
+}
+.poly-group input[type=range]{
+  width:100%;accent-color:var(--gold);
+}
+.poly-group .val{
+  font-size:11px;color:var(--gold);font-weight:bold;
+  text-align:right;float:right;
+}
+.poly-preview{
+  display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;
+}
+.poly-preview canvas{
+  border:1px solid var(--line);border-radius:4px;
+  width:80px;height:80px;image-rendering:pixelated;
+}
+.tear-canvas-wrap{
+  position:relative;display:inline-block;
+}
+.tear-canvas-wrap canvas{
+  display:block;width:100%;height:auto;
+}
+
+@media(max-width:700px){
+  .board{grid-template-columns:repeat(4,1fr)}
+  .emotion-grid{grid-template-columns:repeat(3,1fr)}
+  .btn{font-size:14px;padding:10px 16px}
+  .poly-controls{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="orn">✦ ✦ ✦</div>
+  <h1 class="title"><span class="ph">ГРУМБЛ</span> — Грустные портреты</h1>
+  <p class="subtitle">Полиномиальный арт · Рисуй грусть. Угадывай грусть.</p>
+  <p class="tagline">ПОЛИАРТ · ПОЛИГРЕЙ</p>
+
+  <!-- SCREEN: setup -->
+  <div id="screen-setup" class="screen active">
+    <div class="panel"><div class="in">
+      <h2 class="label">Подготовка</h2>
+      <div class="row" style="margin-bottom:12px">
+        <div class="modeBtn" data-mode="1"><b>1 игрок</b> + 3 компьютера</div>
+        <div class="modeBtn" data-mode="2"><b>2 игрока</b> + 2 компьютера</div>
+        <div class="modeBtn" data-mode="3"><b>3 игрока</b> + 1 компьютер</div>
+        <div class="modeBtn" data-mode="4"><b>4 игрока</b> без компьютера</div>
+      </div>
+      <div id="player-setup"></div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn big" id="btn-start" disabled>Начать игру</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- SCREEN: game -->
+  <div id="screen-game" class="screen">
+    <div class="panel"><div class="in">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <span id="turn-info" style="font-size:14px"></span>
+        <span id="round-info" style="font-size:14px;color:var(--gold)"></span>
+      </div>
+      <div class="scoreboard" id="scoreboard"></div>
+      <div class="row" style="justify-content:center;gap:16px;margin:12px 0">
+        <div class="dice" id="dice">🎲</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button class="btn small" id="btn-roll">Бросить кубик</button>
+          <button class="btn small ghost" id="btn-help">Правила</button>
+        </div>
+      </div>
+      <div class="board" id="board"></div>
+      <div id="cell-action" style="margin-top:12px"></div>
+    </div></div>
+  </div>
+
+  <!-- SCREEN: draw -->
+  <div id="screen-draw" class="screen">
+    <div class="panel"><div class="in">
+      <h2 class="label">Рисуй грустный портрет (полиномиальный арт)</h2>
+      <div class="prompt-card" id="draw-prompt">
+        <span class="emoji">😢</span>
+        <span id="prompt-text">Загрузка...</span>
+      </div>
+      <div class="poly-info">
+        <b>Полиномиальный арт:</b> портрет генерируется полиномиальными функциями.
+        Каждый пиксель — результат полинома <code>f(x,y) = Σ cᵢⱼ·xⁱ·yʲ</code>.
+        Цвет грусти задаётся полиномом от координат.
+      </div>
+      <div class="poly-controls" id="poly-controls">
+        <div class="poly-group">
+          <label>Степень полинома <span class="val" id="val-degree">3</span></label>
+          <input type="range" id="ctrl-degree" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="poly-group">
+          <label>Яркость грусти <span class="val" id="val-bright">0.5</span></label>
+          <input type="range" id="ctrl-bright" min="0" max="1" value="0.5" step="0.05">
+        </div>
+        <div class="poly-group">
+          <label>Частота теней <span class="val" id="val-shadow">0.5</span></label>
+          <input type="range" id="ctrl-shadow" min="0" max="2" value="0.5" step="0.1">
+        </div>
+        <div class="poly-group">
+          <label>Интенсивность слёз <span class="val" id="val-tears">0.5</span></label>
+          <input type="range" id="ctrl-tears" min="0" max="2" value="0.5" step="0.1">
+        </div>
+        <div class="poly-group">
+          <label>Асимметрия лица <span class="val" id="val-asym">0.0</span></label>
+          <input type="range" id="ctrl-asym" min="0" max="1" value="0" step="0.05">
+        </div>
+        <div class="poly-group">
+          <label>Случайный сид <span class="val" id="val-seed">42</span></label>
+          <input type="range" id="ctrl-seed" min="1" max="99999" value="42" step="1">
+        </div>
+      </div>
+      <div class="poly-preview" id="poly-preview">
+        <canvas id="preview-face" width="80" height="80"></canvas>
+        <canvas id="preview-eyes" width="80" height="80"></canvas>
+        <canvas id="preview-mouth" width="80" height="80"></canvas>
+        <canvas id="preview-tears" width="80" height="80"></canvas>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="draw-canvas" width="400" height="400"></canvas>
+      </div>
+      <div class="row" style="justify-content:center;margin-top:8px">
+        <button class="btn small" id="btn-undo">Отменить</button>
+        <button class="btn small" id="btn-clear">Очистить</button>
+        <button class="btn small" id="btn-poly-gen">Сгенерировать полиномом</button>
+        <button class="btn small" id="btn-poly-preview">Обновить превью</button>
+        <button class="btn small teal" id="btn-done">Завершить</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- SCREEN: guess -->
+  <div id="screen-guess" class="screen">
+    <div class="panel"><div class="in">
+      <h2 class="label">Угадай эмоцию</h2>
+      <div class="prompt-card">
+        <span class="emoji">👁</span>
+        <p>Посмотри на рисунок и выбери эмоцию</p>
+      </div>
+      <div class="emotion-grid" id="emotion-grid"></div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn small" id="btn-guess-confirm" disabled>Угадал!</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- SCREEN: grumble -->
+  <div id="screen-grumble" class="screen">
+    <div class="panel"><div class="in">
+      <h2 class="label">💧 ГРУМБЛ — Все рисуют!</h2>
+      <p style="text-align:center;margin:8px 0">Каждый рисует свою самую грустную картинку полиномиальным арт!</p>
+      <div class="poly-controls" id="grumble-poly-controls">
+        <div class="poly-group">
+          <label>Степень полинома <span class="val" id="g-val-degree">3</span></label>
+          <input type="range" id="g-ctrl-degree" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="poly-group">
+          <label>Яркость грусти <span class="val" id="g-val-bright">0.5</span></label>
+          <input type="range" id="g-ctrl-bright" min="0" max="1" value="0.5" step="0.05">
+        </div>
+        <div class="poly-group">
+          <label>Частота теней <span class="val" id="g-val-shadow">0.5</span></label>
+          <input type="range" id="g-ctrl-shadow" min="0" max="2" value="0.5" step="0.1">
+        </div>
+        <div class="poly-group">
+          <label>Интенсивность слёз <span class="val" id="g-val-tears">0.5</span></label>
+          <input type="range" id="g-ctrl-tears" min="0" max="2" value="0.5" step="0.1">
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="grumble-canvas" width="400" height="400"></canvas>
+      </div>
+      <div class="row" style="justify-content:center;margin-top:8px">
+        <button class="btn small" id="btn-grumble-undo">Отменить</button>
+        <button class="btn small" id="btn-grumble-clear">Очистить</button>
+        <button class="btn small" id="btn-grumble-poly">Сгенерировать полиномом</button>
+        <button class="btn small teal" id="btn-grumble-done">Готово</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- SCREEN: result -->
+  <div id="screen-result" class="screen">
+    <div class="panel"><div class="in">
+      <h2 class="label">Итоги</h2>
+      <div id="result-content"></div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn big" id="btn-restart">Играть снова</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- SCREEN: rules -->
+  <div id="screen-rules" class="screen">
+    <div class="panel"><div class="in">
+      <h2 class="label">Правила</h2>
+      <div style="font-size:14px;line-height:1.6">
+        <p><b>Цель:</b> набрать больше всего грустных очков за 60 ходов.</p>
+        <p><b>Ход:</b> брось кубик, передвинь фишку, выполни действие клетки.</p>
+        <p><b>Клетки:</b></p>
+        <p>🎨 Рисование — нарисуй грустный портрет по подсказке (2 мин).</p>
+        <p>👁 Угадывание — угадай эмоцию на рисунке другого игрока.</p>
+        <p>😢 Грусть — нарисуй по карточке грусти.</p>
+        <p>💧 ГРУМБЛ — все рисуют одновременно, вершитель выбирает лучший (+5 очков).</p>
+        <p>🏁 Старт/Финиш — +1 круг.</p>
+        <p><b>Очки:</b> угадал грусть +3, конкретная эмоция +2, рисунок завершён +1, ГРУМБЛ +5.</p>
+        <p><b>Победитель:</b> кто набрал больше всего очков после 60 ходов.</p>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn small" id="btn-rules-back">Назад</button>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+<script>
+// ==================== POLYNOMIAL ART ENGINE ====================
+const PolyArt = {
+  evalPoly(x, y, coeffs) {
+    let val = 0.0;
+    for (let i = 0; i < coeffs.length; i++) {
+      if (!coeffs[i]) continue;
+      for (let j = 0; j < coeffs[i].length; j++) {
+        if (coeffs[i][j] === undefined) continue;
+        val += coeffs[i][j] * Math.pow(x, i) * Math.pow(y, j);
+      }
+    }
+    return this.max(0, this.min(1, (val + 1.0) / 2.0));
+  },
+
+  randomCoeffs(degree, seed) {
+    const rng = this.seededRandom(seed);
+    const coeffs = [];
+    for (let i = 0; i <= degree; i++) {
+      const row = [];
+      for (let j = 0; j <= degree - i; j++) {
+        row.push(rng() * 2 - 1);
+      }
+      coeffs.push(row);
+    }
+    return coeffs;
+  },
+
+  seededRandom(seed) {
+    return function() {
+      seed |= 0;
+      seed = seed + 0x6D2B79F5 | 0;
+      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  },
+
+  max(a, b) { return a > b ? a : b; },
+  min(a, b) { return a < b ? a : b; },
+
+  generatePortrait(ctx, w, h, emotion, seed, params) {
+    const rng = this.seededRandom(seed || Date.now());
+    const imgData = ctx.createImageData(w, h);
+    const data = imgData.data;
+
+    const degree = params ? params.degree : 3;
+    const bright = params ? params.brightness : 0.5;
+    const shadowFreq = params ? params.shadowFreq : 0.5;
+    const tearIntensity = params ? params.tearIntensity : 0.5;
+    const asymmetry = params ? params.asymmetry : 0.0;
+
+    const faceCoeffs = this.randomCoeffs(degree, seed + 1);
+    const leftEyeCoeffs = this.randomCoeffs(2, seed + 2);
+    const rightEyeCoeffs = this.randomCoeffs(2, seed + 3);
+    const mouthCoeffs = this.randomCoeffs(3, seed + 4);
+    const tearCoeffs = this.randomCoeffs(3, seed + 5);
+    const shadowCoeffs = this.randomCoeffs(2, seed + 6);
+    const cheekCoeffs = this.randomCoeffs(2, seed + 7);
+
+    const emotionColors = {
+      "Тоска":     [-10, -5, -15], "Печаль": [-15, -10, -20],
+      "Разочарование": [0, -5, -10], "Одиночество": [-5, -10, -15],
+      "Усталость": [-8, -8, -8], "Ностальгия": [5, 0, -10],
+      "Сомнение":  [-5, -5, -5], "Сожаление": [-12, -8, -12],
+      "Отчаяние":  [-20, -15, -20], "Меланхолия": [-8, -10, -12],
+      "Обида":     [-10, -5, -5], "Тревога": [-5, -2, -8],
+    };
+    const ec = emotionColors[emotion] || [-10, -5, -15];
+
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        let nx = px / w;
+        let ny = py / h;
+        const idx = (py * w + px) * 4;
+
+        nx += asymmetry * 0.1;
+
+        const faceVal = this.evalPoly(nx, ny, faceCoeffs);
+        const faceMask = this.max(0, this.min(1, faceVal * 2));
+
+        const leftEye = this.evalPoly(nx - 0.3, ny - 0.35, leftEyeCoeffs);
+        const rightEye = this.evalPoly(nx - 0.7, ny - 0.35, rightEyeCoeffs);
+        const eyeMask = this.max(this.max(0, leftEye * 3), rightEye * 3);
+
+        const mouth = this.evalPoly(nx - 0.5, ny - 0.65, mouthCoeffs);
+        const mouthMask = this.max(0, -mouth * 2);
+
+        const tear = this.evalPoly(nx - 0.35, ny - 0.3, tearCoeffs);
+        const tearMask = this.max(0, tear * 4 * tearIntensity);
+
+        const shadow = this.evalPoly(nx - 0.35, ny - 0.4, shadowCoeffs);
+        const shadowMask = this.max(0, shadow * 2 * shadowFreq);
+
+        const cheek = this.evalPoly(nx - 0.25, ny - 0.5, cheekCoeffs);
+        const cheekMask = this.max(0, cheek * 1.5);
+
+        if (faceMask > 0.3) {
+          let r = this.min(255, this.max(0, Math.floor(200 + ec[0] * bright * 30 + faceMask * 20)));
+          let g = this.min(255, this.max(0, Math.floor(190 + ec[1] * bright * 20 + faceMask * 15)));
+          let b = this.min(255, this.max(0, Math.floor(180 + ec[2] * bright * 25 + faceMask * 10)));
+
+          if (shadowMask > 0.2) {
+            const darken = shadowMask * 0.4;
+            r = this.max(0, Math.floor(r - darken * 80));
+            g = this.max(0, Math.floor(g - darken * 70));
+            b = this.max(0, Math.floor(b - darken * 60));
+          }
+
+          if (cheekMask > 0.3) {
+            r = this.min(255, r + 15);
+            g = this.max(0, g - 10);
+            b = this.max(0, b - 10);
+          }
+
+          if (eyeMask > 0.3) {
+            r = 20; g = 20; b = 30;
+          }
+
+          if (mouthMask > 0.2) {
+            r = this.max(0, r - 40);
+            g = this.max(0, g - 30);
+            b = this.max(0, b - 30);
+          }
+
+          if (tearMask > 0.3) {
+            r = this.min(255, r + 40);
+            g = this.min(255, g + 60);
+            b = this.min(255, b + 100);
+            data[idx + 3] = this.min(255, Math.floor(180 + tearMask * 75));
+          }
+
+          data[idx] = r;
+          data[idx + 1] = g;
+          data[idx + 2] = b;
+          if (data[idx + 3] === 0) data[idx + 3] = 255;
+        } else {
+          data[idx] = 245;
+          data[idx + 1] = 235;
+          data[idx + 2] = 220;
+          data[idx + 3] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+  },
+
+  generateTearAnimation(ctx, w, h, seed, frames) {
+    const rng = this.seededRandom(seed);
+    const a = rng() * 0.3 + 0.1;
+    const b = rng() * -0.4 - 0.1;
+    const c = rng() * 0.5 + 0.2;
+    const d = rng() * -0.15 - 0.02;
+
+    const animation = [];
+    for (let f = 0; f < frames; f++) {
+      const t = f / frames;
+      const offsetY = t * 0.3;
+      const imgData = ctx.createImageData(w, h);
+      const data = imgData.data;
+
+      for (let py = 0; py < h; py++) {
+        for (let px = 0; px < w; px++) {
+          const nx = px / w;
+          const ny = py / h;
+          const idx = (py * w + px) * 4;
+
+          const tearY = a + b * nx + c * nx * nx + d * nx * nx * nx + offsetY;
+          const dist = Math.abs(ny - tearY);
+          const tearWidth = 0.02 + t * 0.03;
+
+          if (dist < tearWidth && nx > 0.2 && nx < 0.8) {
+            const alpha = (1 - dist / tearWidth) * (1 - t * 0.5);
+            data[idx] = 180;
+            data[idx + 1] = 210;
+            data[idx + 2] = 240;
+            data[idx + 3] = Math.floor(alpha * 200);
+          } else {
+            data[idx] = 0;
+            data[idx + 1] = 0;
+            data[idx + 2] = 0;
+            data[idx + 3] = 0;
+          }
+        }
+      }
+      animation.push(imgData);
+    }
+    return animation;
+  }
+};
+
+// ==================== GAME DATA ====================
+const PROMPTS = [
+  "Потерял зонт в дождь","Долгая разлука с другом","Забыл день рождения",
+  "Провалил важный экзамен","Осенний вечер один","Не может уснуть",
+  "Потерял питомца","Пустая комната","Дождь за окном без выхода",
+  "Забытый подарок","Ушёл близкий человек","Ночь без сна и без надежды",
+  "Грусть без причины","Слёзы после смеха","Тихий плач",
+  "Улыбка, за которой боль","Забытый письмо","Одинокая скамейка",
+  "Последний лист на дереве","Затянутый шторой день",
+  "Слышал, но не услышал","Искала, но не нашла","Ждала, но не пришёл",
+  "Печаль по прошлому","Тень на стене","Мокрый асфальт",
+  "Холодная чашка чая","Забытый зонт","Дорога без конца",
+  "Голубь без крыльев","Свет в окне чужого дома",
+  "Тишина громче слов","Рука, которая не дотянула","Последний глоток",
+  "Утро без будильника","Снег, который тает"
+];
+
+const EMOTIONS = [
+  "Тоска","Печаль","Разочарование","Одиночество",
+  "Усталость","Ностальгия","Сомнение","Сожаление",
+  "Отчаяние","Меланхолия","Обида","Тревога",
+];
+
+const CELL_TYPES = [
+  "START","DRAW","GUESS","SAD","DRAW","GUESS","DRAW",
+  "SAD","DRAW","GUESS","DRAW","SAD",
+  "DRAW","DRAW","GRUMBLE","DRAW",
+  "GUESS","DRAW","SAD","DRAW",
+  "GRUMBLE","DRAW","GUESS",
+];
+
+const PLAYER_COLORS = ["#8a3324","#2f6b6b","#2f446b","#b4a060"];
+const PLAYER_NAMES = ["Кисть слёз","Палитра грусти","Карандаш тоски","Рамка воспоминаний"];
+
+// ==================== STATE ====================
+let state = {
+  mode: 0,
+  players: [],
+  currentPlayer: 0,
+  currentCell: 0,
+  round: 1,
+  scores: [],
+  logs: [],
+  phase: "idle",
+  diceValue: 0,
+  selectedEmotion: null,
+  totalMoves: 0,
+  maxMoves: 60,
+  drawSeed: 0,
+  polyParams: { degree: 3, brightness: 0.5, shadowFreq: 0.5, tearIntensity: 0.5, asymmetry: 0.0 },
+  animationFrame: null,
+};
+
+// ==================== SCREENS ====================
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById("screen-" + id);
+  if (el) el.classList.add("active");
+}
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ==================== SETUP ====================
+function initSetup() {
+  const container = document.getElementById("player-setup");
+  container.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const row = document.createElement("div");
+    row.className = "playerRow";
+    row.innerHTML = `
+      <div class="pcol" style="background:${PLAYER_COLORS[i]}"></div>
+      <input type="text" placeholder="Игрок ${i + 1}" data-idx="${i}" maxlength="16">
+    `;
+    container.appendChild(row);
+  }
+  document.querySelectorAll(".modeBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".modeBtn").forEach(b => b.classList.remove("sel"));
+      btn.classList.add("sel");
+      state.mode = parseInt(btn.dataset.mode);
+      updatePlayerInputs();
+      document.getElementById("btn-start").disabled = false;
+    });
+  });
+  document.getElementById("btn-start").addEventListener("click", startGame);
+}
+
+function updatePlayerInputs() {
+  const inputs = document.querySelectorAll("#player-setup input");
+  inputs.forEach((inp, i) => {
+    if (i >= state.mode) {
+      inp.disabled = true;
+      inp.value = "Компьютер " + (i - state.mode + 1);
+    } else {
+      inp.disabled = false;
+      inp.value = "";
+    }
+  });
+}
+
+// ==================== GAME START ====================
+function startGame() {
+  const inputs = document.querySelectorAll("#player-setup input");
+  state.players = [];
+  state.scores = [];
+  for (let i = 0; i < 4; i++) {
+    const name = inputs[i].value.trim() || ("Игрок " + (i + 1));
+    const isHuman = i < state.mode;
+    state.players.push({ name, color: PLAYER_COLORS[i], icon: ["🖌","🎨","✏️","🖼"][i], isHuman });
+    state.scores.push(0);
+  }
+  state.currentPlayer = 0;
+  state.currentCell = 0;
+  state.round = 1;
+  state.totalMoves = 0;
+  state.logs = [];
+  state.phase = "idle";
+
+  addLog("Игра началась!");
+  showScreen("game");
+  renderBoard();
+  renderScoreboard();
+  updateTurnInfo();
+}
+
+// ==================== BOARD ====================
+function renderBoard() {
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  CELL_TYPES.forEach((type, idx) => {
+    const cell = document.createElement("div");
+    cell.className = "cell " + type;
+    if (idx === state.currentCell) cell.classList.add("current");
+    const icons = { START:"🏁", DRAW:"🎨", GUESS:"👁", SAD:"😢", GRUMBLE:"💧" };
+    const labels = { START:"СТАРТ", DRAW:"Рисование", GUESS:"Угадывание", SAD:"Грусть", GRUMBLE:"ГРУМБЛ" };
+    cell.innerHTML = `<span class="ci">${icons[type] || "?"}</span><span class="cl">${labels[type] || "?"}</span>`;
+    cell.dataset.idx = idx;
+    board.appendChild(cell);
+  });
+}
+
+function highlightCurrent() {
+  document.querySelectorAll(".cell").forEach((c, i) => {
+    c.classList.toggle("current", i === state.currentCell);
+  });
+}
+
+// ==================== TURN ====================
+function updateTurnInfo() {
+  const p = state.players[state.currentPlayer];
+  document.getElementById("turn-info").textContent = `Ход: ${p.name} (${p.icon})`;
+  document.getElementById("round-info").textContent = `Ход ${state.totalMoves + 1} / ${state.maxMoves}`;
+}
+
+function rollDice() {
+  if (state.phase !== "idle") return;
+  const dice = document.getElementById("dice");
+  dice.classList.add("rolling");
+  setTimeout(() => {
+    state.diceValue = Math.floor(Math.random() * 6) + 1;
+    dice.textContent = state.diceValue;
+    dice.classList.remove("rolling");
+    movePlayer(state.diceValue);
+  }, 400);
+}
+
+function movePlayer(steps) {
+  state.currentCell = (state.currentCell + steps) % CELL_TYPES.length;
+  state.totalMoves++;
+  highlightCurrent();
+  renderBoard();
+  const cellType = CELL_TYPES[state.currentCell];
+  addLog(`${state.players[state.currentPlayer].name} попал на клетку ${cellType}`);
+  executeCell(cellType);
+}
+
+function executeCell(type) {
+  const player = state.players[state.currentPlayer];
+  state.phase = type.toLowerCase();
+
+  if (type === "START") {
+    state.scores[state.currentPlayer] += 1;
+    addLog(`${player.name} прошёл круг! +1`);
+    toast("Круг пройден! +1");
+    nextTurn();
+  } else if (type === "DRAW") {
+    showDrawScreen();
+  } else if (type === "GUESS") {
+    showGuessScreen();
+  } else if (type === "SAD") {
+    showSadScreen();
+  } else if (type === "GRUMBLE") {
+    showGrumbleScreen();
+  }
+}
+
+function nextTurn() {
+  state.currentPlayer = (state.currentPlayer + 1) % 4;
+  state.phase = "idle";
+  updateTurnInfo();
+  if (state.totalMoves >= state.maxMoves) {
+    endGame();
+  }
+}
+
+// ==================== DRAW ====================
+function showDrawScreen() {
+  showScreen("draw");
+  const prompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+  document.getElementById("prompt-text").textContent = prompt;
+  state.drawSeed = Math.floor(Math.random() * 100000);
+  initCanvas("draw-canvas", "draw");
+  syncPolyControls("ctrl-", state.polyParams);
+  updatePolyPreview("draw-canvas");
+}
+
+function syncPolyControls(prefix, params) {
+  const degree = document.getElementById(prefix + "degree");
+  const bright = document.getElementById(prefix + "bright");
+  const shadow = document.getElementById(prefix + "shadow");
+  const tears = document.getElementById(prefix + "tears");
+  const asym = document.getElementById(prefix + "asym");
+  const seed = document.getElementById(prefix + "seed");
+
+  if (degree) { degree.value = params.degree; document.getElementById(prefix + "val-degree").textContent = params.degree; }
+  if (bright) { bright.value = params.brightness; document.getElementById(prefix + "val-bright").textContent = params.brightness.toFixed(2); }
+  if (shadow) { shadow.value = params.shadowFreq; document.getElementById(prefix + "val-shadow").textContent = params.shadowFreq.toFixed(2); }
+  if (tears) { tears.value = params.tearIntensity; document.getElementById(prefix + "val-tears").textContent = params.tearIntensity.toFixed(2); }
+  if (asym) { asym.value = params.asymmetry; document.getElementById(prefix + "val-asym").textContent = params.asymmetry.toFixed(2); }
+  if (seed) { seed.value = state.drawSeed; document.getElementById(prefix + "val-seed").textContent = state.drawSeed; }
+}
+
+function readPolyControls(prefix) {
+  const degree = document.getElementById(prefix + "degree");
+  const bright = document.getElementById(prefix + "bright");
+  const shadow = document.getElementById(prefix + "shadow");
+  const tears = document.getElementById(prefix + "tears");
+  const asym = document.getElementById(prefix + "asym");
+  return {
+    degree: degree ? parseInt(degree.value) : 3,
+    brightness: bright ? parseFloat(bright.value) : 0.5,
+    shadowFreq: shadow ? parseFloat(shadow.value) : 0.5,
+    tearIntensity: tears ? parseFloat(tears.value) : 0.5,
+    asymmetry: asym ? parseFloat(asym.value) : 0.0,
+  };
+}
+
+function updatePolyPreview(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const params = readPolyControls("ctrl-");
+  state.polyParams = params;
+  PolyArt.generatePortrait(ctx, canvas.width, canvas.height, "Печаль", state.drawSeed, params);
+}
+
+function initCanvas(canvasId, mode) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+  // Oil paint canvas background
+  ctx.fillStyle = "#faf0dc";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Add subtle canvas texture
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 8;
+    d[i] = Math.max(0, Math.min(255, d[i] + noise));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + noise));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + noise));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  let drawing = false;
+  let lastX, lastY;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  }
+
+  function startDraw(e) { e.preventDefault(); drawing = true; const pos = getPos(e); lastX = pos.x; lastY = pos.y; }
+  function draw(e) { if (!drawing) return; e.preventDefault(); const pos = getPos(e); ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y); ctx.stroke(); lastX = pos.x; lastY = pos.y; }
+  function stopDraw() { drawing = false; }
+
+  canvas.onmousedown = startDraw;
+  canvas.onmousemove = draw;
+  canvas.onmouseup = stopDraw;
+  canvas.onmouseleave = stopDraw;
+  canvas.ontouchstart = startDraw;
+  canvas.ontouchmove = draw;
+  canvas.ontouchend = stopDraw;
+
+  canvas._clear = () => {
+    ctx.fillStyle = "#faf0dc";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+}
+
+function undoCanvas(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function clearCanvas(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function finishDraw() {
+  const player = state.players[state.currentPlayer];
+  state.scores[state.currentPlayer] += 1;
+  addLog(`${player.name} завершил рисунок. +1`);
+  toast("Рисунок завершён! +1");
+  nextTurn();
+}
+
+// ==================== GUESS ====================
+function showGuessScreen() {
+  showScreen("guess");
+  const grid = document.getElementById("emotion-grid");
+  grid.innerHTML = "";
+  state.selectedEmotion = null;
+  EMOTIONS.forEach((em, i) => {
+    const btn = document.createElement("button");
+    btn.className = "emotion-btn";
+    btn.textContent = em;
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".emotion-btn").forEach(b => b.classList.remove("sel"));
+      btn.classList.add("sel");
+      state.selectedEmotion = em;
+      document.getElementById("btn-guess-confirm").disabled = false;
+    });
+    grid.appendChild(btn);
+  });
+  document.getElementById("btn-guess-confirm").disabled = true;
+  document.getElementById("btn-guess-confirm").onclick = confirmGuess;
+}
+
+function confirmGuess() {
+  if (!state.selectedEmotion) return;
+  const player = state.players[state.currentPlayer];
+  const isHuman = player.isHuman;
+  let correct = isHuman;
+  if (!isHuman) correct = Math.random() < 0.4;
+
+  if (correct) {
+    state.scores[state.currentPlayer] += 3;
+    addLog(`${player.name} угадал грусть! +3`);
+    toast("Угадал! +3");
+  } else {
+    addLog(`${player.name} не угадал.`);
+    toast("Не угадал.");
+  }
+  nextTurn();
+}
+
+// ==================== SAD ====================
+function showSadScreen() {
+  showScreen("draw");
+  document.getElementById("prompt-text").textContent = "Нарисуй грусть по своей памяти";
+  state.drawSeed = Math.floor(Math.random() * 100000);
+  initCanvas("draw-canvas", "draw");
+  syncPolyControls("ctrl-", state.polyParams);
+  updatePolyPreview("draw-canvas");
+
+  const btnDone = document.getElementById("btn-done");
+  btnDone.onclick = () => {
+    const player = state.players[state.currentPlayer];
+    state.scores[state.currentPlayer] += 1;
+    addLog(`${player.name} завершил рисунок грусти. +1`);
+    toast("Рисунок грусти завершён! +1");
+    nextTurn();
+  };
+}
+
+// ==================== GRUMBLE ====================
+function showGrumbleScreen() {
+  showScreen("grumble");
+  state.drawSeed = Math.floor(Math.random() * 100000);
+  initCanvas("grumble-canvas", "grumble");
+  syncPolyControls("g-ctrl-", state.polyParams);
+
+  const player = state.players[state.currentPlayer];
+  addLog(`${player.name} участвует в ГРУМБЛ!`);
+
+  document.getElementById("btn-grumble-poly").onclick = () => {
+    const canvas = document.getElementById("grumble-canvas");
+    const ctx = canvas.getContext("2d");
+    const emotion = EMOTIONS[Math.floor(Math.random() * EMOTIONS.length)];
+    const params = readPolyControls("g-ctrl-");
+    state.polyParams = params;
+    PolyArt.generatePortrait(ctx, canvas.width, canvas.height, emotion, state.drawSeed, params);
+    addLog(`${player.name} сгенерировал ГРУМБЛ-портрет полиномом (эмоция: ${emotion})`);
+    toast("ГРУМБЛ-портрет сгенерирован!");
+  };
+
+  document.getElementById("btn-grumble-done").onclick = () => {
+    const scores = state.players.map((p, i) => {
+      if (p.isHuman) return { name: p.name, score: 5 };
+      return { name: p.name, score: Math.random() < 0.3 ? 5 : 0 };
+    });
+    scores.sort((a, b) => b.score - a.score);
+    const winner = scores[0];
+    const winnerIdx = state.players.findIndex(p => p.name === winner.name);
+    state.scores[winnerIdx] += 5;
+    addLog(`ГРУМБЛ: ${winner.name} победил! +5`);
+    toast(`${winner.name} победил в ГРУМБЛ! +5`);
+    nextTurn();
+  };
+}
+
+// ==================== SCOREBOARD ====================
+function renderScoreboard() {
+  const sb = document.getElementById("scoreboard");
+  sb.innerHTML = "";
+  state.players.forEach((p, i) => {
+    const card = document.createElement("div");
+    card.className = "score-card";
+    card.innerHTML = `<div class="name" style="color:${p.color}">${p.icon} ${p.name}</div><div class="pts">${state.scores[i]}</div>`;
+    sb.appendChild(card);
+  });
+}
+
+// ==================== LOG ====================
+function addLog(msg) {
+  state.logs.push(msg);
+}
+
+// ==================== END GAME ====================
+function endGame() {
+  showScreen("result");
+  const content = document.getElementById("result-content");
+  const sorted = state.players.map((p, i) => ({ ...p, score: state.scores[i] }))
+    .sort((a, b) => b.score - a.score);
+
+  let html = "<div class='scoreboard'>";
+  sorted.forEach((p, i) => {
+    const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "  ";
+    html += `<div class="score-card"><div class="name">${medal} ${p.name}</div><div class="pts">${p.score}</div></div>`;
+  });
+  html += "</div>";
+  html += `<p style="text-align:center;margin-top:16px;font-size:18px;font-weight:bold">Победитель: ${sorted[0].name} с ${sorted[0].score} грустными очками!</p>`;
+  content.innerHTML = html;
+
+  document.getElementById("btn-restart").onclick = () => {
+    state.currentPlayer = 0;
+    state.currentCell = 0;
+    state.round = 1;
+    state.totalMoves = 0;
+    state.scores = state.scores.map(() => 0);
+    state.logs = [];
+    state.phase = "idle";
+    showScreen("setup");
+    initSetup();
+  };
+}
+
+// ==================== EVENT BINDINGS ====================
+document.getElementById("btn-roll").addEventListener("click", rollDice);
+document.getElementById("btn-help").addEventListener("click", () => showScreen("rules"));
+document.getElementById("btn-rules-back").addEventListener("click", () => showScreen("game"));
+document.getElementById("btn-undo").addEventListener("click", () => undoCanvas("draw-canvas"));
+document.getElementById("btn-clear").addEventListener("click", () => clearCanvas("draw-canvas"));
+document.getElementById("btn-grumble-undo").addEventListener("click", () => undoCanvas("grumble-canvas"));
+document.getElementById("btn-grumble-clear").addEventListener("click", () => clearCanvas("grumble-canvas"));
+
+document.getElementById("btn-poly-gen").addEventListener("click", () => {
+  const canvas = document.getElementById("draw-canvas");
+  const ctx = canvas.getContext("2d");
+  const emotion = EMOTIONS[Math.floor(Math.random() * EMOTIONS.length)];
+  const params = readPolyControls("ctrl-");
+  state.polyParams = params;
+  PolyArt.generatePortrait(ctx, canvas.width, canvas.height, emotion, state.drawSeed, params);
+  addLog(`${state.players[state.currentPlayer].name} сгенерировал портрет полиномом (эмоция: ${emotion})`);
+  toast("Портрет сгенерирован полиномиальным арт!");
+});
+
+document.getElementById("btn-poly-preview").addEventListener("click", () => {
+  updatePolyPreview("draw-canvas");
+  toast("Превью обновлено!");
+});
+
+// Poly control sliders live update
+["ctrl-", "g-ctrl-"].forEach(prefix => {
+  ["degree", "bright", "shadow", "tears", "asym"].forEach(suffix => {
+    const el = document.getElementById(prefix + suffix);
+    if (el) {
+      el.addEventListener("input", () => {
+        const valEl = document.getElementById(prefix + "val-" + suffix);
+        if (valEl) {
+          const v = parseFloat(el.value);
+          valEl.textContent = suffix === "degree" ? v : v.toFixed(2);
+        }
+      });
+    }
+  });
+});
+
+// ==================== INIT ====================
+initSetup();
+</script>
+</body>
+</html>

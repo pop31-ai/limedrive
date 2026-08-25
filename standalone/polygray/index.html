@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ТВОЯ ИГРА</title>
+<style>
+  body { margin: 0; background: #101a2e; color: #fff; font-family: Arial, sans-serif; text-align: center; }
+  #board { width: min(92vw, 620px); margin: 8px auto; display: block; }
+  .bar { max-width: 620px; margin: 6px auto; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  button { font-size: 18px; padding: 10px 18px; border: 0; border-radius: 12px; background: #f6c445; color: #333; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  #log { max-width: 620px; margin: 10px auto; text-align: left; font-size: 14px; min-height: 60px; }
+  #log p { margin: 2px 0; }
+  #setup { max-width: 520px; margin: 40px auto; background: #1d2b47; border-radius: 18px; padding: 24px; }
+  #setup input { font-size: 16px; padding: 8px; margin: 4px; width: 200px; }
+</style>
+</head>
+<body>
+<div id="setup">
+  <h2>ТВОЯ ИГРА</h2>
+  <input id="p0" value="Игрок 1"><br>
+  <input id="p1" value="Игрок 2"><br>
+  <input id="p2" value="Игрок 3"><br>
+  <input id="p3" value="Игрок 4"><br>
+  <button onclick="startGame()">Начать</button>
+</div>
+<div id="play" style="display:none">
+  <h3 id="turn"></h3>
+  <svg id="board" viewBox="0 0 420 594"></svg>
+  <div class="bar">
+    <button id="btnRoll" onclick="roll()">Кинуть кубики</button>
+    <button id="btnBuild" onclick="build()" disabled>Строить этаж</button>
+    <span id="stock" style="line-height:40px"></span>
+  </div>
+  <div id="dice" style="font-size:40px; letter-spacing:8px"></div>
+  <div id="log"></div>
+</div>
+<script>
+"use strict";
+// ---------- ТВОЁ: константы механики ----------
+const CELLS = 32, TYPES = ["BASE","MAT","EVENT","MAT","FWD","MAT","BACK","MAT"];
+const MATERIALS = ["Кирпич","Дерево","Сталь","Стекло"];
+const FLOORS_TO_WIN = 3;
+const CX=210, CY=320, ROUT=185, RIN=120;
+
+// ---------- Геометрия звезды ----------
+function verts(){const v=[];for(let i=0;i<8;i++){const a=(90-i*45)*Math.PI/180;const r=i%2?RIN:ROUT;v.push([CX+r*Math.cos(a),CY-r*Math.sin(a)]);}return v;}
+function lerp(a,b,t){return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];}
+function buildCells(){const v=verts(),out=[];for(let s=0;s<4;s++){const va=v[2*s],vb=v[2*s+1],vc=v[(2*s+2)%8];const pos=[va,lerp(va,vb,.27),lerp(va,vb,.5),lerp(va,vb,.73),vb,lerp(vb,vc,.27),lerp(vb,vc,.5),lerp(vb,vc,.73)];for(let k=0;k<8;k++)out.push({i:s*8+k,x:pos[k][0],y:pos[k][1],type:TYPES[k]});}return out;}
+const cells=buildCells();
+const typeOf=i=>cells[i].type;
+const base=i=>i%8===0;
+
+// ---------- Состояние игры ----------
+let S=null, ns=null;
+function newGame(names){return{names,pos:names.map((_,i)=>i*8),floors:names.map(()=>0),stock:names.map(()=>({})),turn:0,over:false};}
+function rollD6(){return 1+Math.floor(Math.random()*6);}
+
+function log(m){const p=document.createElement("p");p.textContent=m;document.getElementById("log").prepend(p);}
+function paintStock(){const s=S.stock[S.turn];document.getElementById("stock").textContent=MATERIALS.map(m=>`${m[0]} ${s[m]||0}`).join(" · ");}
+
+function drawBoard(){
+  const svg=document.getElementById("board");svg.innerHTML="";
+  const COL={"BASE":"#e6dca0","MAT":"#e1ebf5","EVENT":"#f0e1f5","FWD":"#d7f5dc","BACK":"#f8dcdc"};
+  for(const c of cells){
+    const r=base(c.i)?20:14.5;
+    const el=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    el.setAttribute("cx",c.x);el.setAttribute("cy",c.y);el.setAttribute("r",r);
+    el.setAttribute("fill",COL[c.type]);el.setAttribute("stroke","#555");
+    el.setAttribute("stroke-width","2");el.setAttribute("id","c"+c.i);
+    svg.appendChild(el);
+    const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x",c.x-8);t.setAttribute("y",c.y+4);t.setAttribute("font-size","11");
+    t.setAttribute("fill","#444");t.textContent=c.i%8;svg.appendChild(t);
+  }
+  S.names.forEach((n,i)=>{
+    const c=cells[S.pos[i]];
+    const el=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    el.setAttribute("cx",c.x+((i-1.5)*16));el.setAttribute("cy",c.y+((i-1.5)*16));
+    el.setAttribute("r","9");el.setAttribute("fill",["#e74c3c","#2ecc71","#3498db","#f1c40f"][i]);
+    el.setAttribute("stroke","#fff");el.setAttribute("stroke-width","2");el.setAttribute("id","p"+i);
+    svg.appendChild(el);
+  });
+  document.getElementById("turn").textContent=`Ход: ${S.names[S.turn]} (этажи: ${S.floors.join(", ")})`;
+}
+
+function setupPhase(){S=newGame([0,1,2,3].map(i=>document.getElementById("p"+i).value.trim()||("Игрок "+(i+1))));document.getElementById("setup").style.display="none";document.getElementById("play").style.display="block";drawBoard();paintStock();}
+function startGame(){setupPhase();log("Игра началась. Все на своих базах.");}
+window.startGame=startGame;
+
+function roll(){
+  const d1=rollD6(),d2=rollD6();
+  document.getElementById("dice").textContent=d1+" "+d2;
+  S.pos[S.turn]=(S.pos[S.turn]+d1+d2)%CELLS;
+  log(`${S.names[S.turn]} выбросил ${d1}+${d2}, клетка ${S.pos[S.turn]%8}.`);
+  if(typeOf(S.pos[S.turn])==="MAT"){const m=MATERIALS[Math.floor(Math.random()*4)];S.stock[S.turn][m]++;log("→ материал: "+m);}
+  document.getElementById("btnBuild").disabled=!(base(S.pos[S.turn])&&MATERIALS.reduce((a,m)=>a+(S.stock[S.turn][m]||0),0)>=3);
+  if(base(S.pos[S.turn]))document.getElementById("btnBuild").disabled=false;
+  paintStock();drawBoard();
+}
+
+function build(){
+  const s=S.stock[S.turn];
+  if(base(S.pos[S.turn])&&MATERIALS.reduce((a,m)=>a+(s[m]||0),0)>=3){
+    const order=MATERIALS.map((_,k)=>k).sort((a,b)=>(s[MATERIALS[b]]||0)-(s[MATERIALS[a]]||0)).slice(0,3);
+    order.forEach(k=>s[MATERIALS[k]]--);S.floors[S.turn]++;
+    log(`${S.names[S.turn]} построил этаж ${S.floors[S.turn]}.`);
+    if(S.floors[S.turn]>=FLOORS_TO_WIN){document.getElementById("turn").textContent=`🏆 ${S.names[S.turn]} победил!`;document.getElementById("btnRoll").disabled=true;document.getElementById("btnBuild").disabled=true;return;}
+  }
+  S.turn=(S.turn+1)%S.names.length;document.getElementById("btnBuild").disabled=true;paintStock();drawBoard();
+}
+window.roll=roll;window.build=build;
+</script>
+</body>
+</html>

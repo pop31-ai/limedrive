@@ -1,0 +1,154 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Kandinsky Train</title><style>
+html,body{margin:0;height:100%;overflow:hidden;background:#191722;font-family:Segoe UI,sans-serif}
+canvas{display:block;cursor:pointer}
+#ui{position:fixed;top:14px;left:0;right:0;text-align:center;color:#fff;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+#ui b{font-size:34px;letter-spacing:2px}
+#ui span{display:block;font-size:14px;opacity:.8;margin-top:2px}
+#hint{position:fixed;bottom:16px;width:100%;text-align:center;color:#fff;opacity:.7;font-size:13px}
+</style></head><body>
+<canvas id=c></canvas>
+<div id=ui><b id=score>0</b><span id=best>РЕКОРД 0</span></div>
+<div id=hint>SPACE / КЛИК — прыжок · уклоняйся от геометрии, собирай круги Кандинского</div>
+<script>
+const cv=document.getElementById('c'),X=cv.getContext('2d');
+let W,H,D=0,PR=Math.min(devicePixelRatio||1,2);
+const resize=_=>{W=innerWidth;H=innerHeight;cv.width=W*PR;cv.height=H*PR;X.setTransform(PR,0,0,PR,0,0)};
+addEventListener('resize',resize);resize();
+
+const C=['#e5483f','#2f6fe0','#eab308','#111827','#f5f0e6','#7a86a1'];
+const R=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.random()*a.length|0];
+const TAU=Math.PI*2;
+
+// кандинский многоугольник с детализацией (много полигонов)
+function poly(x,y,r,n,rot,rot2){X.beginPath();for(let i=0;i<=n;i++){const a=rot+i/n*rot2;X.lineTo(x+Math.cos(a)*r*(.6+.4*Math.sin(i*7.3+rot*5)),y+Math.sin(a)*r*(.6+.4*Math.cos(i*5.1+rot*3))) }X.closePath()}
+function ring(x,y,r,c,lw){X.beginPath();for(let i=0;i<=80;i++){const a=i/80*TAU;X.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r)}X.strokeStyle=c;X.lineWidth=lw;X.stroke()}
+function dot(x,y,r,c){X.beginPath();X.arc(x,y,r,0,TAU);X.fillStyle=c;X.fill()}
+function tri(x,y,r,c,rot){X.beginPath();for(let i=0;i<3;i++){const a=rot+i*TAU/3;X.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r)}X.closePath();X.fillStyle=c;X.fill()}
+function rect(x,y,w,h,c,a){X.save();X.translate(x,y);X.rotate(a||0);X.fillStyle=c;X.fillRect(-w/2,-h/2,w,h);X.restore()}
+
+// фон: композиция Кандинского
+const bg=[];
+for(let i=0;i<60;i++)bg.push({x:Math.random()*2000,y:Math.random()*1200,s:R(20,220),sh:pick(['c','t','r','dot','ring']),c:pick(C),rot:R(0,TAU),sp:R(.2,1.6)});
+function bgDraw(){
+ for(let i=0;i<bg.length;i++){const b=bg[i];b.x-=b.sp*D*.4;if(b.x<-b.s)b.x=W+b.s;
+  X.save();X.globalAlpha=.16;X.translate(b.x-((b.x/60)|0)*0,b.y);
+  if(b.sh==='c')dot(0,0,b.s*.5,b.c);
+  if(b.sh==='t')tri(0,0,b.s*.6,b.c,b.rot);
+  if(b.sh==='r'){X.globalAlpha=.10;poly(0,0,b.s*.55,6,b.rot,TAU);X.fillStyle=b.c;X.fill()}
+  if(b.sh==='dot'){dot(0,0,b.s*.08,'#000')}
+  if(b.sh==='ring')ring(0,0,b.s*.4,b.c,6);
+  X.restore()}
+ // баухаус сетка
+ X.globalAlpha=.07;X.strokeStyle='#fff';
+ for(let x=0;x<W;x+=90){X.beginPath();X.moveTo(x-D%90,0);X.lineTo(x-D%90,H);X.stroke()}
+ for(let y=0;y<H;y+=90){X.beginPath();X.moveTo(0,y);X.lineTo(W,y);X.stroke()}
+ X.globalAlpha=1;
+}
+
+// поезд — состав из геометрических вагонов
+function drawTrain(x,yy){
+ X.save();X.translate(x,GROUND);
+ const bob=Math.sin(D*.02)*2;
+ X.translate(0,yy-22+bob);
+ const sc=1.15;X.scale(sc,sc);
+ const y=0;
+ // рельсы
+ X.strokeStyle='#1a1a1a';X.lineWidth=5;X.beginPath();X.moveTo(-220,74);X.lineTo(260,74);X.stroke();
+ X.strokeStyle='#444';X.lineWidth=2;X.beginPath();X.moveTo(-220,84);X.lineTo(260,84);X.stroke();
+ for(let r=0;r<20;r++){const rx=r*28-(D%28);X.fillStyle='#999';X.fillRect(rx,70,16,4)}
+ // вагон 1 (локомотив) — красный, круглые окна
+ rect(-150,0,150,62,'#e5483f');
+ dot(-112,-14,20,'#f5f0e6');dot(-78,-14,20,'#2f6fe0');
+ rect(-150,26,150,16,'#111827');
+ dot(-150,-10,10,'#eab308');
+ for(let i=0;i<14;i++)poly(-136+i*10,52,5,5,(i*7)%TAU,TAU);
+ // труба
+ rect(-120,-40,14,44,'#111827');rect(-120,-52,20,12,'#c9c2b2');
+ X.globalAlpha=.5;X.fillStyle='#aaa';
+ for(let i=0;i<4;i++){poly(-113,-56-i*9,9,8,i*2,TAU);X.fill()}
+ X.globalAlpha=1;
+ // вагон 2 — синий с треугольниками
+ rect(-10,10,110,52,'#2f6fe0');
+ tri(45,26,22,'#eab308',D*.05);
+ dot(20,-4,8,'#f5f0e6');dot(70,-4,8,'#f5f0e6');
+ rect(-10,40,110,16,'#111827');
+ // вагон 3 — жёлтый, круг
+ rect(100,10,110,52,'#eab308');
+ ring(155,32,16,'#111827',5);
+ rect(100,40,110,16,'#111827');
+ // вагон 4 — чёрный-белый
+ rect(210,10,110,52,'#111827');
+ for(let i=0;i<5;i++){dot(222+i*24,30,7,pick(['#f5f0e6','#7a86a1']))}
+ X.restore();
+}
+
+// мир
+const obs=[],coins=[],parts=[];
+let GROUND=0,speed=0,score=0,best=+localStorage.getItem('kt')||0;
+let vy=0,y=0,dead=0,flash=0,nextSpawn=500;
+function reset(){obs.length=coins.length=parts.length=0;score=0;speed=340;y=0;vy=0;dead=0;flash=0;nextSpawn=500}
+function spawn(){
+ if(D>=nextSpawn){
+  nextSpawn=D+420+Math.random()*420;
+  const type=Math.random()<.5?'rect':'tri';
+  obs.push({x:W+60,y:GROUND-30,w:Math.random()<.5?26:40,h:R(50,90),c:pick(C),type,t:Math.random()*TAU});
+  if(Math.random()<.6)coins.push({x:W+120,y:GROUND-R(110,220),r:10+Math.random()*6});
+ }
+}
+function step(dt){
+ if(dead){flash=Math.max(0,flash-dt*2);if(flash<=0)reset();return}
+ spawn();
+ speed=Math.min(950,speed+dt*7);score+=speed*dt*.08;D+=speed*dt;
+ if(score>best){best=score|0;localStorage.setItem('kt',best)}
+ vy+=1600*dt;y+=vy*dt;
+ if(y>0){y=0;vy=0}
+ if(y<-260){y=-260;vy=0}
+ for(let i=obs.length-1;i>=0;i--){const o=obs[i];o.x-=speed*dt;
+  // коллизия: паровоз ~ x±70 от x=190
+  const ox=190,yy=-y;
+  const hw=o.type==='rect'?o.w/2+34:26;
+  if(o.x>190-hw-90&&o.x<190+hw+90&&yy<o.h){
+   dead=1;flash=.6;vy=-700;y=-120;
+   for(let p=0;p<30;p++)parts.push({x:o.x,y:GROUND-30,vx:R(-300,300),vy:R(-500,-80),c:pick(C),s:R(4,12)});
+  }
+  if(o.x<-100)obs.splice(i,1);
+ }
+ for(let i=coins.length-1;i>=0;i--){const co=coins[i];co.x-=speed*dt;
+  const dx=co.x-190,dy=(GROUND-30)-co.y-(-y);
+  if(dx*dx+dy*dy<65*65){score+=150;coins.splice(i,1);for(let p=0;p<14;p++)parts.push({x:co.x,y:co.y,vx:R(-200,200),vy:R(-300,0),c:'#eab308',s:R(3,8)})}
+  else if(co.x<-60)coins.splice(i,1);
+ }
+ for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.vy+=1400*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.y>GROUND+40)parts.splice(i,1)}
+}
+function draw(){
+ X.fillStyle='#191722';X.fillRect(0,0,W,H);
+ bgDraw();
+ // земля
+ X.fillStyle='#242238';X.fillRect(0,GROUND,W,H-GROUND);
+ for(let x=0;x<W+40;x+=40){X.globalAlpha=.12;dot(x-(D*1.2%40),GROUND+10,6,'#fff');X.globalAlpha=1}
+ // монеты (круги кандинского)
+ for(const co of coins){ring(co.x,co.y,co.r,'#111827',5);dot(co.x,co.y,co.r-4,'#eab308');dot(co.x,co.y,co.r-10,'#fff')}
+ // препятствия
+ for(const o of obs){
+  if(o.type==='rect'){rect(o.x,GROUND-o.h/2,o.w,o.h,o.c,0);
+   for(let i=0;i<Math.min(8,o.h/10);i++)poly(o.x,GROUND-10-i*10,o.w/3,(i*3)%9+3,o.t+i,TAU)}
+  else{tri(o.x,GROUND-o.h,o.h,o.c,o.t+Math.PI);ring(o.x,GROUND-o.h*.5,o.w*.4,'#fff',4)}
+ }
+ // вспышка смерти
+ if(flash>0){X.globalAlpha=flash;X.fillStyle='#e5483f';X.fillRect(0,0,W,H);X.globalAlpha=1}
+ drawTrain(190,y);
+ // частицы
+ for(const p of parts){X.globalAlpha=.9;poly(p.x,p.y,p.s,6,p.vx*.01,TAU);X.fillStyle=p.c;X.fill()}X.globalAlpha=1;
+ // затухание к краю
+ const g=X.createLinearGradient(0,0,0,H*.3);g.addColorStop(0,'rgba(25,23,34,.55)');g.addColorStop(1,'rgba(25,23,34,0)');X.fillStyle=g;X.fillRect(0,0,W,H*.3);
+}
+function frame(){step(1/60);draw();score=score|0;
+ document.getElementById('score').textContent=score;
+ document.getElementById('best').textContent='РЕКОРД '+best;
+ requestAnimationFrame(frame)}
+function jump(){if(dead){reset();return}vy=-900}
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();jump()}});
+addEventListener('pointerdown',e=>{e.preventDefault();jump()},{passive:false});
+GROUND=H-120;reset();frame();
+</script></body></html>

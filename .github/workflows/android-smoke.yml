@@ -46,14 +46,25 @@ jobs:
           name: LimeDrive-apk
           path: platforms/android/dist/LimeDrive.apk
 
+      - name: Install system image (verbose)
+        run: |
+          set -e
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -f "$SDKM" ] || SDKM="$ANDROID_HOME/tools/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null 2>&1 || true
+          "$SDKM" --install "system-images;android-30;google_apis;x86_64" 2>&1 | tail -3
+
       - name: Emulator smoke (Android 11 / API 30)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
           arch: x86_64
           profile: pixel_4
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-audio -no-boot-anim
+          disable-animations: true
           script: |
             set -e
+            echo "== PHASE 1: install =="
             adb install -r platforms/android/dist/LimeDrive.apk
             adb shell am start -n $APP/.MainActivity
             sleep 7
@@ -62,7 +73,9 @@ jobs:
             adb exec-out screencap -p > menu.png
             MENU_SIZE=$(stat -c%s menu.png); echo "menu.png: $MENU_SIZE bytes"
             [ "$MENU_SIZE" -gt 30000 ] || { echo "FAIL: menu looks blank"; exit 1; }
+            echo "== PHASE 1 OK =="
 
+            echo "== PHASE 2: real game =="
             adb shell am force-stop $APP
             adb shell am start -n $APP/.MainActivity --es loadUrl \
               "file:///android_asset/www/examples/player.html?game=01-lime-platformer.json"
@@ -71,8 +84,7 @@ jobs:
             adb exec-out screencap -p > game.png
             GAME_SIZE=$(stat -c%s game.png); echo "game.png: $GAME_SIZE bytes"
             [ "$GAME_SIZE" -gt 30000 ] || { echo "FAIL: player looks blank"; exit 1; }
-
-            echo "SMOKE OK"
+            echo "== SMOKE OK =="
 
       - name: Upload screenshots
         if: always()
