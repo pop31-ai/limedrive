@@ -183,6 +183,46 @@
               alert(api.t("imp.error") + ": " + e2.message);
             });
           });
+          var terminals = [
+            { n: "ChatGPT", p: "com.openai.chatgpt", w: "https://chatgpt.com", e: "🟢" },
+            { n: "Claude", p: "com.anthropic.claude", w: "https://claude.ai", e: "🟠" },
+            { n: "DeepSeek", p: "com.deepseek.chat", w: "https://chat.deepseek.com", e: "🔵" },
+            { n: "Gemini", p: "com.google.android.apps.bard", w: "https://gemini.google.com", e: "✨" },
+            { n: "Copilot", p: "com.microsoft.copilot", w: "https://copilot.microsoft.com", e: "🟦" },
+            { n: "Perplexity", p: "ai.perplexity.app", w: "https://www.perplexity.ai", e: "🔷" },
+            { n: "GigaChat", p: "ru.sberbank.gigachat", w: "https://giga.chat", e: "🟩" },
+            { n: "Алиса AI", p: "ru.yandex.searchplugin", w: "https://alice.yandex.ru", e: "🔴" }
+          ];
+          var termOverlay = document.createElement("div");
+          termOverlay.id = "termOverlay";
+          termOverlay.style.cssText = "display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:999;padding:16px;overflow:auto";
+          var listHtml = terminals.map(function (t) {
+            return '<div style="display:flex;align-items:center;gap:10px;background:#141424;border:1px solid #262640;border-radius:10px;padding:12px;margin-bottom:8px">'
+              + '<span style="font-size:22px">' + t.e + '</span><b style="flex:1;color:#e8e8f0">' + t.n + '</b>'
+              + '<button data-pkg="' + t.p + '" data-web="' + t.w + '" style="background:#00cc77;border:none;border-radius:6px;padding:6px 10px;font-family:monospace">app</button>'
+              + '<button data-web="' + t.w + '" style="background:#262640;border:none;border-radius:6px;padding:6px 10px;color:#e8e8f0;font-family:monospace">web</button></div>';
+          }).join("");
+          termOverlay.innerHTML = '<h3 style="color:#00ff88;margin-bottom:8px">🤖 ' + api.t("term.title") + "</h3>"
+            + '<p style="color:#889;font-size:11px;line-height:1.5">' + api.t("term.steps") + "</p>"
+            + listHtml
+            + '<button id="termClose" style="width:100%;padding:12px;background:#262640;border:none;border-radius:8px;color:#e8e8f0;font-family:monospace">' + api.t("term.close") + "</button>";
+          aiCard.addEventListener("click", function () { termOverlay.style.display = "block"; });
+          termOverlay.addEventListener("click", function (ev) {
+            var b = ev.target.closest ? ev.target.closest("button") : null;
+            if (!b) return;
+            if (b.id === "termClose") { termOverlay.style.display = "none"; return; }
+            var web = b.getAttribute("data-web");
+            var pkg = b.hasAttribute("data-pkg") ? b.getAttribute("data-pkg") : null;
+            if (window.LimeAndroid && window.LimeAndroid.launchApp) {
+              window.LimeAndroid.launchApp(pkg || "", web);
+              termOverlay.style.display = "none";
+            } else if (window.LimeAndroid && window.LimeAndroid.openUrl) {
+              window.LimeAndroid.openUrl(web);
+            } else {
+              window.open(web, "_blank");
+            }
+          });
+          document.body.appendChild(termOverlay);
           grid.insertBefore(aiCard, card.nextSibling);
           document.body.appendChild(inp);
 

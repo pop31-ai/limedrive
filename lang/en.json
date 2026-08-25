@@ -50,5 +50,8 @@
   "ai.title": "AI Prompt",
   "ai.hint": "copy PROMPT.md template",
   "imp.askPrompt": "AI prompt for this game (optional):",
-  "imp.promptCopied": "PROMPT.md copied to clipboard"
+  "imp.promptCopied": "PROMPT.md copied to clipboard",
+  "term.title": "AI terminals",
+  "term.steps": "1) Copy the prompt (card above) 2) open a terminal 3) paste 4) save the JSON → Import. No AI runs inside LimeDrive — by design.",
+  "term.close": "Close"
 }

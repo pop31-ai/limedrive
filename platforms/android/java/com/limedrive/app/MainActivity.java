@@ -1,8 +1,9 @@
 package com.limedrive.app;
 
-import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.provider.MediaStore;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -129,8 +131,40 @@ public class MainActivity extends Activity {
 
         setContentView(root);
 
+        web.addJavascriptInterface(new Bridge(), "LimeAndroid");
+
         String extra = getIntent() != null ? getIntent().getStringExtra("loadUrl") : null;
         web.loadUrl(extra != null ? extra : resolveStartUrl());
+    }
+
+    public class Bridge {
+
+        @JavascriptInterface
+        public void launchApp(String pkg, String webUrl) {
+            try {
+                Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
+                if (i != null) {
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(i);
+                    return;
+                }
+                openUrl(webUrl);
+            } catch (ActivityNotFoundException e) {
+                openUrl(webUrl);
+            } catch (Exception ignored) {
+            }
+        }
+
+        @JavascriptInterface
+        public void openUrl(String u) {
+            try {
+                if (u == null || !u.startsWith("http")) return;
+                Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(u));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     private int dp(int v) {

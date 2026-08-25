@@ -50,5 +50,8 @@
   "ai.title": "KI-Prompt",
   "ai.hint": "PROMPT.md-Vorlage kopieren",
   "imp.askPrompt": "KI-Prompt für dieses Spiel (optional):",
-  "imp.promptCopied": "PROMPT.md in die Zwischenablage kopiert"
+  "imp.promptCopied": "PROMPT.md in die Zwischenablage kopiert",
+  "term.title": "KI-Terminals",
+  "term.steps": "1) Prompt kopieren (Karte oben) 2) Terminal öffnen 3) einfügen 4) JSON speichern → Import. LimeDrive nutzt selbst keine KI — so ist es konzipiert.",
+  "term.close": "Schließen"
 }

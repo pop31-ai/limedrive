@@ -50,5 +50,8 @@
   "ai.title": "Prompt para IA",
   "ai.hint": "copiar plantilla PROMPT.md",
   "imp.askPrompt": "Prompt de IA para este juego (opcional):",
-  "imp.promptCopied": "PROMPT.md copiado al portapapeles"
+  "imp.promptCopied": "PROMPT.md copiado al portapapeles",
+  "term.title": "Terminales de IA",
+  "term.steps": "1) Copia el prompt (tarjeta arriba) 2) abre una terminal 3) pega 4) guarda el JSON → Importar. LimeDrive no usa IA internamente — es decisión de diseño.",
+  "term.close": "Cerrar"
 }
