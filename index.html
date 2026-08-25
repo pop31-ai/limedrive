@@ -17,6 +17,7 @@ p.sub{color:#888;font-size:12px;margin-bottom:14px}
 .card:active{background:#1c1c34}
 .card .t{font-weight:bold;font-size:14px}
 .card .m{color:#7799;font-size:11px}
+.neuro{cursor:pointer;border-color:#00ff88}.neuro:active{background:#00331f}
 .hint{margin-top:14px;color:#556;font-size:11px}
 </style></head><body>
 <h1>◆ LimeDrive</h1>
@@ -59,11 +60,27 @@ p.sub{color:#888;font-size:12px;margin-bottom:14px}
 <a class="card" href="examples/player.html?game=19-mirror-chess.json">
     <span class="t">Зеркальный Шах</span><span class="m">Тактика · 1 ур.</span></a>
 </div>
+<div class="card neuro" id="neuroCard"><span class="t">⚡ НЕЙРО-УРОВЕНЬ</span><span class="m">сгенерировать и играть</span></div>
 <p class="hint">Android: меню браузера → «Добавить на главный экран»</p>
 <script src="lang/i18n.js"></script>
+<script src="neuro.js"></script>
 <script>
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+if (window.NeuroGen) {
+  NeuroGen.ready().then(() => {
+    const card = document.getElementById("neuroCard");
+    if (card) card.addEventListener("click", () => {
+      const genres = NeuroGen.genres();
+      const g = genres[Math.floor(Math.random() * genres.length)];
+      const draft = NeuroGen.generate(g, Date.now() & 0xffffffff);
+      try { localStorage.setItem("currentGame", JSON.stringify(draft)); } catch (e) {}
+      location.href = "examples/player.html";
+    });
+  });
+}
+else {
 }
 </script>
 </body></html>
