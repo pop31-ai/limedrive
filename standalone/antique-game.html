@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Antiquarium 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#1a0e08;font-family:Georgia,serif}
+canvas{display:block}
+#ui{position:fixed;top:20px;left:20px;color:#d4a54a;z-index:10;text-shadow:0 0 8px rgba(212,165,74,0.5);pointer-events:none}
+#ui h1{font-size:28px;margin-bottom:8px;letter-spacing:3px}
+#ui p{font-size:14px;opacity:0.7;margin:2px 0}
+#score{position:fixed;top:20px;right:20px;color:#d4a54a;font-size:22px;z-index:10;text-shadow:0 0 10px rgba(212,165,74,0.6);text-align:right;pointer-events:none}
+#tooltip{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(30,15,5,0.9);color:#d4a54a;padding:12px 24px;border:1px solid rgba(212,165,74,0.27);border-radius:8px;font-size:15px;z-index:10;display:none;text-align:center;min-width:200px;pointer-events:none}
+#inventory{position:fixed;bottom:30px;right:20px;display:flex;gap:8px;z-index:10;pointer-events:none}
+.inv-slot{width:56px;height:56px;border:2px solid rgba(212,165,74,0.33);border-radius:8px;background:rgba(30,15,5,0.8);display:flex;align-items:center;justify-content:center;font-size:28px;transition:all 0.3s}
+.inv-slot.filled{border-color:#d4a54a;box-shadow:0 0 12px rgba(212,165,74,0.3)}
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;z-index:5;pointer-events:none;display:none}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(212,165,74,0.53)}
+#crosshair::before{width:2px;height:20px;left:9px;top:0}
+#crosshair::after{width:20px;height:2px;top:9px;left:0}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#d4a54a;text-align:center;cursor:pointer}
+#overlay h1{font-size:52px;margin-bottom:16px;letter-spacing:6px}
+#overlay p{font-size:16px;opacity:0.7;margin:8px 0}
+#overlay .sub{margin-top:30px;font-size:14px;opacity:0.5;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:0.8}}
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at center,transparent 50%,rgba(10,5,2,0.7) 100%)}
+#click-hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#d4a54a;font-size:18px;z-index:50;pointer-events:none;display:none;text-shadow:0 0 10px rgba(212,165,74,0.6);animation:pulse 1.5s infinite}
+</style>
+</head>
+<body>
+<div id="vignette"></div>
+<div id="overlay" onclick="startGame()">
+  <h1>ANTIQUARIUM</h1>
+  <p>Исследуйте антикварную лавку</p>
+  <p>Найдите все ценные предметы среди завитушек и теней</p>
+  <p style="margin-top:16px;font-size:13px;opacity:0.4">WASD — движение | Мышь — обзор | ЛКМ — подобрать</p>
+  <div class="sub">[ нажмите чтобы войти ]</div>
+</div>
+<div id="ui">
+  <h1>ANTIQUARIUM</h1>
+  <p>ЛКМ — подобрать</p>
+</div>
+<div id="score">СОБРАНО: <span id="count">0</span> / <span id="total">0</span></div>
+<div id="tooltip"></div>
+<div id="inventory"></div>
+<div id="crosshair"></div>
+<div id="click-hint">Нажмите на экран для захвата мыши</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+let scene, camera, renderer;
+let moveF = false, moveB = false, moveL = false, moveR = false;
+const raycaster = new THREE.Raycaster();
+let collectibles = [];
+let collected = 0;
+let totalItems = 0;
+let gameStarted = false;
+let pointerLocked = false;
+const clock = new THREE.Clock();
+const tooltip = document.getElementById('tooltip');
+
+function createSpiralGeometry(radius, height, turns, tubeR, segments) {
+  const pts = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = t * turns * Math.PI * 2;
+    pts.push(new THREE.Vector3(
+      Math.cos(angle) * radius * (1 - t * 0.3),
+      t * height,
+      Math.sin(angle) * radius * (1 - t * 0.3)
+    ));
+  }
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segments * 2, tubeR, 6, false);
+}
+
+function createSpiralFlat(outerR, innerR, turns, tubeR, segments) {
+  const pts = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = t * turns * Math.PI * 2;
+    const r = outerR + (innerR - outerR) * t;
+    pts.push(new THREE.Vector3(Math.cos(angle) * r, Math.sin(angle) * r, 0));
+  }
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segments * 2, tubeR, 6, false);
+}
+
+function createDecoratedVase() {
+  const g = new THREE.Group();
+  const bodyPts = [
+    [0, 0], [0.6, 0.3], [0.7, 0.8], [0.55, 1.3],
+    [0.35, 1.7], [0.3, 2.0], [0.38, 2.1], [0.35, 2.2]
+  ];
+  const geo = new THREE.LatheGeometry(
+    bodyPts.map(([x, y]) => new THREE.Vector2(x, y)), 24
+  );
+  g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    color: 0x8B4513, roughness: 0.4, metalness: 0.2
+  })));
+
+  const spiralMat = new THREE.MeshStandardMaterial({
+    color: 0xDAA520, roughness: 0.3, metalness: 0.6
+  });
+  for (let i = 0; i < 2; i++) {
+    const sp = new THREE.Mesh(createSpiralGeometry(0.75, 2.0, 2.5, 0.035, 80), spiralMat);
+    sp.rotation.y = i * Math.PI;
+    g.add(sp);
+  }
+
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.65 - i * 0.05, 0.02, 8, 32), spiralMat
+    );
+    ring.position.y = 0.5 + i * 0.3;
+    ring.rotation.x = Math.PI / 2;
+    g.add(ring);
+  }
+  return g;
+}
+
+function createFrame() {
+  const g = new THREE.Group();
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0x8B6914, roughness: 0.35, metalness: 0.4
+  });
+  const t = 0.12, w = 1.8, h = 2.2;
+  [
+    [-w / 2, 0, t, h], [w / 2 - t, 0, t, h],
+    [-w / 2 + t, h - t, w - 2 * t, t], [-w / 2 + t, 0, w - 2 * t, t]
+  ].forEach(([x, y, ww, hh]) => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(ww, hh, t), frameMat);
+    s.position.set(x + ww / 2, y + hh / 2, 0);
+    g.add(s);
+  });
+
+  const spiralMat = new THREE.MeshStandardMaterial({
+    color: 0xDAA520, roughness: 0.3, metalness: 0.5
+  });
+  const sp1 = new THREE.Mesh(createSpiralGeometry(0.15, 0.6, 2, 0.02, 40), spiralMat);
+  sp1.position.set(-w / 2 - 0.05, 0, t / 2);
+  g.add(sp1);
+  const sp2 = new THREE.Mesh(createSpiralGeometry(0.15, 0.6, 2, 0.02, 40), spiralMat);
+  sp2.position.set(w / 2 + 0.05, 0, t / 2);
+  sp2.scale.x = -1;
+  g.add(sp2);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 310;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 256, 310);
+  grad.addColorStop(0, '#2a1a0a'); grad.addColorStop(1, '#4a3020');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, 256, 310);
+  ctx.fillStyle = '#d4a54a33';
+  for (let i = 0; i < 60; i++) {
+    ctx.beginPath();
+    ctx.arc(Math.random() * 256, Math.random() * 310, Math.random() * 4 + 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = '#DAA52044';
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    for (let j = 0; j <= 40; j++) {
+      const a = j / 40 * Math.PI * 6;
+      const r = 20 + j * 2;
+      ctx.lineTo(128 + Math.cos(a) * r, 155 + Math.sin(a) * r);
+    }
+    ctx.stroke();
+  }
+  const pic = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.56, 1.96),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas) })
+  );
+  pic.position.set(0, h / 2, 0.07);
+  g.add(pic);
+  return g;
+}
+
+function createCandlestick() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xB8860B, roughness: 0.25, metalness: 0.7
+  });
+  const basePts = [
+    [0, 0], [0.3, 0], [0.35, 0.05], [0.15, 0.15],
+    [0.1, 0.6], [0.08, 1.2], [0.12, 1.25], [0.1, 1.3]
+  ];
+  g.add(new THREE.Mesh(
+    new THREE.LatheGeometry(basePts.map(([x, y]) => new THREE.Vector2(x, y)), 16), mat
+  ));
+
+  const sp = new THREE.Mesh(
+    createSpiralGeometry(0.14, 0.8, 3, 0.015, 60),
+    new THREE.MeshStandardMaterial({ color: 0xFFD700, roughness: 0.2, metalness: 0.8 })
+  );
+  sp.position.y = 0.2;
+  g.add(sp);
+
+  const flame = new THREE.Mesh(
+    new THREE.SphereGeometry(0.05, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xFFAA00 })
+  );
+  flame.position.y = 1.38; flame.scale.set(1, 1.5, 1); flame.name = 'flame';
+  g.add(flame);
+
+  const light = new THREE.PointLight(0xFF8800, 1.5, 8, 2);
+  light.position.y = 1.4;
+  g.add(light);
+  return g;
+}
+
+function createMirror() {
+  const g = new THREE.Group();
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0x6B3A2A, roughness: 0.4, metalness: 0.3
+  });
+  const outerR = 0.9;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(outerR, 0.08, 12, 48), frameMat);
+  ring.rotation.x = Math.PI / 2;
+  g.add(ring);
+
+  const spiralMat = new THREE.MeshStandardMaterial({
+    color: 0xDAA520, roughness: 0.3, metalness: 0.6
+  });
+  for (let i = 0; i < 4; i++) {
+    const s = new THREE.Mesh(createSpiralGeometry(0.12, 0.5, 2.5, 0.018, 50), spiralMat);
+    const a = i * Math.PI / 2;
+    s.position.set(Math.cos(a) * outerR, Math.sin(a) * outerR, 0.05);
+    s.rotation.z = a - Math.PI / 2;
+    g.add(s);
+  }
+
+  g.add(new THREE.Mesh(
+    new THREE.CircleGeometry(0.82, 32),
+    new THREE.MeshStandardMaterial({ color: 0x8899AA, roughness: 0.05, metalness: 0.9 })
+  ));
+  g.children[g.children.length - 1].position.z = 0.01;
+  return g;
+}
+
+function createClock() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x5C3317, roughness: 0.5, metalness: 0.2
+  });
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), mat));
+
+  g.add(new THREE.Mesh(
+    new THREE.CircleGeometry(0.32, 32),
+    new THREE.MeshStandardMaterial({ color: 0xFFF8DC, roughness: 0.8 })
+  ));
+  g.children[g.children.length - 1].position.set(0, 0.2, 0.21);
+
+  const sp = new THREE.Mesh(
+    createSpiralGeometry(0.45, 0.8, 2, 0.025, 60),
+    new THREE.MeshStandardMaterial({ color: 0xDAA520, roughness: 0.3, metalness: 0.5 })
+  );
+  sp.position.set(0, -0.6, 0.22); g.add(sp);
+
+  const handsMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+  const hands = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.25, 0.01), handsMat);
+  hands.position.set(0, 0.2, 0.23); hands.name = 'hourHand'; g.add(hands);
+  const minHand = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.3, 0.01), handsMat);
+  minHand.position.set(0, 0.2, 0.24); minHand.name = 'minHand'; g.add(minHand);
+
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6;
+    const dot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.01, 6, 6),
+      new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+    );
+    dot.position.set(Math.sin(a) * 0.27, 0.2 + Math.cos(a) * 0.27, 0.22);
+    g.add(dot);
+  }
+  return g;
+}
+
+function createBookshelf() {
+  const g = new THREE.Group();
+  const wood = new THREE.MeshStandardMaterial({
+    color: 0x4A2A0A, roughness: 0.6, metalness: 0.1
+  });
+  [-0.7, 0.7].forEach(x => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.2, 0.5), wood);
+    s.position.set(x, 1.6, 0); g.add(s);
+  });
+  [0, 0.8, 1.6, 2.4, 3.2].forEach(y => {
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 0.5), wood);
+    shelf.position.y = y; g.add(shelf);
+  });
+
+  const bookColors = [0x8B0000, 0x006400, 0x00008B, 0x8B8B00, 0x4B0082, 0x8B4513, 0x2F4F4F, 0xB22222];
+  for (let shelf = 0; shelf < 4; shelf++) {
+    let x = -0.55;
+    while (x < 0.5) {
+      const w = 0.04 + Math.random() * 0.06;
+      const h = 0.4 + Math.random() * 0.25;
+      const d = 0.3 + Math.random() * 0.15;
+      const book = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color: bookColors[Math.floor(Math.random() * bookColors.length)], roughness: 0.8 }));
+      book.position.set(x + w / 2, shelf * 0.8 + 0.03 + h / 2, 0);
+      g.add(book);
+      x += w + 0.005;
+      if (Math.random() > 0.85) x += 0.08;
+    }
+  }
+  return g;
+}
+
+function createGlobe() {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(
+    new THREE.SphereGeometry(0.45, 24, 24),
+    new THREE.MeshStandardMaterial({ color: 0x2E5A3E, roughness: 0.6, metalness: 0.1 })
+  ));
+
+  for (let i = 0; i < 8; i++) {
+    const curve = [];
+    for (let j = 0; j <= 20; j++) {
+      const a = j / 20 * Math.PI;
+      curve.push(new THREE.Vector3(
+        Math.sin(a) * 0.46 * Math.cos(i * Math.PI / 4),
+        Math.cos(a) * 0.46,
+        Math.sin(a) * 0.46 * Math.sin(i * Math.PI / 4)
+      ));
+    }
+    g.add(new THREE.Mesh(
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curve), 20, 0.005, 4, false),
+      new THREE.MeshStandardMaterial({ color: 0xDAA520, roughness: 0.3, metalness: 0.5 })
+    ));
+  }
+
+  const standMat = new THREE.MeshStandardMaterial({
+    color: 0x8B6914, roughness: 0.35, metalness: 0.4
+  });
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, 0.5, 12), standMat);
+  stand.position.y = -0.55; g.add(stand);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.015, 8, 32), standMat);
+  ring.rotation.x = Math.PI / 2; g.add(ring);
+  const arc = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.015, 8, 32, Math.PI), standMat);
+  arc.rotation.z = Math.PI / 2; g.add(arc);
+  return g;
+}
+
+function createDecoratedTable() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x5C3317, roughness: 0.5, metalness: 0.15
+  });
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.8), mat));
+  [[-0.75, -0.35], [-0.75, 0.35], [0.75, -0.35], [0.75, 0.35]].forEach(([x, z]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.75, 0.08), mat);
+    leg.position.set(x, -0.415, z); g.add(leg);
+  });
+
+  const sp = new THREE.Mesh(
+    createSpiralGeometry(0.1, 0.3, 3, 0.012, 40),
+    new THREE.MeshStandardMaterial({ color: 0xDAA520, roughness: 0.3, metalness: 0.6 })
+  );
+  sp.position.set(-0.75, -0.415, 0.45); sp.rotation.x = Math.PI / 2;
+  g.add(sp);
+  return g;
+}
+
+function createArch() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x3A1A0A, roughness: 0.6 });
+  const archPts = [];
+  for (let i = 0; i <= 20; i++) {
+    const a = i / 20 * Math.PI;
+    archPts.push(new THREE.Vector3(Math.cos(a) * 1.2, Math.sin(a) * 1.5 + 3.2, 0));
+  }
+  g.add(new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPts), 20, 0.12, 8, false), mat
+  ));
+
+  const spiralMat = new THREE.MeshStandardMaterial({
+    color: 0xDAA520, roughness: 0.3, metalness: 0.5
+  });
+  [-1.2, 1.2].forEach((x, i) => {
+    const s = new THREE.Mesh(createSpiralGeometry(0.2, 1.0, 3, 0.025, 50), spiralMat);
+    s.position.set(x, -0.1, 0);
+    if (i === 1) s.scale.x = -1;
+    g.add(s);
+  });
+  return g;
+}
+
+function createCarpet() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#6B1A1A';
+  ctx.fillRect(0, 0, 512, 512);
+  ctx.strokeStyle = '#DAA520'; ctx.lineWidth = 3;
+  for (let i = 0; i < 8; i++) {
+    const m = 20 + i * 28;
+    ctx.strokeRect(m, m, 512 - 2 * m, 512 - 2 * m);
+  }
+  ctx.beginPath();
+  for (let i = 0; i < 100; i++) {
+    const a = i / 100 * Math.PI * 20;
+    const r = 20 + i * 1.8;
+    ctx.lineTo(256 + Math.cos(a) * r, 256 + Math.sin(a) * r);
+  }
+  ctx.strokeStyle = '#DAA52044'; ctx.lineWidth = 2; ctx.stroke();
+  const carpet = new THREE.Mesh(
+    new THREE.PlaneGeometry(6, 6),
+    new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(canvas), roughness: 0.9 })
+  );
+  carpet.rotation.x = -Math.PI / 2; carpet.position.y = 0.01;
+  return carpet;
+}
+
+function createSofa() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x6B1A1A, roughness: 0.8 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 0.9), mat);
+  base.position.y = 0.25; g.add(base);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(3, 0.8, 0.2), mat);
+  back.position.set(0, 0.9, -0.35); g.add(back);
+  [-1.3, 1.3].forEach(x => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.9), mat);
+    arm.position.set(x, 0.55, 0); g.add(arm);
+  });
+  return g;
+}
+
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a0e08);
+  scene.fog = new THREE.FogExp2(0x1a0e08, 0.04);
+
+  camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 100);
+  camera.position.set(0, 1.7, 5);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.8;
+  document.body.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0x2a1a0a, 0.4));
+  const dirLight = new THREE.DirectionalLight(0xFFAA66, 0.3);
+  dirLight.position.set(5, 8, 3); dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(1024, 1024);
+  scene.add(dirLight);
+
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x3A2010, roughness: 0.8, metalness: 0.1 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), floorMat);
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(18, 14),
+    new THREE.MeshStandardMaterial({ color: 0x2A1A0A, roughness: 0.9 }));
+  ceil.rotation.x = Math.PI / 2; ceil.position.y = 4; scene.add(ceil);
+
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x3D2817, roughness: 0.75 });
+  [
+    [0, 2, -7, 0, [18, 4, 0.2]],
+    [0, 2, 7, 0, [18, 4, 0.2]],
+    [-9, 2, 0, Math.PI / 2, [14, 4, 0.2]],
+    [9, 2, 0, Math.PI / 2, [14, 4, 0.2]]
+  ].forEach(([x, y, z, ry, [sx, sy, sz]]) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), wallMat);
+    m.position.set(x, y, z); m.rotation.y = ry; scene.add(m);
+  });
+
+  scene.add(createCarpet());
+
+  const vase = createDecoratedVase();
+  vase.position.set(-3, 0, -5); scene.add(vase);
+  collectibles.push({ mesh: vase, name: 'Китайская ваза XVIII века', value: 350 });
+
+  const vase2 = createDecoratedVase();
+  vase2.position.set(4, 0, -6); vase2.scale.setScalar(0.7); scene.add(vase2);
+
+  const frame = createFrame();
+  frame.position.set(0, 1.5, -6.85); scene.add(frame);
+  collectibles.push({ mesh: frame, name: 'Портрет неизвестного графа', value: 520 });
+
+  const frame2 = createFrame();
+  frame2.position.set(-3, 1.8, -6.85); frame2.scale.setScalar(0.8); scene.add(frame2);
+
+  const c1 = createCandlestick();
+  c1.position.set(-2, 0, -4); scene.add(c1);
+  collectibles.push({ mesh: c1, name: 'Серебряная подсвечника', value: 180 });
+
+  const c2 = createCandlestick();
+  c2.position.set(3, 0, -5); scene.add(c2);
+
+  const mirror = createMirror();
+  mirror.position.set(6, 2, -6.85); scene.add(mirror);
+  collectibles.push({ mesh: mirror, name: 'Зеркало в резной раме', value: 450 });
+
+  const clockObj = createClock();
+  clockObj.position.set(-6, 0.5, -6.6); scene.add(clockObj);
+  collectibles.push({ mesh: clockObj, name: 'Механические часы', value: 680 });
+
+  const shelf = createBookshelf();
+  shelf.position.set(-8.6, 0, 2); shelf.rotation.y = Math.PI / 2; scene.add(shelf);
+
+  const shelf2 = createBookshelf();
+  shelf2.position.set(8.6, 0, -2); shelf2.rotation.y = -Math.PI / 2; scene.add(shelf2);
+
+  const globe = createGlobe();
+  globe.position.set(5, 1.5, -3); scene.add(globe);
+  collectibles.push({ mesh: globe, name: 'Старинный глобус', value: 390 });
+
+  scene.add(createArch().translateZ(-7));
+
+  const table = createDecoratedTable();
+  table.position.set(-3, 0.75, -4.5); scene.add(table);
+
+  const table2 = createDecoratedTable();
+  table2.position.set(5, 0.7, -3); table2.scale.setScalar(0.7); scene.add(table2);
+
+  const sofa = createSofa();
+  sofa.position.set(0, 0, 5.5); scene.add(sofa);
+
+  [[-3, 3.9, -6.5], [3, 3.9, -6.5], [-6, 3.9, -3], [6, 3.9, 0],
+   [0, 3.9, 4], [-4, 3.9, 3], [4, 3.9, 3]].forEach(p => {
+    const c = new THREE.PointLight(0xFF8800, 0.6, 6, 2);
+    c.position.set(...p); scene.add(c);
+    const glow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.03, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0xFFAA44 })
+    );
+    glow.position.set(...p); scene.add(glow);
+  });
+
+  totalItems = collectibles.length;
+  document.getElementById('total').textContent = totalItems;
+
+  for (let i = 0; i < 8; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'inv-slot'; slot.id = 'slot-' + i;
+    document.getElementById('inventory').appendChild(slot);
+  }
+
+  setupControls();
+  animate();
+}
+
+function setupControls() {
+  document.addEventListener('keydown', e => {
+    if (!gameStarted) return;
+    switch (e.code) {
+      case 'KeyW': moveF = true; break;
+      case 'KeyS': moveB = true; break;
+      case 'KeyA': moveL = true; break;
+      case 'KeyD': moveR = true; break;
+    }
+  });
+  document.addEventListener('keyup', e => {
+    switch (e.code) {
+      case 'KeyW': moveF = false; break;
+      case 'KeyS': moveB = false; break;
+      case 'KeyA': moveL = false; break;
+      case 'KeyD': moveR = false; break;
+    }
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!gameStarted || !pointerLocked) return;
+    camera.rotation.y -= e.movementX * 0.002;
+    camera.rotation.x -= e.movementY * 0.002;
+    camera.rotation.x = Math.max(-1.2, Math.min(1.2, camera.rotation.x));
+  });
+
+  document.addEventListener('mousedown', e => {
+    if (!gameStarted) return;
+    if (!pointerLocked) {
+      renderer.domElement.requestPointerLock();
+      return;
+    }
+    if (e.button === 0) tryCollect();
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    pointerLocked = document.pointerLockElement === renderer.domElement;
+    document.getElementById('click-hint').style.display = (gameStarted && !pointerLocked) ? 'block' : 'none';
+  });
+}
+
+function tryCollect() {
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+  const meshes = [];
+  collectibles.forEach(c => {
+    if (!c.collected) c.mesh.traverse(ch => { if (ch.isMesh) meshes.push(ch); });
+  });
+  const hits = raycaster.intersectObjects(meshes);
+  if (hits.length > 0) {
+    let hitObj = hits[0].object;
+    while (hitObj.parent && !hitObj.parent.isScene) hitObj = hitObj.parent;
+    const item = collectibles.find(c => c.mesh === hitObj);
+    if (item && !item.collected) collectItem(item);
+  }
+}
+
+function collectItem(item) {
+  item.collected = true;
+  collected++;
+  document.getElementById('count').textContent = collected;
+
+  const slot = document.getElementById('slot-' + (collected - 1));
+  if (slot) {
+    slot.classList.add('filled');
+    slot.textContent = ['🏺', '🖼', '🕯', '🪞', '🕰', '🌐'][collected - 1] || '✨';
+  }
+
+  showTooltip(`✦ ${item.name} — ${item.value} золотых ✦`);
+  setTimeout(() => {
+    hideTooltip();
+    if (collected >= totalItems) showTooltip('🎉 Вы нашли все сокровища антикварной лавки!');
+  }, 3000);
+
+  const pos = item.mesh.position.clone();
+  for (let i = 0; i < 15; i++) {
+    const p = new THREE.Mesh(
+      new THREE.SphereGeometry(0.03, 4, 4),
+      new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true })
+    );
+    p.position.copy(pos).add(new THREE.Vector3(
+      (Math.random() - 0.5) * 0.5, Math.random() * 2, (Math.random() - 0.5) * 0.5
+    ));
+    scene.add(p);
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.02, 0.03 + Math.random() * 0.03, (Math.random() - 0.5) * 0.02
+    );
+    const startTime = clock.getElapsedTime();
+    (function anim() {
+      const t = clock.getElapsedTime() - startTime;
+      if (t > 1.5) { scene.remove(p); return; }
+      p.position.add(vel); vel.y -= 0.0005;
+      p.material.opacity = 1 - t / 1.5;
+      requestAnimationFrame(anim);
+    })();
+  }
+}
+
+function showTooltip(text) { tooltip.textContent = text; tooltip.style.display = 'block'; }
+function hideTooltip() { tooltip.style.display = 'none'; }
+
+const tmpVec = new THREE.Vector3();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  if (gameStarted) {
+    const speed = 3.5;
+    const dir = new THREE.Vector3();
+    if (moveF) dir.z -= 1;
+    if (moveB) dir.z += 1;
+    if (moveL) dir.x -= 1;
+    if (moveR) dir.x += 1;
+    if (dir.lengthSq() > 0) {
+      dir.normalize().applyQuaternion(camera.quaternion);
+      dir.y = 0; dir.normalize();
+      tmpVec.copy(camera.position).addScaledVector(dir, speed * dt);
+      tmpVec.x = Math.max(-8.5, Math.min(8.5, tmpVec.x));
+      tmpVec.z = Math.max(-6.5, Math.min(6.5, tmpVec.z));
+      camera.position.copy(tmpVec);
+    }
+    camera.position.y = 1.7;
+
+    if (pointerLocked) {
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      const meshes = [];
+      collectibles.forEach(c => {
+        if (!c.collected) c.mesh.traverse(ch => { if (ch.isMesh) meshes.push(ch); });
+      });
+      const hits = raycaster.intersectObjects(meshes);
+      if (hits.length > 0 && hits[0].distance < 3) {
+        let hitObj = hits[0].object;
+        while (hitObj.parent && !hitObj.parent.isScene) hitObj = hitObj.parent;
+        const item = collectibles.find(c => c.mesh === hitObj);
+        if (item && !item.collected) showTooltip(`${item.name} [ЛКМ]`);
+      } else {
+        hideTooltip();
+      }
+    }
+
+    scene.traverse(ch => {
+      if (ch.name === 'flame') {
+        ch.scale.x = 1 + Math.sin(t * 8) * 0.15;
+        ch.scale.z = 1 + Math.cos(t * 7) * 0.15;
+        ch.position.y = 1.38 + Math.sin(t * 5) * 0.01;
+      }
+      if (ch.name === 'hourHand') ch.rotation.z = -t * 0.1;
+      if (ch.name === 'minHand') ch.rotation.z = -t * 1.2;
+    });
+  }
+
+  renderer.render(scene, camera);
+}
+
+window.startGame = function () {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('crosshair').style.display = 'block';
+  document.getElementById('ui').style.display = 'block';
+  document.getElementById('score').style.display = 'block';
+  gameStarted = true;
+  renderer.domElement.requestPointerLock();
+};
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+init();
+</script>
+</body>
+</html>

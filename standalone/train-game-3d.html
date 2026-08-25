@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Паравозики 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;font-family:'Segoe UI',sans-serif;background:#1a1a2e}
+#hud{position:fixed;top:10px;left:10px;z-index:10;display:flex;gap:8px;flex-wrap:wrap;max-width:950px}
+.hud-item{background:rgba(0,0,0,.75);color:#fff;padding:8px 14px;border-radius:8px;font-size:14px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1)}
+#timer{color:#4fc3f7;font-weight:bold;font-size:16px}
+#score{color:#ffd54f;font-weight:bold;font-size:16px}
+#combo{color:#81c784}
+#panel{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:920px}
+.btn{padding:9px 14px;border:2px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(0,0,0,.7);color:#fff;cursor:pointer;font-size:12px;transition:all .2s;backdrop-filter:blur(4px);user-select:none}
+.btn:hover{background:rgba(60,60,120,.8);border-color:#7c7cff}
+.btn.active{background:rgba(80,80,200,.7);border-color:#7c7cff;box-shadow:0 0 12px rgba(100,100,255,.4)}
+.btn.go{background:rgba(0,150,0,.7);border-color:#4caf50}
+.btn.go:hover{background:rgba(0,180,0,.8)}
+.btn.stop{background:rgba(180,0,0,.7);border-color:#f44}
+.btn.tgl{background:rgba(0,100,120,.7);border-color:#00bcd4}
+.btn.len{background:rgba(60,60,60,.7);border-color:#888;font-size:10px;letter-spacing:-2px;padding:7px 8px}
+#info{position:fixed;top:10px;right:10px;z-index:10;background:rgba(0,0,0,.75);color:#aaa;padding:12px;border-radius:10px;font-size:11px;line-height:1.6;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.08);max-width:210px}
+#info b{color:#ddd}
+#alert{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;font-size:44px;color:#f44;text-shadow:0 0 20px rgba(255,0,0,.6);pointer-events:none;opacity:0;transition:opacity .4s;font-weight:bold}
+#win{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;font-size:32px;color:#4caf50;text-shadow:0 0 20px rgba(0,255,0,.4);pointer-events:none;opacity:0;text-align:center}
+#speedbar{position:fixed;bottom:105px;left:10px;z-index:10;background:rgba(0,0,0,.6);padding:6px 12px;border-radius:8px;color:#fff;font-size:12px}
+#speedbar input{pointer-events:auto}
+#speedbar input{width:100px;vertical-align:middle;margin-left:6px}
+#levelbar{position:fixed;bottom:105px;left:200px;z-index:10;background:rgba(0,0,0,.6);padding:6px 12px;border-radius:8px;color:#fff;font-size:12px}
+#rotbar{position:fixed;bottom:105px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);padding:6px 16px;border-radius:8px;color:#ffd54f;font-size:13px;font-weight:bold;pointer-events:none}
+#presetbar{position:fixed;bottom:145px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:850px}
+#presetbar .btn{padding:4px 8px;font-size:10px;background:rgba(40,60,40,.8);border-color:#4a7c3f}
+#presetbar .btn:hover{background:rgba(60,100,60,.9);border-color:#6fa85f}
+canvas{display:block}
+.popup{position:fixed;pointer-events:none;z-index:15;font-size:22px;font-weight:bold;color:#ffd54f;text-shadow:0 0 8px rgba(255,215,0,.5);animation:popfly 1.5s ease-out forwards}
+@keyframes popfly{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(1.4)}}
+#minimap{position:fixed;bottom:105px;right:10px;z-index:10;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(0,0,0,.5);pointer-events:none}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="hud-item" id="timer">⏱ 00:00</div>
+  <div class="hud-item" id="score">★ 0</div>
+  <div class="hud-item" id="combo">Безаварийно: 0</div>
+  <div class="hud-item" id="speedometer" style="color:#ff9800;font-variant-numeric:tabular-nums">🚂 0 км/ч</div>
+  <div class="hud-item" id="dist">📏 0 / 0 м</div>
+  <div class="hud-item" id="trainFloor" style="display:none;color:#ce93d8">🏩 Этаж: 0</div>
+  <div class="hud-item" id="trackLen">Рельсов: 0</div>
+</div>
+<div id="lapBar" style="position:fixed;top:0;left:0;right:0;height:4px;z-index:15;background:rgba(0,0,0,.4)">
+  <div id="lapFill" style="height:100%;width:0%;background:linear-gradient(90deg,#f44,#4caf50);transition:width .15s;border-radius:0 2px 2px 0"></div>
+</div>
+
+<div id="panel">
+  <button class="btn active" data-tool="straight" title="Прямая">══ Прямая</button>
+  <button class="btn" data-tool="curve" title="Поворот">╮ Поворот</button>
+  <button class="btn" data-tool="tunnel" title="Туннель">🚇 Туннель</button>
+  <button class="btn" data-tool="bridge" title="Мост">🌉 Мост</button>
+  <button class="btn" data-tool="signal" title="Светофор">🚦 Светофор</button>
+  <button class="btn" data-tool="switch" title="Стрелка">⑂ Стрелка</button>
+  <button class="btn" data-tool="cross" title="Пересечение">✚ Пересечение</button>
+  <button class="btn" data-tool="overpass" title="Путепровод">🏗 Путепровод</button>
+  <button class="btn" data-tool="station" title="Станция">🏛 Станция</button>
+  <button class="btn" data-tool="house" title="Домик">🏠 Домик</button>
+  <button class="btn" data-tool="windmill" title="Ветряк">🌀 Ветряк</button>
+  <button class="btn" data-tool="fence" title="Забор">║ Забор</button>
+  <button class="btn" data-tool="tree" title="Дерево">🌲 Дерево</button>
+  <button class="btn" data-tool="delete" title="Удалить">✕ Удалить</button>
+  <button class="btn tgl" id="btnTransparent" title="Прозрачные тоннели">👁 Прозрачность</button>
+  <button class="btn tgl" id="btnCamFollow" title="Камера следит за поездом">🎥 Камера</button>
+  <button class="btn tgl" id="btnColors" title="Цвета поездов">🎨 Цвета</button>
+  <button class="btn go" id="btnGo" title="Запустить поезд">▶ Пуск</button>
+  <button class="btn" id="btnTrain2" title="Запустить второй поезд" style="background:rgba(150,30,0,.7);border-color:#e57373">🚂 Поезд 2</button>
+  <button class="btn stop" id="btnStop" title="Остановить">⏹ Стоп</button>
+  <span style="color:#fff;font-size:11px;opacity:.5;margin-left:4px">│</span>
+  <button class="btn len" data-len="3" title="Короткая секция">▮</button>
+  <button class="btn len active" data-len="4" title="Средняя секция">▮▮</button>
+  <button class="btn len" data-len="6" title="Длинная секция">▮▮▮</button>
+  <button class="btn len" data-len="8" title="Очень длинная">▮▮▮▮</button>
+</div>
+
+<div id="speedbar">Скорость: <input type="range" id="speedSlider" min="1" max="10" value="4"> <span id="speedVal">x4</span></div>
+<div id="levelbar">Уровень: <button class="btn" id="levelUp" style="padding:4px 8px">▲</button> <span id="levelVal" style="color:#4fc3f7;font-size:16px;font-weight:bold">0</span> <button class="btn" id="levelDown" style="padding:4px 8px">▼</button></div>
+  <div id="rotbar">Поворот: 0° (R / Shift+колёсико)</div>
+<div id="presetbar">Треки: 
+  <button class="btn preset" data-preset="0">1 Кольцо</button>
+  <button class="btn preset" data-preset="1">2 Овал</button>
+  <button class="btn preset" data-preset="2">3 Светофоры</button>
+  <button class="btn preset" data-preset="3">4 Мост</button>
+  <button class="btn preset" data-preset="4">5 Станция</button>
+  <button class="btn preset" data-preset="5">6 Гараж</button>
+  <button class="btn preset" data-preset="6">7 Башня</button>
+  <button class="btn preset" data-preset="7">8 Мегаполис</button>
+  <span style="color:#fff;font-size:11px;opacity:.3;margin:0 4px">│</span>
+  <button class="btn" id="btnChamp" style="background:rgba(100,60,0,.8);border-color:#daa520;color:#ffd54f">🏆 Чемпионат</button>
+</div>
+
+<div id="info">
+  <b>Паравозики 3D</b><br>
+  ЛКМ — поставить рельсу<br>
+  ПКМ — настроить / светофор<br>
+  <b>R</b> — повернуть рельсу<br>
+  Колёсико — zoom<br>
+  Средняя — вращение<br>
+  <b>D</b> — debug путь<br><br>
+  Собирай <b>замкнутый маршрут</b>!<br>
+  <b>✚</b> — пересечение (ПКМ: светофор)<br>
+  <b>🏗</b> — путепровод (эстакада)<br>
+  <b>▲▼</b> — уровень постройки<br><br>
+  <b>Очки:</b> +100 за круг<br>
+  бонус ×серия. -50 за аварию
+</div>
+
+<div id="alert"></div>
+<div id="win">🏁 МАРШРУТ ГОТОВ!<br><span id="winScore"></span></div>
+<div id="champResults" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:25;background:rgba(0,0,0,.92);color:#fff;padding:30px 40px;border-radius:15px;text-align:center;display:none;max-width:420px;font-size:14px;line-height:1.8;border:2px solid #daa520">
+  <h2 style="color:#ffd54f;margin:0 0 12px;font-size:22px">🏆 Чемпионат завершён!</h2>
+  <div id="champDetails"></div>
+  <button class="btn" onclick="document.getElementById('champResults').style.display='none'" style="margin-top:15px;background:rgba(80,80,0,.8);border-color:#daa520">Закрыть</button>
+</div>
+<div id="colorPanel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:25;background:rgba(0,0,0,.92);color:#fff;padding:24px 30px;border-radius:15px;border:2px solid #666;min-width:280px">
+  <h3 style="color:#ffd54f;margin:0 0 16px;text-align:center">🎨 Цвета поездов</h3>
+  <div style="display:flex;gap:24px">
+    <div style="flex:1">
+      <div style="color:#4fc3f7;font-weight:bold;margin-bottom:8px">🚂 Поезд 1</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+        Локомотив <input type="color" id="c1Loco" value="#2244cc" style="width:36px;height:24px;border:none;cursor:pointer">
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+        Вагон 1 <input type="color" id="c1W1" value="#cc3333" style="width:36px;height:24px;border:none;cursor:pointer">
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+        Вагон 2 <input type="color" id="c1W2" value="#33aa33" style="width:36px;height:24px;border:none;cursor:pointer">
+      </label>
+    </div>
+    <div style="flex:1">
+      <div style="color:#e57373;font-weight:bold;margin-bottom:8px">🚂 Поезд 2</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+        Локомотив <input type="color" id="c2Loco" value="#cc2222" style="width:36px;height:24px;border:none;cursor:pointer">
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+        Вагон 1 <input type="color" id="c2W1" value="#2288cc" style="width:36px;height:24px;border:none;cursor:pointer">
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+        Вагон 2 <input type="color" id="c2W2" value="#ccaa22" style="width:36px;height:24px;border:none;cursor:pointer">
+      </label>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:16px">
+    <button class="btn" onclick="document.getElementById('colorPanel').style.display='none'" style="background:rgba(80,80,80,.8)">Закрыть</button>
+  </div>
+</div>
+<canvas id="minimap" width="140" height="140"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const GRID = 4;
+const HALF = GRID / 2;
+const DIRS = [
+  {dx: GRID, dz: 0, label: '→', angle: 0},
+  {dx: 0, dz: GRID, label: '↓', angle: Math.PI/2},
+  {dx: -GRID, dz: 0, label: '←', angle: Math.PI},
+  {dx: 0, dz: -GRID, label: '↑', angle: -Math.PI/2}
+];
+const DIR_ANGLES = [0, Math.PI/2, Math.PI, -Math.PI/2];
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+scene.fog = new THREE.FogExp2(0x87CEEB, 0.005);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
+camera.position.set(30, 35, 30);
+
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0x6688aa, 0.5));
+const sunLight = new THREE.DirectionalLight(0xffffcc, 1.2);
+sunLight.position.set(50, 70, 40);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+const sc = sunLight.shadow.camera;
+sc.near = 1; sc.far = 250; sc.left = -100; sc.right = 100; sc.top = 100; sc.bottom = -100;
+scene.add(sunLight);
+scene.add(new THREE.HemisphereLight(0x88bbff, 0x445522, 0.4));
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(250, 250),
+  new THREE.MeshStandardMaterial({color: 0x4a7c3f, roughness: 0.9})
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.1;
+ground.receiveShadow = true;
+scene.add(ground);
+
+for (let i = 0; i < 400; i++) {
+  const s = 0.08 + Math.random() * 0.2;
+  const blade = new THREE.Mesh(
+    new THREE.ConeGeometry(s * 0.3, s * 1.5, 4),
+    new THREE.MeshStandardMaterial({color: new THREE.Color().setHSL(0.25 + Math.random() * 0.12, 0.6, 0.25 + Math.random() * 0.15)})
+  );
+  blade.position.set((Math.random() - 0.5) * 180, s * 0.7, (Math.random() - 0.5) * 180);
+  scene.add(blade);
+}
+
+function makeTreeGeo() {
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.2, 1.5, 6),
+    new THREE.MeshStandardMaterial({color: 0x8B4513, roughness: 0.9})
+  );
+  trunk.position.y = 0.75;
+  trunk.castShadow = true;
+  g.add(trunk);
+  const fMat = new THREE.MeshStandardMaterial({color: 0x228B22, roughness: 0.8});
+  const t = Math.floor(Math.random() * 3);
+  if (t === 0) {
+    [{r:1.0,h:1.2,y:2},{r:0.7,h:1,y:2.8},{r:0.4,h:0.8,y:3.4}].forEach(l => {
+      const f = new THREE.Mesh(new THREE.ConeGeometry(l.r, l.h, 8), fMat);
+      f.position.y = l.y; f.castShadow = true; g.add(f);
+    });
+  } else if (t === 1) {
+    const f = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshStandardMaterial({color: 0x33aa33, roughness: 0.8}));
+    f.position.y = 2.5; f.castShadow = true; g.add(f);
+  } else {
+    const f = new THREE.Mesh(new THREE.DodecahedronGeometry(0.9), new THREE.MeshStandardMaterial({color: 0x44bb44, roughness: 0.7}));
+    f.position.y = 2.4; f.castShadow = true; g.add(f);
+  }
+  g.userData.type = 'tree';
+  return g;
+}
+
+const decorTrees = new THREE.Group();
+for (let i = 0; i < 50; i++) {
+  const t = makeTreeGeo();
+  const s = 0.7 + Math.random() * 0.8;
+  t.scale.set(s, s, s);
+  t.position.set((Math.random() - 0.5) * 140, 0, (Math.random() - 0.5) * 140);
+  decorTrees.add(t);
+}
+scene.add(decorTrees);
+
+const gridHelper = new THREE.GridHelper(120, 30, 0xffffff, 0xaaaaaa);
+gridHelper.material.opacity = 0.35;
+gridHelper.material.transparent = true;
+gridHelper.material.depthWrite = false;
+gridHelper.position.y = 0.05;
+gridHelper.renderOrder = 1;
+scene.add(gridHelper);
+
+const cells = {};
+let tool = 'straight';
+let currentRotation = 0; // 0,1,2,3 = 0°,90°,180°,270°
+let transparentMode = false;
+let trainRunning = false;
+let trainDist = 0;
+let trainPath = [];
+let pathMetrics = null;
+let totalDist = 0;
+let lapDist = 0;
+let score = 0;
+let accidents = 0;
+let comboSafe = 0;
+let startTime = null;
+let elapsed = 0;
+let trainGroup = null;
+let trainSpeed = 4;
+let smokeParticles = [];
+let windmills = [];
+let trackLen = 4;
+let currentLevel = 0;
+let trainLevel = 0;
+let championshipMode = false;
+let championshipIndex = 0;
+let champScores = [];
+let champTimes = [];
+let champTrackStart = 0;
+let champTrackScore = 0;
+let presetTimer = null;
+let train1Colors = { loco: '#2244cc', w1: '#cc3333', w2: '#33aa33' };
+let train2Colors = { loco: '#cc2222', w1: '#2288cc', w2: '#ccaa22' };
+const TRAIN_SCALE_INV = 1 / 0.75;
+let debugPathDots = null;
+let showDebugPath = false;
+let train2Group = null;
+let train2Dist = 0;
+let train2Running = false;
+let train2SmokeParticles = [];
+let train2SmokeIdx = 0;
+let lastSignalKey1 = '';
+let lastSignalKey2 = '';
+let collisionStop1 = false;
+let collisionStop2 = false;
+
+const TW = 2.2;
+const TH = 0.7;
+const RAIL_SPREAD = 0.55;
+
+// ── Audio ──
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    const t = audioCtx.currentTime;
+    const defs = {
+      place:     ['sine',    [440,t,660,t+0.1], [0.15,t,0.001,t+0.15], 0.15],
+      delete:    ['sawtooth',[300,t,100,t+0.2],  [0.12,t,0.001,t+0.25], 0.25],
+      whistle:   ['sine',    [800,t,1000,t+0.15,800,t+0.3], [0.18,t,0.001,t+0.5], 0.5],
+      accident:  ['sawtooth',[200,t,50,t+0.5],   [0.25,t,0.001,t+0.5],  0.5],
+      chug:      ['triangle',[80+Math.random()*30,t], [0.04,t,0.001,t+0.08], 0.08],
+      bonus:     ['sine',    [523,t,659,t+0.1,784,t+0.2], [0.15,t,0.001,t+0.4], 0.4],
+      switchSnd: ['square',  [1200,t], [0.08,t,0.001,t+0.05], 0.05]
+    };
+    const d = defs[type]; if (!d) return;
+    o.type = d[0];
+    for (let i = 1; i < d[1].length; i += 2) o.frequency.setValueAtTime(d[1][i-1], d[1][i]);
+    for (let i = 1; i < d[2].length; i += 2) g.gain.setValueAtTime(d[2][i-1], d[2][i]);
+    o.start(t); o.stop(t + d[3]);
+  } catch(e) {}
+}
+
+function playSwitch() { playSound('switchSnd'); }
+
+function keyFn(x, z, level) { return x + ',' + z + ',' + (level !== undefined ? level : currentLevel); }
+
+// ── Rotation-aware connection logic ──
+// Each piece type has a base connection pattern (at rotation=0).
+// rotation 0 = no turn, 1 = +90°, 2 = +180°, 3 = +270°
+// We rotate the direction indices: dir becomes (dir + rotation) % 4
+
+function getBaseConnections(type, switchState) {
+  switch (type) {
+    case 'straight': return [0, 2];
+    case 'curve': return [0, 1];
+    case 'tunnel': return [0, 2];
+    case 'bridge': return [0, 2];
+    case 'signal': return [0, 2];
+    case 'switch': return switchState === 0 ? [0, 1, 3] : [0, 2, 3];
+    case 'cross': return [0, 1, 2, 3];
+    case 'overpass': return [0, 2];
+    case 'station': return [0, 2];
+    default: return [0, 1, 2, 3];
+  }
+}
+
+function getRotatedConnections(cell) {
+  const base = getBaseConnections(cell.userData.type, cell.userData.switchState || 0);
+  const rot = cell.userData.rot || 0;
+  return base.map(d => (d + rot) % 4);
+}
+
+// ── Piece builders ──
+const TRACK_COL = 0x666666;
+const RAIL_COL = 0x888888;
+const TIE_COL = 0x553311;
+const BALLAST = 0x8B7355;
+const trackArrowMat = new THREE.MeshBasicMaterial({color: 0x00ff88, transparent: true, opacity: 0.5});
+
+function addArrows(g, type, rot) {
+  const conns = getBaseConnections(type, 0);
+  conns.forEach(d => {
+    const ad = (d + (rot || 0)) % 4;
+    const dx = DIRS[ad].dx, dz = DIRS[ad].dz;
+    const signX = dx > 0 ? 1 : dx < 0 ? -1 : 0;
+    const signZ = dz > 0 ? 1 : dz < 0 ? -1 : 0;
+    const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.5, 4), trackArrowMat);
+    arrow.position.set(signX * HALF * 0.5, TH + 0.15, signZ * HALF * 0.5);
+    arrow.rotation.z = -Math.PI / 2;
+    arrow.rotation.y = DIRS[ad].angle;
+    g.add(arrow);
+  });
+}
+
+function makeStraightGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7, roughness: 0.3});
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, TH + 0.06, dz);
+    g.add(r);
+  }
+  const tieMat = new THREE.MeshStandardMaterial({color: TIE_COL, roughness: 0.9});
+  for (let tx = -L / 2 + 0.3; tx <= L / 2 - 0.3; tx += 0.55) {
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, TW - 0.2), tieMat);
+    tie.position.set(tx, TH + 0.01, 0);
+    g.add(tie);
+  }
+  g.userData.type = 'straight';
+  addArrows(g, 'straight', 0);
+  return g;
+}
+
+function makeCurveGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L, TH, L),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const curveMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7, roughness: 0.3});
+  const y = TH + 0.06;
+  // Quadratic Bezier: correct endpoints + ~constant gauge
+  const rails = [
+    {p0: [HALF, -RAIL_SPREAD], p1: [-RAIL_SPREAD, -RAIL_SPREAD], p2: [-RAIL_SPREAD, HALF]},
+    {p0: [HALF, RAIL_SPREAD], p1: [RAIL_SPREAD, RAIL_SPREAD], p2: [RAIL_SPREAD, HALF]}
+  ];
+  for (const {p0, p1, p2} of rails) {
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(p0[0], y, p0[1]),
+      new THREE.Vector3(p1[0], y, p1[1]),
+      new THREE.Vector3(p2[0], y, p2[1])
+    );
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.04, 4, false), curveMat));
+  }
+
+  const tieMat = new THREE.MeshStandardMaterial({color: TIE_COL, roughness: 0.9});
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    const tx = HALF * (1 - t) * (1 - t);
+    const tz = HALF * t * t;
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, TW - 0.2), tieMat);
+    tie.position.set(tx, y, tz);
+    tie.rotation.y = Math.atan2(t, 1 - t);
+    g.add(tie);
+  }
+  g.userData.type = 'curve';
+  addArrows(g, 'curve', 0);
+  return g;
+}
+
+function makeTunnelGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: 0x555555, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true;
+  g.add(base);
+
+  const tMat = transparentMode
+    ? new THREE.MeshStandardMaterial({color: 0x999999, transparent: true, opacity: 0.15, side: THREE.DoubleSide})
+    : new THREE.MeshStandardMaterial({color: 0x666666, roughness: 0.5, metalness: 0.1});
+  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(TW * 0.6, TW * 0.6, L + 0.1, 16, 1, true), tMat);
+  tunnel.rotation.z = Math.PI / 2;
+  tunnel.position.y = GRID / 2;
+  tunnel.userData.isTunnelWall = true;
+  g.add(tunnel);
+
+  for (const side of [-1, 1]) {
+    const arch = new THREE.Mesh(
+      new THREE.TorusGeometry(TW * 0.6, 0.1, 6, 12, Math.PI),
+      new THREE.MeshStandardMaterial({color: 0x444444})
+    );
+    arch.position.set(side * (L / 2), GRID / 2, 0);
+    arch.rotation.y = Math.PI / 2;
+    g.add(arch);
+  }
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7});
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, TH + 0.06, dz);
+    g.add(r);
+  }
+  g.userData.type = 'tunnel';
+  addArrows(g, 'tunnel', 0);
+  return g;
+}
+
+function makeBridgeGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const pMat = new THREE.MeshStandardMaterial({color: 0x888888, roughness: 0.5, metalness: 0.3});
+  for (const dx of [-L / 2 + 0.4, L / 2 - 0.4]) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.4, GRID * 1.5, 0.4), pMat);
+    p.position.set(dx, GRID * 0.75, 0);
+    p.castShadow = true; g.add(p);
+  }
+
+  const deck = new THREE.Mesh(
+    new THREE.BoxGeometry(L + 0.3, 0.2, TW + 0.4),
+    new THREE.MeshStandardMaterial({color: 0x8B7355, roughness: 0.7})
+  );
+  deck.position.y = GRID * 0.6; deck.castShadow = true; g.add(deck);
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7});
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, GRID * 0.6 + 0.16, dz);
+    g.add(r);
+  }
+  g.userData.type = 'bridge';
+  addArrows(g, 'bridge', 0);
+  return g;
+}
+
+function makeSignalGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const SX = TW / 2 + 0.3;
+  const headGroup = new THREE.Group();
+  headGroup.rotation.y = -Math.PI / 2;
+
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.08, 3.2, 8),
+    new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.5})
+  );
+  pole.position.set(0, 1.6 + TH, SX);
+  headGroup.add(pole);
+
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.9, 0.3),
+    new THREE.MeshStandardMaterial({color: 0x1a1a1a})
+  );
+  box.position.set(0, 3.2 + TH, SX);
+  headGroup.add(box);
+
+  const cap = new THREE.Mesh(
+    new THREE.ConeGeometry(0.22, 0.15, 4),
+    new THREE.MeshStandardMaterial({color: 0x111111})
+  );
+  cap.position.set(0, 3.72 + TH, SX);
+  headGroup.add(cap);
+
+  const cols = [0x00ff00, 0xffaa00, 0xff0000];
+  const ys = [3.55 + TH, 3.2 + TH, 2.85 + TH];
+  const lights = [];
+  cols.forEach((c, i) => {
+    const l = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 10, 10),
+      new THREE.MeshStandardMaterial({color: i === 0 ? c : 0x222222, emissive: i === 0 ? c : 0x000000, emissiveIntensity: i === 0 ? 1.5 : 0})
+    );
+    l.position.set(0, ys[i], SX + 0.16);
+    lights.push(l); headGroup.add(l);
+  });
+
+  g.add(headGroup);
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7});
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, TH + 0.06, dz);
+    g.add(r);
+  }
+
+  g.userData.type = 'signal';
+  g.userData.signalState = 'green';
+  g.userData.lights = lights;
+  addArrows(g, 'signal', 0);
+  return g;
+}
+
+function makeSwitchGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const plate = new THREE.Mesh(
+    new THREE.BoxGeometry(L * 0.6, 0.15, TW - 0.3),
+    new THREE.MeshStandardMaterial({color: 0x8B6914, roughness: 0.7})
+  );
+  plate.position.set(0, TH + 0.08, 0);
+  g.add(plate);
+
+  const lever = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.06, 1.5, 8),
+    new THREE.MeshStandardMaterial({color: 0xcc0000, metalness: 0.4})
+  );
+  lever.position.set(0, TH + 0.8, TW / 2 + 0.2);
+  g.add(lever);
+
+  const knob = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 8, 8),
+    new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.3})
+  );
+  knob.position.set(0, TH + 1.6, TW / 2 + 0.2);
+  g.add(knob);
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7});
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, TH + 0.06, dz);
+    g.add(r);
+  }
+
+  g.userData.type = 'switch';
+  g.userData.switchState = 0;
+  g.userData.lever = lever;
+  addArrows(g, 'switch', 0);
+  return g;
+}
+
+function makeStationGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const ST_OFF = -(TW / 2 + 0.5);
+
+  const platform = new THREE.Mesh(
+    new THREE.BoxGeometry(L * 0.8, 0.25, TW + 0.8),
+    new THREE.MeshStandardMaterial({color: 0xBB9966, roughness: 0.6})
+  );
+  platform.position.set(0, TH + 0.13, ST_OFF);
+  g.add(platform);
+
+  const edgeMat = new THREE.MeshStandardMaterial({color: 0xEECC88, roughness: 0.5});
+  const edgeH = 0.18;
+  const edgeW = 0.12;
+  const pW = L * 0.8, pD = TW + 0.8;
+  const frontEdge = new THREE.Mesh(new THREE.BoxGeometry(pW, edgeH, edgeW), edgeMat);
+  frontEdge.position.set(0, TH + 0.25 + edgeH / 2, ST_OFF + pD / 2 - edgeW / 2);
+  g.add(frontEdge);
+  const backEdge = new THREE.Mesh(new THREE.BoxGeometry(pW, edgeH, edgeW), edgeMat);
+  backEdge.position.set(0, TH + 0.25 + edgeH / 2, ST_OFF - pD / 2 + edgeW / 2);
+  g.add(backEdge);
+  const leftEdge = new THREE.Mesh(new THREE.BoxGeometry(edgeW, edgeH, pD - 2 * edgeW), edgeMat);
+  leftEdge.position.set(-pW / 2 + edgeW / 2, TH + 0.25 + edgeH / 2, ST_OFF);
+  g.add(leftEdge);
+  const rightEdge = new THREE.Mesh(new THREE.BoxGeometry(edgeW, edgeH, pD - 2 * edgeW), edgeMat);
+  rightEdge.position.set(pW / 2 - edgeW / 2, TH + 0.25 + edgeH / 2, ST_OFF);
+  g.add(rightEdge);
+
+  const yellowMat = new THREE.MeshStandardMaterial({color: 0xffdd00, emissive: 0x886600, emissiveIntensity: 0.2});
+  const yellowStrip = new THREE.Mesh(new THREE.BoxGeometry(pW + 0.04, 0.04, 0.15), yellowMat);
+  yellowStrip.position.set(0, TH + 0.26, ST_OFF + pD / 2 - edgeW - 0.08);
+  g.add(yellowStrip);
+
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(L * 0.5, 0.08, TW + 0.6),
+    new THREE.MeshStandardMaterial({color: 0xcc3333, roughness: 0.5})
+  );
+  roof.position.set(0, TH + 2.2, ST_OFF);
+  g.add(roof);
+
+  for (const dx of [-L * 0.2, L * 0.2]) {
+    const col = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 2.0, 6),
+      new THREE.MeshStandardMaterial({color: 0x555555})
+    );
+    col.position.set(dx, TH + 1.1, ST_OFF);
+    g.add(col);
+  }
+
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.25, 0.04),
+    new THREE.MeshStandardMaterial({color: 0xffffff})
+  );
+  sign.position.set(0, TH + 1.6, ST_OFF + 0.35);
+  g.add(sign);
+
+  const bench = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.3, 0.25),
+    new THREE.MeshStandardMaterial({color: 0x8B5A2B, roughness: 0.8})
+  );
+  bench.position.set(-L * 0.15, TH + 0.25 + 0.15, ST_OFF);
+  g.add(bench);
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7});
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, TH + 0.06, dz);
+    g.add(r);
+  }
+
+  g.userData.type = 'station';
+  addArrows(g, 'station', 0);
+  return g;
+}
+
+function makeHouseGeo() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.8, 2.0), new THREE.MeshStandardMaterial({color: 0xDEB887, roughness: 0.8}));
+  body.position.set(0, 0.9, 0); g.add(body);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.7, 1.2, 4), new THREE.MeshStandardMaterial({color: 0xaa3333, roughness: 0.6}));
+  roof.position.set(0, 2.4, 0); roof.rotation.y = Math.PI / 4; roof.castShadow = true; g.add(roof);
+  const wMat = new THREE.MeshStandardMaterial({color: 0x88ccff, emissive: 0x446688, emissiveIntensity: 0.3});
+  for (const dx of [-0.5, 0.5]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.05), wMat); w.position.set(dx, 1.2, 1.01); g.add(w); }
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.05), new THREE.MeshStandardMaterial({color: 0x553311}));
+  door.position.set(0, 0.35, 1.01); g.add(door);
+  g.userData.type = 'house';
+  return g;
+}
+
+function makeWindmillGeo() {
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.6, 3.5, 6), new THREE.MeshStandardMaterial({color: 0xccbb99}));
+  base.position.set(0, 1.75, 0); g.add(base);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.6, 6), new THREE.MeshStandardMaterial({color: 0x666666}));
+  cap.position.set(0, 3.8, 0); g.add(cap);
+
+  const blades = new THREE.Group();
+  blades.position.set(0, 3.5, 0.45);
+  const bMat = new THREE.MeshStandardMaterial({color: 0xdddddd, side: THREE.DoubleSide});
+  for (let i = 0; i < 4; i++) {
+    const arm = new THREE.Group();
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.2, 0.05), bMat);
+    blade.position.set(0, 1.1, 0); arm.add(blade);
+    arm.rotation.z = (Math.PI / 2) * i;
+    blades.add(arm);
+  }
+  g.add(blades);
+  g.userData.type = 'windmill';
+  g.userData.blades = blades;
+  windmills.push(g);
+  return g;
+}
+
+function makeFenceGeo() {
+  const g = new THREE.Group();
+  const fMat = new THREE.MeshStandardMaterial({color: 0x8B7355, roughness: 0.9});
+  for (let dx = -HALF + 0.5; dx <= HALF - 0.5; dx += 1.0) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.2, 0.15), fMat);
+    post.position.set(dx, 0.6, 0); g.add(post);
+  }
+  for (const dy of [0.3, 0.8]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(GRID, 0.1, 0.08), fMat); rail.position.set(0, dy, 0); g.add(rail); }
+  g.userData.type = 'fence';
+  return g;
+}
+
+function makeCrossGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L, TH, L),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7, roughness: 0.3});
+  const y = TH + 0.06;
+
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, y, dz);
+    g.add(r);
+  }
+  for (const dx of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, L + 0.4), railMat);
+    r.position.set(dx, y, 0);
+    g.add(r);
+  }
+
+  const tieMat = new THREE.MeshStandardMaterial({color: TIE_COL, roughness: 0.9});
+  for (let tx = -L / 2 + 0.3; tx <= L / 2 - 0.3; tx += 0.55) {
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, TW - 0.2), tieMat);
+    tie.position.set(tx, TH + 0.01, 0);
+    g.add(tie);
+  }
+  for (let tz = -L / 2 + 0.3; tz <= L / 2 - 0.3; tz += 0.55) {
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(TW - 0.2, 0.08, 0.15), tieMat);
+    tie.position.set(0, TH + 0.01, tz);
+    g.add(tie);
+  }
+
+  const SOff = L / 2 - 0.2;
+  const signals = [];
+  for (const [sx, sz] of [[SOff, SOff], [-SOff, SOff], [SOff, -SOff], [-SOff, -SOff]]) {
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.06, 2.2, 6),
+      new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.5})
+    );
+    pole.position.set(sx, 1.1 + TH, sz);
+    g.add(pole);
+    const light = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 8, 8),
+      new THREE.MeshStandardMaterial({color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 1.5})
+    );
+    light.position.set(sx, 2.3 + TH, sz);
+    signals.push(light);
+    g.add(light);
+  }
+
+  g.userData.type = 'cross';
+  g.userData.lights = signals;
+  g.userData.signalState = 'green';
+  addArrows(g, 'cross', 0);
+  return g;
+}
+
+function makeOverpassGeo() {
+  const g = new THREE.Group();
+  const L = trackLen;
+
+  const pMat = new THREE.MeshStandardMaterial({color: 0x999999, roughness: 0.5, metalness: 0.2});
+  for (const dx of [-L / 2 + 0.5, L / 2 - 0.5]) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, GRID * 0.6 + TH, 0.5), pMat);
+    p.position.set(dx, (GRID * 0.6 + TH) / 2, 0);
+    p.castShadow = true; g.add(p);
+  }
+
+  const deck = new THREE.Mesh(
+    new THREE.BoxGeometry(L + 0.4, 0.25, TW + 0.5),
+    new THREE.MeshStandardMaterial({color: 0x8B7355, roughness: 0.7})
+  );
+  deck.position.y = GRID * 0.6 + TH / 2;
+  deck.castShadow = true; g.add(deck);
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3})
+  );
+  base.position.y = GRID * 0.6 + TH / 2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const railMat = new THREE.MeshStandardMaterial({color: RAIL_COL, metalness: 0.7});
+  for (const dz of [-RAIL_SPREAD, RAIL_SPREAD]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(L + 0.4, 0.12, 0.08), railMat);
+    r.position.set(0, GRID * 0.6 + TH + 0.12, dz);
+    g.add(r);
+  }
+
+  const groundBase = new THREE.Mesh(
+    new THREE.BoxGeometry(L - 0.1, TH, TW),
+    new THREE.MeshStandardMaterial({color: TRACK_COL, roughness: 0.6, metalness: 0.3, transparent: true, opacity: 0.4})
+  );
+  groundBase.position.y = TH / 2;
+  g.add(groundBase);
+
+  g.userData.type = 'overpass';
+  addArrows(g, 'overpass', 0);
+  return g;
+}
+
+const makers = {
+  straight: makeStraightGeo, curve: makeCurveGeo, tunnel: makeTunnelGeo,
+  bridge: makeBridgeGeo, signal: makeSignalGeo, switch: makeSwitchGeo,
+  cross: makeCrossGeo, overpass: makeOverpassGeo,
+  station: makeStationGeo, house: makeHouseGeo, windmill: makeWindmillGeo,
+  fence: makeFenceGeo, tree: makeTreeGeo
+};
+function createPiece(type) { return (makers[type] || makers.straight)(); }
+
+// ── Presets ──
+const G = GRID;
+const presets = [
+  { name: 'Кольцо', data: [
+    [0,0,'curve',0],[G,0,'straight',0],[2*G,0,'curve',1],
+    [2*G,G,'straight',1],[2*G,2*G,'curve',2],
+    [G,2*G,'straight',0],[0,2*G,'curve',3],[0,G,'straight',1]
+  ]},
+  { name: 'Овал', data: [
+    [0,0,'curve',0],[G,0,'straight',0],[2*G,0,'straight',0],[3*G,0,'straight',0],
+    [4*G,0,'curve',1],[4*G,G,'straight',1],[4*G,2*G,'curve',2],
+    [3*G,2*G,'straight',0],[2*G,2*G,'straight',0],[G,2*G,'straight',0],
+    [0,2*G,'curve',3],[0,G,'straight',1]
+  ]},
+  { name: 'Светофоры', data: [
+    [0,0,'curve',0],[G,0,'signal',0],[2*G,0,'curve',1],
+    [2*G,G,'signal',1],[2*G,2*G,'curve',2],
+    [G,2*G,'signal',0],[0,2*G,'curve',3],[0,G,'signal',1]
+  ]},
+  { name: 'Мост и тоннель', data: [
+    [0,0,'curve',0],[G,0,'bridge',0],[2*G,0,'curve',1],
+    [2*G,G,'tunnel',1],[2*G,2*G,'curve',2],
+    [G,2*G,'bridge',0],[0,2*G,'curve',3],[0,G,'tunnel',1]
+  ]},
+  { name: 'Станция', data: [
+    [0,0,'curve',0],[G,0,'station',0],[2*G,0,'signal',0],[3*G,0,'straight',0],
+    [4*G,0,'curve',1],[4*G,G,'signal',1],[4*G,2*G,'curve',2],
+    [3*G,2*G,'station',0],[2*G,2*G,'signal',0],[G,2*G,'straight',0],
+    [0,2*G,'curve',3],[0,G,'signal',1]
+  ]},
+  { name: 'Гараж 3 этажа', data: [
+    [0,0,'curve',0,0],[G,0,'straight',0,0],[2*G,0,'curve',1,0],[2*G,G,'bridge',1,0],
+    [2*G,G,'straight',1,1],[2*G,2*G,'curve',2,1],[G,2*G,'straight',0,1],[0,2*G,'bridge',0,1],
+    [0,0,'tunnel',1,1],
+    [0,2*G,'curve',2,2],[0,G,'straight',1,2],[0,0,'tunnel',1,2]
+  ]},
+  { name: 'Спиральная Башня', data: [
+    [0,0,'curve',0,0],[G,0,'straight',0,0],[2*G,0,'straight',0,0],[3*G,0,'curve',1,0],
+    [3*G,G,'bridge',1,0],[3*G,2*G,'curve',2,0],[2*G,2*G,'straight',0,0],[G,2*G,'straight',0,0],
+    [0,2*G,'curve',3,0],[0,G,'straight',1,0],
+    [3*G,G,'straight',1,1],[3*G,2*G,'curve',2,1],[2*G,2*G,'straight',0,1],[G,2*G,'straight',0,1],
+    [0,2*G,'curve',3,1],[0,G,'straight',1,1],[0,0,'tunnel',1,1]
+  ]},
+  { name: 'Мегаполис 7 этажей', data: (() => {
+    const d = [];
+    for (let lv = 0; lv < 7; lv++) {
+      d.push([0, 0, lv > 0 ? 'tunnel' : 'curve', 0, lv]);
+      d.push([4, 0, lv === 0 ? 'station' : 'straight', 0, lv]);
+      d.push([8, 0, lv === 0 ? 'signal' : 'straight', 0, lv]);
+      d.push([12, 0, 'curve', 1, lv]);
+      d.push([12, 4, lv < 6 ? 'bridge' : 'straight', 1, lv]);
+      d.push([12, 8, 'curve', 2, lv]);
+      d.push([8, 8, lv === 6 ? 'signal' : 'straight', 0, lv]);
+      d.push([4, 8, lv === 6 ? 'station' : 'straight', 0, lv]);
+      d.push([0, 8, 'curve', 3, lv]);
+      d.push([0, 4, 'straight', 1, lv]);
+    }
+    for (let x = -4; x <= 16; x += 8) {
+      d.push([x, -4, 'tree', 0, 0]);
+      d.push([x, 12, 'tree', 0, 0]);
+    }
+    for (let z = 0; z <= 8; z += 8) {
+      d.push([-4, z, 'tree', 0, 0]);
+      d.push([16, z, 'tree', 0, 0]);
+    }
+    d.push([-4, -4, 'house', 0, 0]);
+    d.push([16, 12, 'house', 0, 0]);
+    d.push([-8, 4, 'windmill', 0, 0]);
+    d.push([20, 4, 'windmill', 0, 0]);
+    return d;
+  })()}
+];
+
+function loadPreset(idx) {
+  if (trainRunning) stopTrain();
+  Object.values(cells).forEach(c => scene.remove(c));
+  Object.keys(cells).forEach(k => delete cells[k]);
+  windmills = [];
+  currentLevel = 0;
+  updateLevelDisplay();
+  updateTrackCount();
+
+  const p = presets[idx];
+  p.data.forEach(([x, z, type, rot, level]) => {
+    const lv = level || 0;
+    const piece = createPiece(type);
+    piece.position.set(x, lv * GRID, z);
+    piece.rotation.y = -rot * Math.PI / 2;
+    piece.userData.rot = rot;
+    scene.add(piece);
+    cells[keyFn(x, z, lv)] = piece;
+  });
+  addRamps();
+  addSupportPillars();
+  updateTrackCount();
+  playSound('place');
+
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, maxLv = 0;
+  Object.keys(cells).forEach(k => {
+    const parts = k.split(',').map(Number);
+    minX = Math.min(minX, parts[0]); maxX = Math.max(maxX, parts[0]);
+    minZ = Math.min(minZ, parts[1]); maxZ = Math.max(maxZ, parts[1]);
+    maxLv = Math.max(maxLv, parts[2] || 0);
+  });
+  camTarget.set((minX + maxX) / 2, maxLv * GRID * 0.4, (minZ + maxZ) / 2);
+  const spanX = maxX - minX + GRID * 2;
+  const spanZ = maxZ - minZ + GRID * 2;
+  camDist = Math.max(15, Math.min(80, Math.max(spanX, spanZ) * 0.9));
+  camPitch = 0.7 + maxLv * 0.03;
+  updateCamera();
+
+  if (presetTimer) { clearTimeout(presetTimer); presetTimer = null; }
+  presetTimer = setTimeout(startTrain, 200);
+}
+
+const rampMeshes = [];
+function addRamps() {
+  rampMeshes.forEach(m => scene.remove(m));
+  rampMeshes.length = 0;
+  const visited = new Set();
+  Object.entries(cells).forEach(([k, c]) => {
+    const type = c.userData.type;
+    if (type !== 'bridge' && type !== 'tunnel' && type !== 'overpass') return;
+    const parts = k.split(',').map(Number);
+    const x = parts[0], z = parts[1], lv = parts[2] || 0;
+    const aboveK = keyFn(x, z, lv + 1);
+    const belowK = keyFn(x, z, lv - 1);
+    if (cells[aboveK] && !visited.has(k + '>up')) {
+      visited.add(k + '>up');
+      const rampH = GRID;
+      const rampL = GRID * 0.9;
+      const rampMat = new THREE.MeshStandardMaterial({color: 0x777777, roughness: 0.6, metalness: 0.2});
+      const rot = c.userData.rot || 0;
+      const ramp = new THREE.Mesh(new THREE.BoxGeometry(rampL, 0.25, TW * 0.6), rampMat);
+      ramp.position.set(x, lv * GRID + rampH / 2 + TH / 2, z);
+      ramp.rotation.x = -Math.atan2(rampH - TH, rampL);
+      const dir = DIRS[rot !== undefined ? (rot % 2 === 0 ? 0 : 1) : 0];
+      ramp.rotation.y = -rot * Math.PI / 2;
+      ramp.castShadow = true;
+      scene.add(ramp);
+      rampMeshes.push(ramp);
+      const pillarMat = new THREE.MeshStandardMaterial({color: 0x888888, roughness: 0.5});
+      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, rampH * 0.8, 0.3), pillarMat);
+      p1.position.set(x + dir.dx * 0.8, lv * GRID + rampH * 0.4, z + dir.dz * 0.8);
+      p1.castShadow = true; scene.add(p1); rampMeshes.push(p1);
+      const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, rampH * 0.5, 0.3), pillarMat);
+      p2.position.set(x - dir.dx * 0.8, lv * GRID + rampH * 0.25, z - dir.dz * 0.8);
+      p2.castShadow = true; scene.add(p2); rampMeshes.push(p2);
+    }
+  });
+}
+
+const pillarMeshes = [];
+function addSupportPillars() {
+  pillarMeshes.forEach(m => scene.remove(m));
+  pillarMeshes.length = 0;
+  const pillarMat = new THREE.MeshStandardMaterial({color: 0x999999, roughness: 0.5, metalness: 0.2});
+  Object.entries(cells).forEach(([k, c]) => {
+    const parts = k.split(',').map(Number);
+    const lv = parts[2] || 0;
+    if (lv < 1) return;
+    const type = c.userData.type;
+    if (['tree','house','windmill','fence'].includes(type)) return;
+    if (type === 'bridge' || type === 'overpass') return;
+    const x = parts[0], z = parts[1];
+    const pillarH = lv * GRID - TH;
+    if (pillarH <= 0) return;
+    for (const dx of [-HALF * 0.7, HALF * 0.7]) {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(0.25, pillarH, 0.25), pillarMat);
+      p.position.set(x + dx, pillarH / 2, z);
+      p.castShadow = true;
+      scene.add(p);
+      pillarMeshes.push(p);
+    }
+  });
+}
+
+document.querySelectorAll('[data-preset]').forEach(btn => {
+  btn.addEventListener('click', () => loadPreset(parseInt(btn.dataset.preset)));
+});
+
+// ── Hover marker ──
+const hoverMarker = new THREE.Mesh(
+  new THREE.BoxGeometry(trackLen, 0.15, TW),
+  new THREE.MeshBasicMaterial({color: 0xffff00, transparent: true, opacity: 0.35, wireframe: true})
+);
+hoverMarker.visible = false;
+scene.add(hoverMarker);
+
+// direction arrows on hover marker
+const arrowGroup = new THREE.Group();
+const arrowMat = new THREE.MeshBasicMaterial({color: 0x00ff88, transparent: true, opacity: 0.6});
+for (let i = 0; i < 4; i++) {
+  const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.6, 4), arrowMat);
+  arrow.position.set(DIRS[i].dx * 0.6 / GRID * HALF, 0.3, DIRS[i].dz * 0.6 / GRID * HALF);
+  arrow.rotation.z = -Math.PI / 2;
+  arrow.rotation.y = DIRS[i].angle;
+  arrowGroup.add(arrow);
+}
+hoverMarker.add(arrowGroup);
+
+// ── Camera ──
+let camAngle = Math.PI / 4;
+let camPitch = 0.8;
+let camDist = 35;
+let camTarget = new THREE.Vector3(0, 0, 0);
+let camFollow = false;
+
+function updateCamera() {
+  camera.position.x = camTarget.x + camDist * Math.sin(camAngle) * Math.cos(camPitch);
+  camera.position.y = camTarget.y + camDist * Math.sin(camPitch);
+  camera.position.z = camTarget.z + camDist * Math.cos(camAngle) * Math.cos(camPitch);
+  camera.lookAt(camTarget);
+}
+updateCamera();
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function getGridPos(e) {
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObject(ground);
+  if (hits.length > 0) {
+    const p = hits[0].point;
+    return {x: Math.round(p.x / GRID) * GRID, z: Math.round(p.z / GRID) * GRID};
+  }
+  return null;
+}
+
+// ── Input ──
+let camDragStart = null;
+let camDragBtn = -1;
+let rightDragging = false;
+let wasDragged = false;
+let hoveredCell = null;
+
+renderer.domElement.addEventListener('mousedown', e => {
+  if (e.button === 1 || e.button === 2 || (e.button === 0 && e.altKey)) {
+    camDragStart = {x: e.clientX, y: e.clientY};
+    camDragBtn = e.button;
+    rightDragging = (e.button === 2);
+    wasDragged = false;
+    e.preventDefault();
+  } else if (e.button === 0) {
+    wasDragged = false;
+  }
+});
+
+renderer.domElement.addEventListener('mousemove', e => {
+  if (camDragStart) {
+    wasDragged = true;
+    const dx = e.clientX - camDragStart.x;
+    const dy = e.clientY - camDragStart.y;
+    if (rightDragging) {
+      camAngle -= dx * 0.005;
+      camPitch = Math.max(0.1, Math.min(1.4, camPitch + dy * 0.005));
+    } else {
+      const right = new THREE.Vector3();
+      camera.getWorldDirection(right);
+      right.cross(new THREE.Vector3(0, 1, 0)).normalize();
+      camTarget.addScaledVector(right, -dx * 0.05);
+      camTarget.y += dy * 0.05;
+    }
+    updateCamera();
+    camDragStart = {x: e.clientX, y: e.clientY};
+    return;
+  }
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObject(ground);
+  if (hits.length > 0) {
+    const p = hits[0].point;
+    const gx = Math.round(p.x / GRID) * GRID;
+    const gz = Math.round(p.z / GRID) * GRID;
+    hoverMarker.position.set(gx, currentLevel * GRID + 0.08, gz);
+    hoverMarker.visible = true;
+    hoverMarker.rotation.y = -currentRotation * Math.PI / 2;
+    hoveredCell = {x: gx, z: gz};
+  } else {
+    hoveredCell = null;
+  }
+});
+
+window.addEventListener('mouseup', () => { camDragStart = null; });
+
+renderer.domElement.addEventListener('wheel', e => {
+  if (e.shiftKey) {
+    currentRotation = (currentRotation + (e.deltaY > 0 ? 1 : 3)) % 4;
+    updateRotDisplay();
+    hoverMarker.rotation.y = -currentRotation * Math.PI / 2;
+    return;
+  }
+  camDist = Math.max(8, Math.min(120, camDist + e.deltaY * 0.05));
+  updateCamera();
+  e.preventDefault();
+}, {passive: false});
+
+renderer.domElement.addEventListener('click', e => {
+  if (wasDragged) { wasDragged = false; return; }
+  const pos = getGridPos(e);
+  if (!pos) return;
+  const k = keyFn(pos.x, pos.z);
+
+  if (chooseStartMode) {
+    chooseStartMode = false;
+    if (cells[k] && !['tree','house','windmill','fence'].includes(cells[k].userData.type)) {
+      startTrain({x: pos.x, z: pos.z});
+    } else {
+      showAlert('⚠ Кликните по рельсе!', '#ff9800', 1500);
+    }
+    return;
+  }
+
+  if (tool === 'delete') {
+    if (cells[k]) {
+      if (cells[k].userData.type === 'windmill') windmills = windmills.filter(w => w !== cells[k]);
+      scene.remove(cells[k]);
+      delete cells[k];
+      updateTrackCount();
+      playSound('delete');
+    }
+    return;
+  }
+
+  if (tool === 'switch' && cells[k] && cells[k].userData.type === 'switch') {
+    cells[k].userData.switchState = (cells[k].userData.switchState + 1) % 2;
+    cells[k].userData.lever.rotation.z = cells[k].userData.switchState === 0 ? 0 : Math.PI / 3;
+    playSwitch();
+    return;
+  }
+
+  if (cells[k] && cells[k].userData.type === 'signal') {
+    const c = cells[k];
+    const states = ['green', 'red', 'yellow'];
+    const si = (states.indexOf(c.userData.signalState) + 1) % 3;
+    c.userData.signalState = states[si];
+    const cols = [0x00ff00, 0xff0000, 0xffaa00];
+    c.userData.lights.forEach((l, i) => {
+      const active = states[si] === states[i];
+      l.material.color.setHex(active ? cols[i] : 0x222222);
+      l.material.emissive.setHex(active ? cols[i] : 0x000000);
+      l.material.emissiveIntensity = active ? 1.5 : 0;
+    });
+    playSwitch();
+    return;
+  }
+
+  if (cells[k]) return;
+
+  const piece = createPiece(tool);
+  piece.position.set(pos.x, currentLevel * GRID, pos.z);
+  piece.rotation.y = -currentRotation * Math.PI / 2;
+  piece.userData.rot = currentRotation;
+  scene.add(piece);
+  cells[k] = piece;
+  updateTrackCount();
+  playSound('place');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (chooseStartMode) { chooseStartMode = false; showAlert('🚫 Отмена', '#ff9800', 1000); return; }
+  }
+  if (e.key === 'd' || e.key === 'D') { toggleDebugPath(); return; }
+  if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
+    if (hoveredCell) {
+      const k = keyFn(hoveredCell.x, hoveredCell.z);
+      const cell = cells[k];
+      if (cell && ['straight','curve','tunnel','bridge','signal','switch','cross','overpass','station'].includes(cell.userData.type)) {
+        cell.userData.rot = ((cell.userData.rot || 0) + 1) % 4;
+        cell.rotation.y = -cell.userData.rot * Math.PI / 2;
+        playSound('switch');
+        return;
+      }
+    }
+    currentRotation = (currentRotation + 1) % 4;
+    updateRotDisplay();
+    hoverMarker.rotation.y = -currentRotation * Math.PI / 2;
+  }
+});
+
+function updateRotDisplay() {
+  document.getElementById('rotbar').textContent = 'Поворот: ' + (currentRotation * 90) + '° (R: повернуть кубик / R над пустым: выбрать угол)';
+}
+
+// ── Popup ──
+function spawnPopup(text, color) {
+  const el = document.createElement('div');
+  el.className = 'popup';
+  el.textContent = text;
+  el.style.color = color || '#ffd54f';
+  el.style.left = innerWidth / 2 - 40 + 'px';
+  el.style.top = innerHeight / 2 + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+
+// ── Place / Delete ──
+renderer.domElement.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const pos = getGridPos(e);
+  if (!pos) return;
+  const k = keyFn(pos.x, pos.z);
+  if (!cells[k]) return;
+  const c = cells[k];
+
+  if (c.userData.type === 'switch') {
+    c.userData.switchState = (c.userData.switchState + 1) % 2;
+    c.userData.lever.rotation.z = c.userData.switchState === 0 ? 0 : Math.PI / 3;
+    playSwitch();
+    return;
+  }
+  if (c.userData.type === 'signal') {
+    const states = ['green', 'red', 'yellow'];
+    const si = (states.indexOf(c.userData.signalState) + 1) % 3;
+    c.userData.signalState = states[si];
+    const cols = [0x00ff00, 0xff0000, 0xffaa00];
+    c.userData.lights.forEach((l, i) => {
+      const active = states[si] === states[i];
+      l.material.color.setHex(active ? cols[i] : 0x222222);
+      l.material.emissive.setHex(active ? cols[i] : 0x000000);
+      l.material.emissiveIntensity = active ? 1.5 : 0;
+    });
+    playSwitch();
+    return;
+  }
+  if (c.userData.type === 'cross') {
+    const states = ['green', 'red'];
+    const si = (states.indexOf(c.userData.signalState) + 1) % states.length;
+    c.userData.signalState = states[si];
+    const col = states[si] === 'green' ? 0x00ff00 : 0xff0000;
+    c.userData.lights.forEach(l => {
+      l.material.color.setHex(col);
+      l.material.emissive.setHex(col);
+      l.material.emissiveIntensity = 1.5;
+    });
+    playSwitch();
+    return;
+  }
+});
+
+document.querySelectorAll('[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tool = btn.dataset.tool;
+    updateHoverShape();
+  });
+});
+
+document.querySelectorAll('[data-len]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-len]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    trackLen = parseInt(btn.dataset.len);
+    updateHoverShape();
+  });
+});
+
+function updateHoverShape() {
+  hoverMarker.geometry.dispose();
+  const isSquare = tool === 'curve' || tool === 'cross';
+  const w = isSquare ? trackLen : trackLen;
+  const d = isSquare ? trackLen : TW;
+  hoverMarker.geometry = new THREE.BoxGeometry(w, 0.15, d);
+}
+
+document.getElementById('btnTransparent').addEventListener('click', () => {
+  transparentMode = !transparentMode;
+  document.getElementById('btnTransparent').classList.toggle('active', transparentMode);
+  Object.values(cells).forEach(c => {
+    c.traverse(child => {
+      if (child.userData && child.userData.isTunnelWall) {
+        child.material.transparent = transparentMode;
+        child.material.opacity = transparentMode ? 0.15 : 1.0;
+        child.material.side = transparentMode ? THREE.DoubleSide : THREE.FrontSide;
+        child.material.needsUpdate = true;
+      }
+    });
+  });
+});
+
+document.getElementById('btnCamFollow').addEventListener('click', () => {
+  camFollow = !camFollow;
+  document.getElementById('btnCamFollow').classList.toggle('active', camFollow);
+});
+
+document.getElementById('btnColors').addEventListener('click', () => {
+  const panel = document.getElementById('colorPanel');
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  document.getElementById('btnColors').classList.toggle('active', !visible);
+});
+
+['c1Loco','c1W1','c1W2','c2Loco','c2W1','c2W2'].forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    const v = e.target.value;
+    if (id === 'c1Loco') train1Colors.loco = v;
+    else if (id === 'c1W1') train1Colors.w1 = v;
+    else if (id === 'c1W2') train1Colors.w2 = v;
+    else if (id === 'c2Loco') train2Colors.loco = v;
+    else if (id === 'c2W1') train2Colors.w1 = v;
+    else if (id === 'c2W2') train2Colors.w2 = v;
+  });
+});
+
+document.getElementById('btnGo').addEventListener('click', () => {
+  if (presetTimer) { clearTimeout(presetTimer); presetTimer = null; }
+  if (trainRunning) stopTrain();
+  chooseStartMode = true;
+  showAlert('📍 Кликните по рельсе — место старта', '#4fc3f7', 4000);
+});
+document.getElementById('btnStop').addEventListener('click', () => {
+  stopTrain();
+  if (championshipMode) {
+    championshipMode = false;
+    showAlert('🏆 Чемпионат отменён', '#ff9800', 2000);
+  }
+});
+document.getElementById('btnTrain2').addEventListener('click', () => { startTrain2(); });
+
+const speedSlider = document.getElementById('speedSlider');
+speedSlider.addEventListener('input', () => {
+  trainSpeed = parseInt(speedSlider.value);
+  document.getElementById('speedVal').textContent = 'x' + trainSpeed;
+});
+
+// ── Level selector ──
+function updateLevelDisplay() {
+  document.getElementById('levelVal').textContent = currentLevel;
+  if (hoveredCell) {
+    hoverMarker.position.y = currentLevel * GRID + 0.08;
+  }
+}
+document.getElementById('levelUp').addEventListener('click', () => {
+  currentLevel = Math.min(currentLevel + 1, 5);
+  updateLevelDisplay();
+});
+document.getElementById('levelDown').addEventListener('click', () => {
+  currentLevel = Math.max(currentLevel - 1, 0);
+  updateLevelDisplay();
+});
+
+// ── Championship ──
+document.getElementById('btnChamp').addEventListener('click', () => {
+  if (championshipMode) {
+    championshipMode = false;
+    stopTrain();
+    showAlert('🏆 Чемпионат отменён', '#ff9800', 2000);
+    return;
+  }
+  championshipMode = true;
+  championshipIndex = 0;
+  champScores = [];
+  champTimes = [];
+  champTrackStart = Date.now();
+  champTrackScore = 0;
+  score = 0;
+  elapsed = 0;
+  startTime = Date.now();
+  updateScoreDisplay();
+  showAlert('🏆 Чемпионат! Этап 1/8', '#ffd54f', 2000);
+  loadPreset(0);
+});
+
+function showChampResults() {
+  const names = presets.map(p => p.name);
+  let html = '<table style="margin:0 auto;border-collapse:collapse">';
+  html += '<tr style="color:#ffd54f"><th>Трек</th><th>Очки</th><th>Время</th></tr>';
+  let totalScore = 0, totalTime = 0;
+  for (let i = 0; i < 8; i++) {
+    const s = champScores[i] || 0;
+    const t = champTimes[i] || 0;
+    totalScore += s;
+    totalTime += t;
+    const min = Math.floor(t / 60);
+    const sec = t % 60;
+    html += '<tr><td style="padding:4px 12px">' + names[i] + '</td><td style="color:#ffd54f;padding:4px 12px">★ ' + s + '</td><td style="color:#4fc3f7;padding:4px 12px">' + min + ':' + String(sec).padStart(2, '0') + '</td></tr>';
+  }
+  html += '</table>';
+  html += '<div style="margin-top:12px;font-size:18px;color:#ffd54f">Итого: ★ ' + totalScore + '</div>';
+  const tMin = Math.floor(totalTime / 60);
+  const tSec = totalTime % 60;
+  html += '<div style="color:#4fc3f7">Общее время: ' + tMin + ':' + String(tSec).padStart(2, '0') + '</div>';
+  document.getElementById('champDetails').innerHTML = html;
+  document.getElementById('champResults').style.display = 'block';
+}
+
+function updateTrackCount() {
+  let count = 0;
+  Object.entries(cells).forEach(([k, c]) => {
+    if (['straight','curve','tunnel','bridge','signal','switch','cross','overpass','station'].includes(c.userData.type)) {
+      const parts = k.split(',').map(Number);
+      if ((parts[2] || 0) === currentLevel) count++;
+    }
+  });
+  document.getElementById('trackLen').textContent = 'Рельсов: ' + count;
+}
+
+// ── Pathfinding ──
+function findPath(level, startPos) {
+  const lv = (level !== undefined) ? level : currentLevel;
+  const isTrack = c => !['tree','house','windmill','fence'].includes(c.userData.type);
+
+  function getNeighbors(gx, gz, useLv) {
+    const nb = [];
+    const cell = cells[keyFn(gx, gz, useLv)];
+    if (!cell) return nb;
+    const conns = getRotatedConnections(cell);
+    conns.forEach(d => {
+      const nx = gx + DIRS[d].dx;
+      const nz = gz + DIRS[d].dz;
+      const neighbor = cells[keyFn(nx, nz, useLv)];
+      if (neighbor && isTrack(neighbor)) {
+        const oppDir = (d + 2) % 4;
+        const nConns = getRotatedConnections(neighbor);
+        if (nConns.includes(oppDir)) nb.push({x: nx, z: nz, level: useLv});
+      }
+    });
+    const type = cell.userData.type;
+    if ((type === 'bridge' || type === 'overpass') && cells[keyFn(gx, gz, useLv + 1)]) {
+      nb.push({x: gx, z: gz, level: useLv + 1});
+    }
+    if (type === 'tunnel' && cells[keyFn(gx, gz, useLv - 1)]) {
+      nb.push({x: gx, z: gz, level: useLv - 1});
+    }
+    return nb;
+  }
+
+  function findLoopFrom(sx, sz, startLv) {
+    const visited = new Set();
+    const stack = [[sx, sz, startLv, [{x: sx, z: sz, level: startLv}]]];
+
+    while (stack.length > 0) {
+      const [gx, gz, lv2, p] = stack.pop();
+      const ck = keyFn(gx, gz, lv2);
+      if (p.length > 3 && gx === sx && gz === sz && lv2 === startLv) return p;
+      if (visited.has(ck)) continue;
+      visited.add(ck);
+      const neighbors = getNeighbors(gx, gz, lv2);
+      for (const nb of neighbors) {
+        if (nb.x === sx && nb.z === sz && nb.level === startLv && p.length > 2) return [...p, {x: nb.x, z: nb.z, level: nb.level}];
+        const nk = keyFn(nb.x, nb.z, nb.level);
+        if (!visited.has(nk)) {
+          stack.push([nb.x, nb.z, nb.level, [...p, {x: nb.x, z: nb.z, level: nb.level}]]);
+        }
+      }
+    }
+    return null;
+  }
+
+  if (startPos) {
+    const loop = findLoopFrom(startPos.x, startPos.z, lv);
+    if (loop) return loop;
+  }
+
+  function tryLevel(useLv) {
+    const trackCells = Object.entries(cells).filter(([k, c]) => {
+      if (!isTrack(c)) return false;
+      const parts = k.split(',').map(Number);
+      return (parts[2] || 0) === useLv;
+    });
+    if (trackCells.length < 3) return [];
+    for (const [startK] of trackCells) {
+      const [sx, sz] = startK.split(',').map(Number);
+      const loop = findLoopFrom(sx, sz, useLv);
+      if (loop) return loop;
+    }
+    return [];
+  }
+
+  const result = tryLevel(lv);
+  if (result.length > 0) return result;
+
+  const multiResult = tryAllLevels();
+  if (multiResult.length > 0) return multiResult;
+
+  for (let alt = 0; alt <= 5; alt++) {
+    if (alt === lv) continue;
+    const altResult = tryLevel(alt);
+    if (altResult.length > 0) return altResult;
+  }
+
+  return [];
+
+  function tryAllLevels() {
+    const allTrack = Object.entries(cells).filter(([k, c]) => isTrack(c));
+    if (allTrack.length < 4) return [];
+    for (const [startK] of allTrack) {
+      const parts = startK.split(',').map(Number);
+      const loop = findLoopFrom(parts[0], parts[1], parts[2] || 0);
+      if (loop) return loop;
+    }
+    return [];
+  }
+}
+
+// ── Smooth path: replace curve cell centers with Bezier points ──
+function smoothPath(path, level) {
+  if (path.length < 3) return path;
+  const result = [];
+  for (let i = 0; i < path.length; i++) {
+    const prev = path[(i - 1 + path.length) % path.length];
+    const curr = path[i];
+    const next = path[(i + 1) % path.length];
+    const lv = curr.level !== undefined ? curr.level : level;
+    const lvPrev = prev.level !== undefined ? prev.level : level;
+    const lvNext = next.level !== undefined ? next.level : level;
+    const isTransition = (lv !== lvPrev || lv !== lvNext);
+    const cell = cells[keyFn(curr.x, curr.z, lv)];
+    if (cell && cell.userData.type === 'curve' && !isTransition && (next.x !== curr.x || next.z !== curr.z)) {
+      const dxE = prev.x - curr.x, dzE = prev.z - curr.z;
+      const dxX = next.x - curr.x, dzX = next.z - curr.z;
+      const sgn = d => d > 0 ? 1 : d < 0 ? -1 : 0;
+      const p0x = curr.x + sgn(dxE) * HALF, p0z = curr.z + sgn(dzE) * HALF;
+      const p2x = curr.x + sgn(dxX) * HALF, p2z = curr.z + sgn(dzX) * HALF;
+      for (let s = 0; s <= 8; s++) {
+        const t = s / 8;
+        const u = 1 - t;
+        result.push({
+          x: u * u * p0x + 2 * u * t * curr.x + t * t * p2x,
+          z: u * u * p0z + 2 * u * t * curr.z + t * t * p2z,
+          level: lv
+        });
+      }
+    } else {
+      result.push({x: curr.x, z: curr.z, level: lv});
+    }
+  }
+  return result;
+}
+
+function buildPathMetrics(path) {
+  const dense = resamplePath(path, 0.15);
+  const segs = [];
+  let cumLen = 0;
+  for (let i = 0; i < dense.length; i++) {
+    const a = dense[i];
+    const b = dense[(i + 1) % dense.length];
+    const dx = b.x - a.x, dz = b.z - a.z;
+    const levelA = a.level !== undefined ? a.level : 0;
+    const levelB = b.level !== undefined ? b.level : 0;
+    let len;
+    if (Math.abs(dx) < 1e-9 && Math.abs(dz) < 1e-9) {
+      len = Math.abs(levelB - levelA) * GRID;
+    } else {
+      len = Math.sqrt(dx * dx + dz * dz);
+    }
+    if (len < 1e-9) continue;
+    segs.push({ a, b, len, cumLen });
+    cumLen += len;
+  }
+  return { segs, totalLen: cumLen };
+}
+
+function resamplePath(path, spacing) {
+  if (path.length < 2) return path.slice();
+  const totalLen = pathLength(path);
+  if (totalLen < 1e-9) return path.slice();
+  const count = Math.max(2, Math.round(totalLen / spacing));
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    const d = (i / count) * totalLen;
+    result.push(getPointOnPolyline(path, d));
+  }
+  return result;
+}
+
+function pathLength(path) {
+  let len = 0;
+  for (let i = 0; i < path.length; i++) {
+    const a = path[i], b = path[(i + 1) % path.length];
+    len += segLenFull(a, b);
+  }
+  return len;
+}
+
+function segLen2D(a, b) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  return Math.sqrt(dx * dx + dz * dz);
+}
+
+function segLenFull(a, b) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const la = a.level !== undefined ? a.level : 0;
+  const lb = b.level !== undefined ? b.level : 0;
+  if (Math.abs(dx) < 1e-9 && Math.abs(dz) < 1e-9) return Math.abs(lb - la) * GRID;
+  return Math.sqrt(dx * dx + dz * dz);
+}
+
+function getPointOnPolyline(path, dist) {
+  let remaining = dist;
+  for (let i = 0; i < path.length; i++) {
+    const a = path[i], b = path[(i + 1) % path.length];
+    const len = segLenFull(a, b);
+    if (len < 1e-9) continue;
+    if (remaining <= len + 1e-9) {
+      const t = Math.min(remaining / len, 1);
+      const la = a.level !== undefined ? a.level : 0;
+      const lb = b.level !== undefined ? b.level : 0;
+      const dx = b.x - a.x, dz = b.z - a.z;
+      if (Math.abs(dx) < 1e-9 && Math.abs(dz) < 1e-9) {
+        return { x: a.x, z: a.z, level: la + (lb - la) * t };
+      }
+      return { x: a.x + dx * t, z: a.z + dz * t, level: la + (lb - la) * t };
+    }
+    remaining -= len;
+  }
+  return { x: path[0].x, z: path[0].z, level: path[0].level !== undefined ? path[0].level : 0 };
+}
+
+function getPosAtDist(dist) {
+  if (!pathMetrics || !pathMetrics.segs.length) return null;
+  const { segs, totalLen } = pathMetrics;
+  const d = ((dist % totalLen) + totalLen) % totalLen;
+  let lo = 0, hi = segs.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (segs[mid].cumLen + segs[mid].len <= d) lo = mid + 1; else hi = mid;
+  }
+  const seg = segs[lo];
+  const t = seg.len > 1e-9 ? (d - seg.cumLen) / seg.len : 0;
+  const lvA = seg.a.level !== undefined ? seg.a.level : 0;
+  const lvB = seg.b.level !== undefined ? seg.b.level : 0;
+  const level = lvA + (lvB - lvA) * t;
+  const px = seg.a.x + (seg.b.x - seg.a.x) * t;
+  const pz = seg.a.z + (seg.b.z - seg.a.z) * t;
+  const angle = Math.atan2(seg.a.x - seg.b.x, seg.a.z - seg.b.z);
+  return { x: px, z: pz, angle, level: Math.round(level), segIdx: lo, t };
+}
+
+// ── Train ──
+function buildTrain(locoColor, wColors) {
+  const group = new THREE.Group();
+  const lc = locoColor || 0x2244cc;
+  const wc = wColors || [0xcc3333, 0x33aa33];
+
+  const loco = new THREE.Group();
+  const lBody = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.6, 2.2), new THREE.MeshStandardMaterial({color: lc, roughness: 0.4, metalness: 0.2}));
+  lBody.position.set(0, 1.0, 0); lBody.castShadow = true; loco.add(lBody);
+  const lCab = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 1.0), new THREE.MeshStandardMaterial({color: 0x3355dd, roughness: 0.3}));
+  lCab.position.set(0, 1.9, 0.4); loco.add(lCab);
+  const lChimney = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.0, 8), new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.5}));
+  lChimney.position.set(0, 2.1, -0.6); loco.add(lChimney);
+  const lCap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.12, 0.15, 8), new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.6}));
+  lCap.position.set(0, 2.65, -0.6); loco.add(lCap);
+  const lLight = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), new THREE.MeshStandardMaterial({color: 0xccaa00, metalness: 0.6}));
+  lLight.position.set(0, 1.8, -0.1); loco.add(lLight);
+  const lCow = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 0.15), new THREE.MeshStandardMaterial({color: 0x888888, metalness: 0.7}));
+  lCow.position.set(0, 0.5, -1.15); loco.add(lCow);
+  const hl = new THREE.PointLight(0xffff88, 0.8, 12);
+  hl.position.set(0, 1.2, -1.3);
+  loco.add(hl);
+
+  for (const side of [-0.45, 0.45]) {
+    for (const fx of [-0.4, 0.4]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.12, 10), new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.4}));
+      w.rotation.x = Math.PI / 2;
+      w.position.set(fx, 0.25, side);
+      loco.add(w);
+    }
+  }
+  loco.userData.wagonType = 'loco';
+  group.add(loco);
+
+  const wCols = wc;
+  for (let wi = 0; wi < 2; wi++) {
+    const wagon = new THREE.Group();
+    const wBody = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, 1.8), new THREE.MeshStandardMaterial({color: wCols[wi], roughness: 0.5, metalness: 0.15}));
+    wBody.position.set(0, 0.8, 0); wBody.castShadow = true; wagon.add(wBody);
+    const wRoof = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 1.9), new THREE.MeshStandardMaterial({color: 0x888888, metalness: 0.3}));
+    wRoof.position.set(0, 1.46, 0); wagon.add(wRoof);
+    for (const side of [-0.4, 0.4]) {
+      for (const fx of [-0.3, 0.3]) {
+        const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8), new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.4}));
+        wh.rotation.x = Math.PI / 2;
+        wh.position.set(fx, 0.2, side);
+        wagon.add(wh);
+      }
+    }
+    const wBuf = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.5), new THREE.MeshStandardMaterial({color: 0x666666, metalness: 0.5}));
+    wBuf.position.set(0, 0.4, -1.1); wagon.add(wBuf);
+    wagon.userData.wagonType = 'wagon';
+    wagon.userData.offset = wi + 1;
+    wagon.userData.spacing = (wi + 1) * 3.0;
+    group.add(wagon);
+  }
+
+  group.scale.set(0.75, 0.75, 0.75);
+  return group;
+}
+
+function createSmokeSystem() {
+  const particles = [];
+  for (let i = 0; i < 20; i++) {
+    const p = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1 + Math.random() * 0.15, 6, 6),
+      new THREE.MeshBasicMaterial({color: 0xcccccc, transparent: true, opacity: 0.5})
+    );
+    p.visible = false;
+    p.userData = {life: 0, maxLife: 1 + Math.random(), vy: 0.5 + Math.random() * 0.5};
+    scene.add(p);
+    particles.push(p);
+  }
+  return particles;
+}
+
+let smokeIdx = 0;
+
+function emitSmoke(pos) {
+  if (!smokeParticles.length) return;
+  const p = smokeParticles[smokeIdx % smokeParticles.length];
+  smokeIdx++;
+  p.visible = true;
+  p.position.set(pos.x + (Math.random() - 0.5) * 0.3, pos.y, pos.z);
+  p.userData.life = p.userData.maxLife;
+  p.material.opacity = 0.5;
+  p.scale.set(1, 1, 1);
+}
+
+function startTrain(startPos) {
+  if (presetTimer) { clearTimeout(presetTimer); presetTimer = null; }
+  if (trainRunning) stopTrain();
+  trainLevel = currentLevel;
+  const path = findPath(trainLevel, startPos);
+  if (path.length < 3) {
+    showAlert('⚠ Замкнутый маршрут не найден!', '#ff9800', 2000);
+    return;
+  }
+  if (path.length > 2 && path[0].x === path[path.length-1].x && path[0].z === path[path.length-1].z) path.pop();
+  trainPath = smoothPath(path, trainLevel);
+  pathMetrics = buildPathMetrics(trainPath);
+  buildDebugPath();
+  trainDist = 0;
+  totalDist = 0;
+  lapDist = 0;
+  trainRunning = true;
+  animate._prevDist = undefined;
+  animate._smoothSpeed = 0;
+  startTime = Date.now();
+  comboSafe = 0;
+  trainVisitedStations.clear();
+  trainGroup = buildTrain(parseInt(train1Colors.loco.slice(1), 16), [parseInt(train1Colors.w1.slice(1), 16), parseInt(train1Colors.w2.slice(1), 16)]);
+  scene.add(trainGroup);
+  smokeParticles = createSmokeSystem();
+  smokeIdx = 0;
+  lastSignalKey1 = '';
+  lastSignalKey2 = '';
+  collisionStop1 = false;
+  collisionStop2 = false;
+  playSound('whistle');
+  if (championshipMode) {
+    showAlert('🚂 Этап ' + (championshipIndex + 1) + '/5', '#ffd54f', 1500);
+  } else {
+    showAlert('🚂 Поехали! Кругов: 0', '#4caf50', 1200);
+  }
+}
+
+function stopTrain() {
+  trainRunning = false;
+  if (trainGroup) { scene.remove(trainGroup); trainGroup = null; }
+  smokeParticles.forEach(p => scene.remove(p));
+  smokeParticles = [];
+  stopTrain2();
+  clearDebugPath();
+}
+
+function startTrain2() {
+  if (!trainRunning || !pathMetrics) { showAlert('⚠ Сначала запустите Поезд 1!', '#ff9800', 2000); return; }
+  if (train2Running) { stopTrain2(); }
+  train2Dist = (pathMetrics.totalLen / 2) % pathMetrics.totalLen;
+  train2Running = true;
+  train2Group = buildTrain(parseInt(train2Colors.loco.slice(1), 16), [parseInt(train2Colors.w1.slice(1), 16), parseInt(train2Colors.w2.slice(1), 16)]);
+  scene.add(train2Group);
+  train2SmokeParticles = createSmokeSystem();
+  train2SmokeIdx = 0;
+  lastSignalKey2 = '';
+  collisionStop2 = false;
+  playSound('whistle');
+  showAlert('🚂 Второй поезд!', '#e57373', 1500);
+}
+
+function stopTrain2() {
+  train2Running = false;
+  if (train2Group) { scene.remove(train2Group); train2Group = null; }
+  train2SmokeParticles.forEach(p => scene.remove(p));
+  train2SmokeParticles = [];
+}
+
+function buildDebugPath() {
+  clearDebugPath();
+  if (!pathMetrics) return;
+  debugPathDots = new THREE.Group();
+  const dense = resamplePath(trainPath, 0.15);
+  const dotMat = new THREE.MeshBasicMaterial({color: 0xff00ff});
+  for (let i = 0; i < dense.length; i += 3) {
+    const p = dense[i];
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 4, 4), dotMat);
+    dot.position.set(p.x, (p.level !== undefined ? p.level : trainLevel) * GRID + TH + 0.15, p.z);
+    debugPathDots.add(dot);
+  }
+  scene.add(debugPathDots);
+  debugPathDots.visible = showDebugPath;
+}
+
+function clearDebugPath() {
+  if (debugPathDots) { scene.remove(debugPathDots); debugPathDots = null; }
+}
+
+function toggleDebugPath() {
+  showDebugPath = !showDebugPath;
+  if (debugPathDots) debugPathDots.visible = showDebugPath;
+  showAlert(showDebugPath ? '🔍 Путь: ВКЛ' : '🔍 Путь: ВЫКЛ', '#ff00ff', 800);
+}
+
+function shuffleWagons() {
+  if (!trainGroup || trainGroup.children.length < 3) return;
+  const w1 = trainGroup.children[1];
+  const w2 = trainGroup.children[2];
+  const tmpOff = w1.userData.offset;
+  w1.userData.offset = w2.userData.offset;
+  w2.userData.offset = tmpOff;
+  const tmpSp = w1.userData.spacing;
+  w1.userData.spacing = w2.userData.spacing;
+  w2.userData.spacing = tmpSp;
+  const c1 = w1.children[0].material.color.getHex();
+  const c2 = w2.children[0].material.color.getHex();
+  w1.children[0].material.color.setHex(c2);
+  w2.children[0].material.color.setHex(c1);
+  const pts = 50;
+  score += pts;
+  updateScoreDisplay();
+  spawnPopup('🔄 Перестановка! +' + pts, '#ff9800');
+  playSound('bonus');
+}
+
+function checkSignals() {
+  if (!trainRunning || !pathMetrics) return false;
+  const pos = getPosAtDist(trainDist);
+  if (!pos) return false;
+  const cell = cells[keyFn(pos.x, pos.z, trainLevel)];
+  return cell && cell.userData.type === 'signal' && cell.userData.signalState === 'red';
+}
+
+function checkSignalsAt(dist, lv) {
+  if (!pathMetrics) return false;
+  const pos = getPosAtDist(dist);
+  if (!pos) return false;
+  const clv = pos.level !== undefined ? pos.level : lv;
+  const cell = cells[keyFn(pos.x, pos.z, clv)];
+  return cell && cell.userData.type === 'signal' && cell.userData.signalState === 'red';
+}
+
+function emitSmokeTrain2(pos) {
+  if (!train2SmokeParticles.length) return;
+  const p = train2SmokeParticles[train2SmokeIdx % train2SmokeParticles.length];
+  train2SmokeIdx++;
+  p.visible = true;
+  p.position.set(pos.x + (Math.random() - 0.5) * 0.3, pos.y, pos.z);
+  p.userData.life = p.userData.maxLife;
+  p.material.opacity = 0.5;
+  p.scale.set(1, 1, 1);
+}
+
+function triggerAccident() {
+  accidents++;
+  comboSafe = 0;
+  score = Math.max(0, score - 50);
+  playSound('accident');
+  spawnPopup('-50 АВАРИЯ!', '#ff4444');
+  showAlert('💥 АВАРИЯ!', '#f44', 1200);
+  updateScoreDisplay();
+}
+
+function showAlert(text, color, dur) {
+  const a = document.getElementById('alert');
+  a.textContent = text;
+  a.style.color = color;
+  a.style.opacity = 1;
+  setTimeout(() => a.style.opacity = 0, dur);
+}
+
+function updateScoreDisplay() {
+  document.getElementById('score').textContent = '★ ' + score;
+  document.getElementById('combo').textContent = 'Безаварийно: ' + comboSafe + ' 🔥';
+  const lapLen = pathMetrics ? Math.round(pathMetrics.totalLen) : 0;
+  document.getElementById('dist').textContent = '📏 ' + Math.round(lapDist) + ' / ' + lapLen + ' м | Всего: ' + Math.round(totalDist) + ' м';
+}
+
+function updateTimer() {
+  if (!startTime) return;
+  elapsed = Math.floor((Date.now() - startTime) / 1000);
+  document.getElementById('timer').textContent = '⏱ ' + String(Math.floor(elapsed / 60)).padStart(2, '0') + ':' + String(elapsed % 60).padStart(2, '0');
+}
+
+// ── Main loop ──
+const clock = new THREE.Clock();
+let chugTimer = 0;
+let frameCount = 0;
+let lastAccidentPos = '';
+let trainVisitedStations = new Set();
+let chooseStartMode = false;
+
+// ── Decorative ambient trains ──
+const decoTracks = [];
+const decoTrainMeshes = [];
+
+function initDecoTracks() {
+  const specs = [
+    { cx:-18, cz:5, rx:9, ry:6, n:48, shape:'oval', col:0xff6600, col2:0xcc4400, speed:4.5 },
+    { cx:34, cz:5, rx:11, ry:5, n:52, shape:'fig8', col:0x44cc44, col2:0x228822, speed:5.2 },
+    { cx:8, cz:-18, rx:15, ry:3.5, n:48, shape:'wave', col:0xdd44dd, col2:0x882288, speed:3.8 },
+    { cx:-6, cz:22, rx:8, ry:5, n:44, shape:'drop', col:0x44cccc, col2:0x228888, speed:4.0 },
+    { cx:46, cz:-2, rx:5, ry:10, n:50, shape:'star', col:0xddcc22, col2:0x887711, speed:5.8 }
+  ];
+  specs.forEach(s => {
+    const pts = [];
+    for (let i = 0; i < s.n; i++) {
+      const t = (i / s.n) * Math.PI * 2;
+      let x, z;
+      switch (s.shape) {
+        case 'oval':
+          x = s.cx + s.rx * Math.cos(t);
+          z = s.cz + s.ry * Math.sin(t);
+          break;
+        case 'fig8':
+          x = s.cx + s.rx * Math.sin(t);
+          z = s.cz + s.ry * Math.sin(2 * t);
+          break;
+        case 'wave':
+          x = s.cx + s.rx * Math.cos(t);
+          z = s.cz + s.ry * Math.sin(t) + Math.sin(3 * t) * 2;
+          break;
+        case 'drop':
+          x = s.cx + s.rx * (1.2 * Math.cos(t) - 0.4 * Math.cos(2 * t));
+          z = s.cz + s.ry * 1.3 * Math.sin(t);
+          break;
+        case 'star':
+          x = s.cx + s.rx * Math.cos(t) + Math.sin(3 * t) * 2.5;
+          z = s.cz + s.ry * Math.sin(t) + Math.cos(2 * t) * 1.5;
+          break;
+      }
+      pts.push({ x, z });
+    }
+    const segs = [];
+    let totalLen = 0;
+    for (let j = 0; j < pts.length; j++) {
+      const p1 = pts[j], p2 = pts[(j + 1) % pts.length];
+      const l = Math.hypot(p2.x - p1.x, p2.z - p1.z);
+      segs.push(l);
+      totalLen += l;
+    }
+    const group = new THREE.Group();
+    const mat1 = new THREE.MeshStandardMaterial({ color: s.col, roughness: 0.45, metalness: 0.15 });
+    const mat2 = new THREE.MeshStandardMaterial({ color: s.col2, roughness: 0.5 });
+    const loco = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 1.0), mat1);
+    loco.position.set(0, 0.32, 0); loco.castShadow = true; group.add(loco);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.25, 0.35), mat2);
+    cab.position.set(0, 0.6, 0.2); group.add(cab);
+    const chm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.35, 6), new THREE.MeshStandardMaterial({color:0x333333}));
+    chm.position.set(0, 0.7, -0.3); group.add(chm);
+    for (let wi = 0; wi < 2; wi++) {
+      const wg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.7), mat2);
+      wg.position.set(0, 0.28, 0.9 + wi * 0.85); wg.castShadow = true; group.add(wg);
+      const wr = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.75), new THREE.MeshStandardMaterial({color:0x777777}));
+      wr.position.set(0, 0.48, 0.9 + wi * 0.85); group.add(wr);
+    }
+    scene.add(group);
+    decoTracks.push({ pts, segs, totalLen, dist: Math.random() * totalLen, speed: s.speed });
+    decoTrainMeshes.push(group);
+  });
+}
+
+function updateDecoTrains(dt) {
+  for (let i = 0; i < decoTracks.length; i++) {
+    const tr = decoTracks[i];
+    tr.dist = (tr.dist + tr.speed * dt) % tr.totalLen;
+    if (tr.dist < 0) tr.dist += tr.totalLen;
+    let acc = 0;
+    for (let j = 0; j < tr.segs.length; j++) {
+      if (acc + tr.segs[j] >= tr.dist) {
+        const frac = (tr.dist - acc) / tr.segs[j];
+        const p1 = tr.pts[j], p2 = tr.pts[(j + 1) % tr.pts.length];
+        const x = p1.x + (p2.x - p1.x) * frac;
+        const z = p1.z + (p2.z - p1.z) * frac;
+        const mesh = decoTrainMeshes[i];
+        mesh.position.set(x, 0.15, z);
+        mesh.rotation.y = Math.atan2(p2.x - p1.x, p2.z - p1.z);
+        break;
+      }
+      acc += tr.segs[j];
+    }
+  }
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const time = Date.now() * 0.001;
+  frameCount++;
+
+  windmills.forEach(w => { if (w.userData.blades) w.userData.blades.rotation.z += dt * 1.5; });
+  updateDecoTrains(dt);
+
+  if (trainRunning && pathMetrics && trainGroup) {
+    if (!checkSignals() && !collisionStop1) {
+      const prevDist = trainDist;
+      trainDist += dt * trainSpeed * 6.0;
+      totalDist += dt * trainSpeed * 6.0;
+      const lapDelta = trainDist - prevDist;
+
+      if (trainDist >= pathMetrics.totalLen) {
+        trainDist -= pathMetrics.totalLen;
+        trainVisitedStations.clear();
+        comboSafe++;
+        lapDist = 0;
+        const pts = 100 + comboSafe * 15;
+        score += pts;
+        updateScoreDisplay();
+        playSound('bonus');
+
+        if (championshipMode) {
+          const trackScore = score - champTrackScore;
+          const trackTime = Math.floor((Date.now() - champTrackStart) / 1000);
+          champScores.push(trackScore);
+          champTimes.push(trackTime);
+          stopTrain();
+          if (championshipIndex < 7) {
+            championshipIndex++;
+            champTrackStart = Date.now();
+            champTrackScore = score;
+            showAlert('🏆 Этап ' + (championshipIndex + 1) + '/8', '#ffd54f', 1500);
+            setTimeout(() => loadPreset(championshipIndex), 1500);
+          } else {
+            showChampResults();
+            championshipMode = false;
+          }
+          return;
+        }
+
+        spawnPopup('+' + pts + ' 🏁', '#4caf50');
+
+        if (comboSafe >= 2 && comboSafe % 2 === 0) {
+          document.getElementById('winScore').textContent = '★ ' + score + ' очков | Серия: ' + comboSafe;
+          document.getElementById('win').style.opacity = 1;
+          setTimeout(() => document.getElementById('win').style.opacity = 0, 2000);
+        }
+      }
+
+      lapDist += lapDelta;
+      const pos = getPosAtDist(trainDist);
+      if (pos) {
+        const curLv = pos.level !== undefined ? pos.level : trainLevel;
+        trainLevel = curLv;
+        const cell = cells[keyFn(pos.x, pos.z, curLv)];
+        let py = curLv * GRID + TH + 0.12;
+        if (cell) {
+          if (cell.userData.type === 'bridge') py = curLv * GRID + GRID * 0.6 + 0.22;
+          if (cell.userData.type === 'overpass') py = curLv * GRID + GRID * 0.6 + TH + 0.16;
+        }
+
+        const loco = trainGroup.children[0];
+        loco.position.set(pos.x * TRAIN_SCALE_INV, py * TRAIN_SCALE_INV, pos.z * TRAIN_SCALE_INV);
+        loco.rotation.y = pos.angle;
+
+        for (let ci = 1; ci < trainGroup.children.length; ci++) {
+          const wagon = trainGroup.children[ci];
+          const spacing = wagon.userData.spacing || ci * 3.0;
+          const wPos = getPosAtDist(trainDist - spacing);
+          if (wPos) {
+            const wLv = wPos.level !== undefined ? wPos.level : trainLevel;
+            const wCell = cells[keyFn(wPos.x, wPos.z, wLv)];
+            let wy = wLv * GRID + TH + 0.12;
+            if (wCell) {
+              if (wCell.userData.type === 'bridge') wy = wLv * GRID + GRID * 0.6 + 0.22;
+              if (wCell.userData.type === 'overpass') wy = wLv * GRID + GRID * 0.6 + TH + 0.16;
+            }
+            wagon.position.set(wPos.x * TRAIN_SCALE_INV, wy * TRAIN_SCALE_INV, wPos.z * TRAIN_SCALE_INV);
+            wagon.rotation.y = wPos.angle;
+          }
+        }
+
+        chugTimer += dt * trainSpeed;
+        if (chugTimer > 0.15) { chugTimer = 0; playSound('chug'); }
+
+        if (frameCount % 3 === 0) emitSmoke({x: pos.x, y: py + 1.9875 + 0.5, z: pos.z});
+
+        const posKey = keyFn(pos.x, pos.z, curLv);
+        if (posKey !== lastAccidentPos) {
+          if (cell && cell.userData.type === 'switch' && Math.random() < 0.3) triggerAccident();
+          if (cell && cell.userData.type === 'station' && !trainVisitedStations.has(posKey)) {
+            trainVisitedStations.add(posKey);
+            shuffleWagons();
+          }
+          lastAccidentPos = posKey;
+        }
+
+        if (cell && cell.userData.type === 'signal' && cell.userData.signalState === 'green') {
+          if (posKey !== lastSignalKey1) {
+            lastSignalKey1 = posKey;
+            cell.userData.signalState = 'red';
+            cell.userData.lights.forEach((l, i) => {
+              const active = 'red' === ['green','red','yellow'][i];
+              l.material.color.setHex(active ? 0xff0000 : 0x222222);
+              l.material.emissive.setHex(active ? 0xff0000 : 0x000000);
+              l.material.emissiveIntensity = active ? 1.5 : 0;
+            });
+            setTimeout(() => {
+              if (cell.userData.type === 'signal') {
+                cell.userData.signalState = 'green';
+                cell.userData.lights.forEach((l, i) => {
+                  const active = 'green' === ['green','red','yellow'][i];
+                  l.material.color.setHex(active ? 0x00ff00 : 0x222222);
+                  l.material.emissive.setHex(active ? 0x00ff00 : 0x000000);
+                  l.material.emissiveIntensity = active ? 1.5 : 0;
+                });
+              }
+            }, 3000);
+          }
+        }
+      }
+    }
+  }
+
+  // ── Train 2 ──
+  if (train2Running && pathMetrics && train2Group) {
+    const dForward = ((trainDist - train2Dist) % pathMetrics.totalLen + pathMetrics.totalLen) % pathMetrics.totalLen;
+    const dBehind = pathMetrics.totalLen - dForward;
+    const distBetween = Math.min(dForward, dBehind);
+
+    if (distBetween < 3) {
+      collisionStop2 = true;
+    } else if (distBetween > 5) {
+      collisionStop2 = false;
+    }
+
+    if (!collisionStop2 && !checkSignalsAt(train2Dist, trainLevel)) {
+      train2Dist += dt * trainSpeed * 5.5;
+      if (train2Dist >= pathMetrics.totalLen) {
+        train2Dist -= pathMetrics.totalLen;
+        comboSafe++;
+        const pts = 100 + comboSafe * 15;
+        score += pts;
+        updateScoreDisplay();
+        playSound('bonus');
+        spawnPopup('+' + pts + ' 🏁 (Поезд2)', '#e57373');
+      }
+
+      const pos2 = getPosAtDist(train2Dist);
+      if (pos2) {
+        const curLv2 = pos2.level !== undefined ? pos2.level : trainLevel;
+        const cell2 = cells[keyFn(pos2.x, pos2.z, curLv2)];
+        let py2 = curLv2 * GRID + TH + 0.12;
+        if (cell2) {
+          if (cell2.userData.type === 'bridge') py2 = curLv2 * GRID + GRID * 0.6 + 0.22;
+          if (cell2.userData.type === 'overpass') py2 = curLv2 * GRID + GRID * 0.6 + TH + 0.16;
+        }
+
+        const loco2 = train2Group.children[0];
+        loco2.position.set(pos2.x * TRAIN_SCALE_INV, py2 * TRAIN_SCALE_INV, pos2.z * TRAIN_SCALE_INV);
+        loco2.rotation.y = pos2.angle;
+
+        for (let ci = 1; ci < train2Group.children.length; ci++) {
+          const wagon = train2Group.children[ci];
+          const spacing = wagon.userData.spacing || ci * 3.0;
+          const wPos2 = getPosAtDist(train2Dist - spacing);
+          if (wPos2) {
+            const wLv2 = wPos2.level !== undefined ? wPos2.level : trainLevel;
+            const wCell2 = cells[keyFn(wPos2.x, wPos2.z, wLv2)];
+            let wy2 = wLv2 * GRID + TH + 0.12;
+            if (wCell2) {
+              if (wCell2.userData.type === 'bridge') wy2 = wLv2 * GRID + GRID * 0.6 + 0.22;
+              if (wCell2.userData.type === 'overpass') wy2 = wLv2 * GRID + GRID * 0.6 + TH + 0.16;
+            }
+            wagon.position.set(wPos2.x * TRAIN_SCALE_INV, wy2 * TRAIN_SCALE_INV, wPos2.z * TRAIN_SCALE_INV);
+            wagon.rotation.y = wPos2.angle;
+          }
+        }
+
+        if (frameCount % 3 === 0) emitSmokeTrain2({x: pos2.x, y: py2 + 1.9875 + 0.5, z: pos2.z});
+
+        if (cell2 && cell2.userData.type === 'signal' && cell2.userData.signalState === 'green') {
+          const posKey2 = keyFn(pos2.x, pos2.z, curLv2);
+          if (posKey2 !== lastSignalKey2) {
+            lastSignalKey2 = posKey2;
+            cell2.userData.signalState = 'red';
+            cell2.userData.lights.forEach((l, i) => {
+              const active = 'red' === ['green','red','yellow'][i];
+              l.material.color.setHex(active ? 0xff0000 : 0x222222);
+              l.material.emissive.setHex(active ? 0xff0000 : 0x000000);
+              l.material.emissiveIntensity = active ? 1.5 : 0;
+            });
+            setTimeout(() => {
+              if (cell2.userData.type === 'signal') {
+                cell2.userData.signalState = 'green';
+                cell2.userData.lights.forEach((l, i) => {
+                  const active = 'green' === ['green','red','yellow'][i];
+                  l.material.color.setHex(active ? 0x00ff00 : 0x222222);
+                  l.material.emissive.setHex(active ? 0x00ff00 : 0x000000);
+                  l.material.emissiveIntensity = active ? 1.5 : 0;
+                });
+              }
+            }, 3000);
+          }
+        }
+      }
+    }
+
+    if (trainRunning) {
+      const dFwd12 = ((train2Dist - trainDist) % pathMetrics.totalLen + pathMetrics.totalLen) % pathMetrics.totalLen;
+      const dBeh12 = pathMetrics.totalLen - dFwd12;
+      const dist12 = Math.min(dFwd12, dBeh12);
+      if (dist12 < 3) {
+        collisionStop1 = true;
+      } else if (dist12 > 5) {
+        collisionStop1 = false;
+      }
+    }
+  }
+
+  // smoke update
+  smokeParticles.forEach(p => {
+    if (!p.visible) return;
+    p.userData.life -= dt;
+    if (p.userData.life <= 0) { p.visible = false; return; }
+    p.position.y += p.userData.vy * dt;
+    p.position.x += (Math.random() - 0.5) * dt;
+    p.material.opacity = (p.userData.life / p.userData.maxLife) * 0.4;
+    const s = 1 + (1 - p.userData.life / p.userData.maxLife) * 2;
+    p.scale.set(s, s, s);
+  });
+  train2SmokeParticles.forEach(p => {
+    if (!p.visible) return;
+    p.userData.life -= dt;
+    if (p.userData.life <= 0) { p.visible = false; return; }
+    p.position.y += p.userData.vy * dt;
+    p.position.x += (Math.random() - 0.5) * dt;
+    p.material.opacity = (p.userData.life / p.userData.maxLife) * 0.4;
+    const s = 1 + (1 - p.userData.life / p.userData.maxLife) * 2;
+    p.scale.set(s, s, s);
+  });
+
+  updateTimer();
+  if (frameCount % 10 === 0 && trainRunning) updateScoreDisplay();
+  const tfEl = document.getElementById('trainFloor');
+  if (trainRunning) {
+    tfEl.style.display = '';
+    tfEl.textContent = '🏩 Этаж: ' + trainLevel;
+  } else {
+    tfEl.style.display = 'none';
+  }
+  const speedEl = document.getElementById('speedometer');
+  const lapFillEl = document.getElementById('lapFill');
+  if (trainRunning && pathMetrics) {
+    const safeDt = Math.min(dt, 0.1);
+    const rawSpeed = safeDt > 0 ? (trainDist - (animate._prevDist !== undefined ? animate._prevDist : trainDist)) / safeDt : 0;
+    const clampedSpeed = Math.max(0, Math.min(rawSpeed, 80));
+    animate._smoothSpeed = (animate._smoothSpeed || 0) * 0.85 + clampedSpeed * 0.15;
+    const kmh = Math.round(animate._smoothSpeed * 3.6);
+    speedEl.textContent = '🚂 ' + kmh + ' км/ч';
+    speedEl.style.display = '';
+    const pct = Math.max(0, Math.min(100, (lapDist / pathMetrics.totalLen) * 100));
+    lapFillEl.style.width = pct.toFixed(1) + '%';
+  } else {
+    speedEl.style.display = 'none';
+    lapFillEl.style.width = '0%';
+  }
+  if (trainRunning) animate._prevDist = trainDist;
+
+  // signal blink
+  Object.values(cells).forEach(c => {
+    if ((c.userData.type === 'signal' || c.userData.type === 'cross') && c.userData.lights) {
+      c.userData.lights.forEach((l, i) => {
+        const active = c.userData.type === 'cross' ? true : c.userData.signalState === ['green','red','yellow'][i];
+        if (active) {
+          l.material.emissiveIntensity = Math.sin(time * 4) > -0.3 ? 1.5 : 0.5;
+        }
+      });
+    }
+  });
+
+  drawMinimap();
+
+  if (camFollow && trainRunning && trainGroup) {
+    const loco = trainGroup.children[0];
+    if (loco) {
+      camTarget.x += (loco.position.x - camTarget.x) * 0.06;
+      camTarget.y += (loco.position.y - camTarget.y) * 0.06;
+      camTarget.z += (loco.position.z - camTarget.z) * 0.06;
+      updateCamera();
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ── Minimap ──
+const minimapCanvas = document.getElementById('minimap');
+const mctx = minimapCanvas.getContext('2d');
+
+function drawMinimap() {
+  mctx.clearRect(0, 0, 140, 140);
+  mctx.fillStyle = 'rgba(30,60,30,0.8)';
+  mctx.fillRect(0, 0, 140, 140);
+  const scale = 1.8;
+  const cx = 70, cz = 70;
+
+  Object.entries(cells).forEach(([k, c]) => {
+    const parts = k.split(',').map(Number);
+    const gx = parts[0], gz = parts[1], glv = parts[2] || 0;
+    const mx = cx + gx * scale;
+    const mz = cz + gz * scale;
+    let col = '#666';
+    const t = c.userData.type;
+    if (t === 'straight' || t === 'tunnel' || t === 'bridge') col = '#999';
+    else if (t === 'curve') col = '#aaa';
+    else if (t === 'signal') col = c.userData.signalState === 'green' ? '#0f0' : c.userData.signalState === 'red' ? '#f00' : '#fa0';
+    else if (t === 'switch') col = '#f0f';
+    else if (t === 'cross') col = c.userData.signalState === 'green' ? '#0ff' : '#f66';
+    else if (t === 'overpass') col = '#da5';
+    else if (t === 'station') col = '#ff0';
+    else if (t === 'house') col = '#c96';
+    else if (t === 'tree') col = '#080';
+    else if (t === 'windmill') col = '#fff';
+    else if (t === 'fence') col = '#864';
+    if (glv > 0 && (t === 'straight' || t === 'curve' || t === 'bridge' || t === 'tunnel' || t === 'station' || t === 'signal')) {
+      const h = col.replace('#','');
+      const hh = h.length === 3 ? h[0]+h[0]+h[1]+h[1]+h[2]+h[2] : h;
+      const r = parseInt(hh.slice(0,2),16), g = parseInt(hh.slice(2,4),16), b = parseInt(hh.slice(4,6),16);
+      const bright = 0.6 + glv * 0.06;
+      col = 'rgb(' + Math.min(255,Math.round(r*bright)) + ',' + Math.min(255,Math.round(g*bright)) + ',' + Math.min(255,Math.round(b + glv*25)) + ')';
+    }
+    mctx.fillStyle = col;
+    mctx.fillRect(mx - 2, mz - 2, 4, 4);
+
+    // draw connection dots
+    const conns = getRotatedConnections(c);
+    conns.forEach(d => {
+      const dotX = mx + DIRS[d].dx * scale / GRID * 2;
+      const dotZ = mz + DIRS[d].dz * scale / GRID * 2;
+      mctx.fillStyle = 'rgba(0,255,100,0.4)';
+      mctx.fillRect(dotX - 1, dotZ - 1, 2, 2);
+    });
+  });
+
+  if (trainRunning && trainGroup) {
+    const loco = trainGroup.children[0];
+    if (loco) {
+      mctx.fillStyle = '#0af';
+      mctx.beginPath();
+      const wx = loco.position.x / TRAIN_SCALE_INV;
+      const wz = loco.position.z / TRAIN_SCALE_INV;
+      mctx.arc(cx + wx * scale, cz + wz * scale, 4, 0, Math.PI * 2);
+      mctx.fill();
+    }
+  }
+  if (train2Running && train2Group) {
+    const loco2 = train2Group.children[0];
+    if (loco2) {
+      mctx.fillStyle = '#f55';
+      mctx.beginPath();
+      const wx2 = loco2.position.x / TRAIN_SCALE_INV;
+      const wz2 = loco2.position.z / TRAIN_SCALE_INV;
+      mctx.arc(cx + wx2 * scale, cz + wz2 * scale, 4, 0, Math.PI * 2);
+      mctx.fill();
+    }
+  }
+}
+
+initDecoTracks();
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

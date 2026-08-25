@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ОРБИТАЛЬНЫЙ ГИГАНТ - Космическая Станция</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            overflow: hidden; 
+            background: #000;
+            font-family: 'Courier New', monospace;
+            cursor: none;
+        }
+        #gameCanvas { display: block; }
+        
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .hud-panel {
+            position: absolute;
+            background: rgba(0, 20, 40, 0.7);
+            border: 1px solid #0ff;
+            color: #0ff;
+            padding: 10px;
+            font-size: 12px;
+            text-shadow: 0 0 10px #0ff;
+        }
+        
+        #topLeft { top: 10px; left: 10px; width: 200px; }
+        #topRight { top: 10px; right: 10px; width: 250px; text-align: right; }
+        #bottomCenter { 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            width: 400px;
+            text-align: center;
+        }
+        #emergency {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #f00;
+            text-shadow: 0 0 30px #f00;
+            animation: emergencyPulse 0.5s infinite;
+            display: none;
+            z-index: 200;
+        }
+        @keyframes emergencyPulse {
+            0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.1); }
+        }
+        
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+            z-index: 150;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 255, 255, 0.8);
+        }
+        #crosshair::before {
+            width: 2px;
+            height: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #crosshair::after {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .gologram {
+            position: absolute;
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            background: rgba(0, 255, 255, 0.1);
+            animation: holoFlicker 2s infinite;
+        }
+        @keyframes holoFlicker {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+        
+        #startScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #1a0a2e 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: all;
+        }
+        #startScreen h1 {
+            font-size: 48px;
+            color: #0ff;
+            text-shadow: 0 0 50px #0ff, 0 0 100px #08f;
+            margin-bottom: 20px;
+            animation: titleGlow 2s infinite;
+        }
+        @keyframes titleGlow {
+            0%, 100% { text-shadow: 0 0 50px #0ff; }
+            50% { text-shadow: 0 0 100px #0ff, 0 0 150px #08f; }
+        }
+        #startScreen p {
+            color: #8af;
+            margin: 10px;
+            font-size: 14px;
+        }
+        #startBtn {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 18px;
+            background: transparent;
+            border: 2px solid #0ff;
+            color: #0ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+        #startBtn:hover {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 30px #0ff;
+        }
+        
+        #levelInfo {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            color: #0f0;
+            text-shadow: 0 0 30px #0f0;
+            display: none;
+            z-index: 200;
+            text-align: center;
+        }
+        
+        #shieldIndicator {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 150px;
+            height: 10px;
+            border: 1px solid #0ff;
+            z-index: 100;
+        }
+        #shieldBar {
+            height: 100%;
+            background: linear-gradient(90deg, #0f0, #ff0, #f00);
+            transition: width 0.3s;
+        }
+        
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1) 0px,
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* ШТУРВАЛ */
+        #commandDeck {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 420px;
+            background: linear-gradient(180deg, rgba(0,10,20,0) 0%, rgba(0,10,20,0.97) 20%);
+            z-index: 120;
+            pointer-events: all;
+            display: none;
+            padding: 30px 20px 15px;
+            overflow-y: auto;
+        }
+        #commandDeck.active { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        #commandDeck.retracted { height: 40px; padding-top: 5px; }
+        #commandDeck.retracted .lever-panel, #commandDeck.retracted .pilot-section { display: none; }
+
+        .lever-panel {
+            background: rgba(0,20,40,0.8);
+            border: 1px solid #0ff;
+            border-radius: 8px;
+            padding: 10px;
+            width: 130px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .lever-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--color);
+            box-shadow: 0 0 10px var(--color);
+        }
+        .lever-panel:hover {
+            border-color: var(--color);
+            box-shadow: 0 0 20px var(--color);
+            transform: translateY(-5px);
+        }
+        .lever-panel.active-lever {
+            border-color: var(--color);
+            background: rgba(0,40,60,0.9);
+        }
+        .lever-panel.active-lever .lever-indicator {
+            background: var(--color);
+            box-shadow: 0 0 15px var(--color);
+        }
+
+        .lever-icon {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        .lever-name {
+            color: var(--color);
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .lever-desc {
+            color: #668;
+            font-size: 9px;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        .lever-indicator {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #333;
+            margin: 0 auto 4px;
+            transition: all 0.3s;
+        }
+        .lever-bar {
+            width: 100%;
+            height: 4px;
+            background: #112;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .lever-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--color);
+            transition: width 0.5s;
+        }
+        .lever-result {
+            color: #0f0;
+            font-size: 9px;
+            margin-top: 4px;
+            min-height: 14px;
+        }
+
+        #commandToggle {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 130;
+            pointer-events: all;
+            background: rgba(0,20,40,0.8);
+            border: 1px solid #0ff;
+            color: #0ff;
+            padding: 8px 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: none;
+        }
+        #commandToggle:hover {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 20px #0ff;
+        }
+        #commandToggle.visible { display: block; }
+
+        .bot-status {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            z-index: 140;
+            pointer-events: none;
+            display: none;
+        }
+        .bot-status.active { display: block; }
+        .bot-tag {
+            background: rgba(0,20,40,0.85);
+            border: 1px solid;
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            font-size: 10px;
+            border-radius: 4px;
+            animation: botPulse 1.5s infinite;
+        }
+        @keyframes botPulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        #commandDeck.retracted { 
+            height: 40px; 
+            padding-top: 5px;
+        }
+        #commandDeck.retracted .lever-panel { display: none; }
+
+        /* РАЗВЕДЫВАТЕЛЬНЫЙ ДАШБОРД */
+        #reconDashboard {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 520px;
+            height: 440px;
+            background: rgba(0,8,16,0.95);
+            border: 1px solid #08f;
+            border-radius: 8px;
+            z-index: 300;
+            pointer-events: all;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 40px rgba(0,136,255,0.3), inset 0 0 60px rgba(0,136,255,0.05);
+        }
+        #reconDashboard.active { display: flex; }
+        .recon-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            border-bottom: 1px solid rgba(0,136,255,0.3);
+            font-size: 11px;
+            color: #08f;
+        }
+        .recon-header .title {
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #08f;
+        }
+        .recon-header .close-btn {
+            cursor: pointer;
+            padding: 2px 8px;
+            border: 1px solid #08f;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            background: transparent;
+            color: #08f;
+        }
+        .recon-header .close-btn:hover {
+            background: #08f;
+            color: #000;
+        }
+        .recon-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        #reconCanvas {
+            flex: 1;
+            cursor: grab;
+        }
+        #reconCanvas:active { cursor: grabbing; }
+        .recon-sidebar {
+            width: 160px;
+            border-left: 1px solid rgba(0,136,255,0.3);
+            padding: 8px;
+            overflow-y: auto;
+            font-size: 10px;
+        }
+        .recon-sidebar h4 {
+            color: #08f;
+            font-size: 10px;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 8px #08f;
+        }
+        .recon-obj {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(0,136,255,0.1);
+            color: #8af;
+        }
+        .recon-obj .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .recon-obj .label {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .recon-obj .dist {
+            color: #08f;
+            font-size: 9px;
+        }
+        .recon-zoom {
+            padding: 6px 14px;
+            border-top: 1px solid rgba(0,136,255,0.3);
+            font-size: 10px;
+            color: #08f;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* ГОЛОГРАФИЧЕСКИЕ КНОПКИ ПИЛОТИРОВАНИЯ */
+        .pilot-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .pilot-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(0,15,30,0.6);
+            border: 1px solid rgba(255,50,50,0.3);
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(255,30,30,0.05);
+        }
+        .pilot-group-label {
+            font-size: 8px;
+            color: rgba(255,100,100,0.6);
+            letter-spacing: 1px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            margin-right: 4px;
+        }
+        .holo-btn {
+            position: relative;
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transition: all 0.08s ease;
+            outline: none;
+        }
+        .holo-btn .btn-body {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, rgba(255,80,80,0.9), rgba(180,20,20,0.95));
+            border: 2px solid rgba(255,120,120,0.7);
+            box-shadow:
+                0 6px 0 rgba(120,0,0,0.8),
+                0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4),
+                inset 0 2px 6px rgba(255,180,180,0.3),
+                0 0 20px rgba(255,40,40,0.3);
+            transition: all 0.08s ease;
+        }
+        .holo-btn:hover .btn-body {
+            background: radial-gradient(circle at 35% 35%, rgba(255,120,120,0.95), rgba(220,40,40,1));
+            box-shadow:
+                0 6px 0 rgba(150,0,0,0.8),
+                0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4),
+                inset 0 2px 6px rgba(255,200,200,0.4),
+                0 0 30px rgba(255,60,60,0.5);
+        }
+        .holo-btn:active, .holo-btn.pressed .btn-body {
+            transform: translateY(4px);
+            background: radial-gradient(circle at 35% 35%, rgba(255,50,50,0.95), rgba(140,10,10,1));
+            box-shadow:
+                0 2px 0 rgba(80,0,0,0.8),
+                0 3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 10px rgba(0,0,0,0.5),
+                inset 0 -1px 4px rgba(255,150,150,0.2),
+                0 0 40px rgba(255,30,30,0.6);
+        }
+        .holo-btn .btn-label {
+            position: relative;
+            z-index: 2;
+            font-size: 9px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            pointer-events: none;
+            line-height: 1;
+        }
+        .holo-btn .btn-icon {
+            position: relative;
+            z-index: 2;
+            font-size: 18px;
+            pointer-events: none;
+            line-height: 1;
+            margin-bottom: 1px;
+        }
+        .holo-btn .btn-holo-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,60,60,0.2);
+            animation: holoRingPulse 2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes holoRingPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .holo-btn .btn-glow {
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,40,40,0.15) 0%, transparent 70%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .holo-btn:hover .btn-glow, .holo-btn.pressed .btn-glow {
+            opacity: 1;
+        }
+
+        /* Зелёные кнопки (тяга/тормоз) */
+        .holo-btn.green .btn-body {
+            background: radial-gradient(circle at 35% 35%, rgba(80,255,80,0.9), rgba(20,140,20,0.95));
+            border-color: rgba(120,255,120,0.7);
+            box-shadow: 0 6px 0 rgba(0,80,0,0.8), 0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4), inset 0 2px 6px rgba(180,255,180,0.3),
+                0 0 20px rgba(40,255,40,0.3);
+        }
+        .holo-btn.green:hover .btn-body {
+            background: radial-gradient(circle at 35% 35%, rgba(120,255,120,0.95), rgba(40,200,40,1));
+            box-shadow: 0 6px 0 rgba(0,100,0,0.8), 0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4), inset 0 2px 6px rgba(200,255,200,0.4),
+                0 0 30px rgba(60,255,60,0.5);
+        }
+        .holo-btn.green:active, .holo-btn.green.pressed .btn-body {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,60,0,0.8), 0 3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 10px rgba(0,0,0,0.5), 0 0 40px rgba(30,255,30,0.6);
+        }
+        .holo-btn.green .btn-holo-ring { border-color: rgba(60,255,60,0.2); }
+        .holo-btn.green .btn-glow { background: radial-gradient(circle, rgba(40,255,40,0.15) 0%, transparent 70%); }
+
+        /* Синие кнопки (стрейф/вертикаль) */
+        .holo-btn.blue .btn-body {
+            background: radial-gradient(circle at 35% 35%, rgba(80,180,255,0.9), rgba(20,80,180,0.95));
+            border-color: rgba(120,200,255,0.7);
+            box-shadow: 0 6px 0 rgba(0,40,100,0.8), 0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4), inset 0 2px 6px rgba(180,220,255,0.3),
+                0 0 20px rgba(40,120,255,0.3);
+        }
+        .holo-btn.blue:hover .btn-body {
+            background: radial-gradient(circle at 35% 35%, rgba(120,200,255,0.95), rgba(40,120,220,1));
+            box-shadow: 0 6px 0 rgba(0,60,130,0.8), 0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4), inset 0 2px 6px rgba(200,230,255,0.4),
+                0 0 30px rgba(60,140,255,0.5);
+        }
+        .holo-btn.blue:active, .holo-btn.blue.pressed .btn-body {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,30,80,0.8), 0 3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 10px rgba(0,0,0,0.5), 0 0 40px rgba(30,100,255,0.6);
+        }
+        .holo-btn.blue .btn-holo-ring { border-color: rgba(60,140,255,0.2); }
+        .holo-btn.blue .btn-glow { background: radial-gradient(circle, rgba(30,100,255,0.15) 0%, transparent 70%); }
+
+        /* Фиолетовые кнопки (крен) */
+        .holo-btn.purple .btn-body {
+            background: radial-gradient(circle at 35% 35%, rgba(200,80,255,0.9), rgba(100,20,160,0.95));
+            border-color: rgba(220,120,255,0.7);
+            box-shadow: 0 6px 0 rgba(60,0,100,0.8), 0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4), inset 0 2px 6px rgba(230,180,255,0.3),
+                0 0 20px rgba(160,40,255,0.3);
+        }
+        .holo-btn.purple:hover .btn-body {
+            background: radial-gradient(circle at 35% 35%, rgba(220,120,255,0.95), rgba(140,40,200,1));
+            box-shadow: 0 6px 0 rgba(80,0,130,0.8), 0 8px 15px rgba(0,0,0,0.5),
+                inset 0 -3px 8px rgba(0,0,0,0.4), inset 0 2px 6px rgba(240,200,255,0.4),
+                0 0 30px rgba(180,60,255,0.5);
+        }
+        .holo-btn.purple:active, .holo-btn.purple.pressed .btn-body {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(40,0,80,0.8), 0 3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 10px rgba(0,0,0,0.5), 0 0 40px rgba(130,30,255,0.6);
+        }
+        .holo-btn.purple .btn-holo-ring { border-color: rgba(160,60,255,0.2); }
+        .holo-btn.purple .btn-glow { background: radial-gradient(circle, rgba(130,30,255,0.15) 0%, transparent 70%); }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>ОРБИТАЛЬНЫЙ ГИГАНТ</h1>
+        <p>КОСМИЧЕСКАЯ СТАНЦИЯ - ПОСАДКА И РАЗГРУЗКА</p>
+        <p>WASD - тангаж/рыскание | Q/E - крен | ПРОБЕЛ - тяга | Z/C - стрейф</p>
+        <p>F/V - подъём/спуск | SHIFT - тормоз | G - стыковка | X - щит</p>
+        <button id="startBtn">НАЧАТЬ МИССИЮ</button>
+    </div>
+    
+    <div id="hud">
+        <div class="hud-panel" id="topLeft">
+            <div>УРОВЕНЬ: <span id="level">1</span></div>
+            <div>ОЧКИ: <span id="score">0</span></div>
+            <div>ТАЙМЕР: <span id="timer">60</span>с</div>
+        </div>
+        <div class="hud-panel" id="topRight">
+            <div>СТАТУС: <span id="status">НОРМА</span></div>
+            <div>СКОРОСТЬ: <span id="speed">0</span> м/с</div>
+            <div>ВЫСОТА: <span id="altitude">500</span>м</div>
+            <div>КРЕН: <span id="roll">0</span>°</div>
+            <div>ТАНГАЖ: <span id="pitch">0</span>°</div>
+            <div>РЫСКАНИЕ: <span id="yaw">0</span>°</div>
+        </div>
+        <div class="hud-panel" id="bottomCenter">
+            <div>ТОПЛИВО: <span id="fuel">100</span>% | ДАВЛЕНИЕ: <span id="pressure">100</span>%</div>
+        </div>
+    </div>
+    
+    <div id="crosshair"></div>
+    <div id="emergency">EMERGENCY</div>
+    <div id="levelInfo"></div>
+    
+    <button id="commandToggle">[ TAB ] ШТУРВАЛ</button>
+    
+    <div id="commandDeck">
+        <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;width:100%;">
+            <div class="lever-panel" style="--color:#0f0" data-action="medical" onclick="activateLever('medical')">
+                <div class="lever-indicator"></div>
+                <div class="lever-icon">🔬</div>
+                <div class="lever-name">МЕДИЦИНСКИЙ</div>
+                <div class="lever-desc">Поиск жизни, сканирование ДНК</div>
+                <div class="lever-bar"><div class="lever-bar-fill"></div></div>
+                <div class="lever-result"></div>
+            </div>
+            <div class="lever-panel" style="--color:#f80" data-action="engineer" onclick="activateLever('engineer')">
+                <div class="lever-indicator"></div>
+                <div class="lever-icon">🔧</div>
+                <div class="lever-name">ИНЖЕНЕРНЫЙ</div>
+                <div class="lever-desc">Ремонт, апгрейд модулей</div>
+                <div class="lever-bar"><div class="lever-bar-fill"></div></div>
+                <div class="lever-result"></div>
+            </div>
+            <div class="lever-panel" style="--color:#08f" data-action="scanner" onclick="activateLever('scanner')">
+                <div class="lever-indicator"></div>
+                <div class="lever-icon">📡</div>
+                <div class="lever-name">СКАНЕР</div>
+                <div class="lever-desc">Измерение расстояния, карта</div>
+                <div class="lever-bar"><div class="lever-bar-fill"></div></div>
+                <div class="lever-result"></div>
+            </div>
+            <div class="lever-panel" style="--color:#f0f" data-action="selfie" onclick="activateLever('selfie')">
+                <div class="lever-indicator"></div>
+                <div class="lever-icon">📸</div>
+                <div class="lever-name">СЕЛФИ</div>
+                <div class="lever-desc">Фото станции, +500 очков</div>
+                <div class="lever-bar"><div class="lever-bar-fill"></div></div>
+                <div class="lever-result"></div>
+            </div>
+            <div class="lever-panel" style="--color:#ff0" data-action="paint" onclick="activateLever('paint')">
+                <div class="lever-indicator"></div>
+                <div class="lever-icon">🎨</div>
+                <div class="lever-name">ПОКРАСКА</div>
+                <div class="lever-desc">Покраска объекта, смена цвета</div>
+                <div class="lever-bar"><div class="lever-bar-fill"></div></div>
+                <div class="lever-result"></div>
+            </div>
+            <div class="lever-panel" style="--color:#0ff" data-action="docking" onclick="activateLever('docking')">
+                <div class="lever-indicator"></div>
+                <div class="lever-icon">⚓</div>
+                <div class="lever-name">СТЫКОВКА</div>
+                <div class="lever-desc">Магнитная стыковка с площадкой</div>
+                <div class="lever-bar"><div class="lever-bar-fill"></div></div>
+                <div class="lever-result"></div>
+            </div>
+        </div>
+
+        <div class="pilot-section">
+            <div class="pilot-group">
+                <span class="pilot-group-label">ТАНГАЖ</span>
+                <div class="holo-btn green" data-key="KeyW" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">▲</span>
+                    <span class="btn-label">W</span>
+                </div>
+                <div class="holo-btn green" data-key="KeyS" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">▼</span>
+                    <span class="btn-label">S</span>
+                </div>
+            </div>
+
+            <div class="pilot-group">
+                <span class="pilot-group-label">РЫСКАНИЕ</span>
+                <div class="holo-btn green" data-key="KeyA" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">◀</span>
+                    <span class="btn-label">A</span>
+                </div>
+                <div class="holo-btn green" data-key="KeyD" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">▶</span>
+                    <span class="btn-label">D</span>
+                </div>
+            </div>
+
+            <div class="pilot-group">
+                <span class="pilot-group-label">КРЕН</span>
+                <div class="holo-btn purple" data-key="KeyQ" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">↺</span>
+                    <span class="btn-label">Q</span>
+                </div>
+                <div class="holo-btn purple" data-key="KeyE" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">↻</span>
+                    <span class="btn-label">E</span>
+                </div>
+            </div>
+
+            <div class="pilot-group">
+                <span class="pilot-group-label">ДВИЖЕНИЕ</span>
+                <div class="holo-btn" data-key="Space" data-hold="true" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">🚀</span>
+                    <span class="btn-label">ТЯГА</span>
+                </div>
+                <div class="holo-btn" data-key="ShiftLeft" data-hold="true" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">🛑</span>
+                    <span class="btn-label">ТОРМОЗ</span>
+                </div>
+            </div>
+
+            <div class="pilot-group">
+                <span class="pilot-group-label">СТРЕЙФ</span>
+                <div class="holo-btn blue" data-key="KeyZ" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">◁</span>
+                    <span class="btn-label">Z</span>
+                </div>
+                <div class="holo-btn blue" data-key="KeyC" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">▷</span>
+                    <span class="btn-label">C</span>
+                </div>
+            </div>
+
+            <div class="pilot-group">
+                <span class="pilot-group-label">ВЕРТ</span>
+                <div class="holo-btn blue" data-key="KeyF" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">⬆</span>
+                    <span class="btn-label">F</span>
+                </div>
+                <div class="holo-btn blue" data-key="KeyV" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">⬇</span>
+                    <span class="btn-label">V</span>
+                </div>
+            </div>
+
+            <div class="pilot-group">
+                <span class="pilot-group-label">СИСТЕМЫ</span>
+                <div class="holo-btn blue" data-key="KeyX" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">🛡️</span>
+                    <span class="btn-label">ЩИТ</span>
+                </div>
+                <div class="holo-btn green" data-key="KeyG" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">⚓</span>
+                    <span class="btn-label">G</span>
+                </div>
+                <div class="holo-btn" data-key="KeyR" onmousedown="pilotPress(this)" onmouseup="pilotRelease(this)" onmouseleave="pilotRelease(this)" ontouchstart="pilotPress(this)" ontouchend="pilotRelease(this)">
+                    <div class="btn-body"></div>
+                    <div class="btn-holo-ring"></div>
+                    <div class="btn-glow"></div>
+                    <span class="btn-icon">⚠️</span>
+                    <span class="btn-label">R</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bot-status" id="botStatus"></div>
+    
+    <div id="reconDashboard">
+        <div class="recon-header">
+            <span class="title">РАЗВЕДКА // ОБЗОР СЕКТОРА</span>
+            <button class="close-btn" onclick="closeReconDashboard()">✕ ЗАКРЫТЬ</button>
+        </div>
+        <div class="recon-body">
+            <canvas id="reconCanvas"></canvas>
+            <div class="recon-sidebar" id="reconSidebar">
+                <h4>ОБЪЕКТЫ СЕКТОРА</h4>
+                <div id="reconObjList"></div>
+            </div>
+        </div>
+        <div class="recon-zoom">
+            <span>ЗУМ: <span id="reconZoomLevel">100</span>%</span>
+            <span>колесо мыши для масштаба | перетаскивание для панорамы</span>
+        </div>
+    </div>
+    
+    <div class="scanline"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

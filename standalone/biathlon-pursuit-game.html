@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Биатлон — Гонка Преследования</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;overflow:hidden;font-family:'Segoe UI',sans-serif;user-select:none}
+canvas{display:block}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.hud{position:absolute;top:12px;left:12px;color:#fff;text-shadow:1px 1px 4px #000}
+.hud-row{margin:3px 0}
+.hud-label{color:#999;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.hud-val{font-size:22px;font-weight:700}
+#stamina-bar{width:140px;height:10px;background:#333;border-radius:5px;overflow:hidden;margin-top:3px}
+#stamina-fill{height:100%;width:100%;background:linear-gradient(90deg,#ff4444,#ffaa00,#00ff88);border-radius:5px;transition:width .1s}
+#wind-box{position:absolute;top:12px;right:12px;text-align:center;color:#fff;text-shadow:1px 1px 4px #000}
+#wind-canvas{border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(0,0,0,.4)}
+#lap-box{position:absolute;top:12px;left:50%;transform:translateX(-50%);text-align:center;color:#fff;text-shadow:1px 1px 4px #000}
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:52px;font-weight:900;text-shadow:0 0 30px rgba(0,0,0,.8);opacity:0;transition:opacity .3s;text-align:center;pointer-events:none}
+#minimap{position:absolute;bottom:12px;right:12px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:rgba(0,0,0,.5)}
+#pos-display{position:absolute;bottom:12px;left:12px;color:#ffd700;font-size:30px;font-weight:900;text-shadow:2px 2px 6px #000}
+#penalty-info{position:absolute;bottom:50px;left:12px;color:#ff6666;font-size:18px;font-weight:700;text-shadow:1px 1px 4px #000;display:none}
+#shoot-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:none;color:#fff;text-shadow:1px 1px 4px #000;text-align:center}
+.bullet{display:inline-block;width:18px;height:18px;border-radius:50%;margin:0 3px;vertical-align:middle;border:2px solid rgba(255,255,255,.3)}
+.bullet-unused{background:#cc3333}
+.bullet-hit{background:#00cc66;border-color:#00ff88}
+.bullet-miss{background:#555}
+#screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,20,.92);color:#fff;z-index:20;pointer-events:all}
+#screen.hidden{display:none}
+#screen h1{font-size:72px;margin-bottom:8px;background:linear-gradient(135deg,#00ccff,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#screen h2{font-size:22px;color:#888;margin-bottom:30px}
+.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:24px 36px;max-width:520px;width:90%}
+.card-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:16px}
+.card-row:last-child{border:none}
+.btn{padding:14px 48px;font-size:20px;font-weight:700;border:none;border-radius:10px;cursor:pointer;margin-top:18px;background:linear-gradient(135deg,#00ccff,#0066ff);color:#fff;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 20px rgba(0,100,255,.3)}
+.btn:hover{transform:scale(1.06);box-shadow:0 6px 30px rgba(0,100,255,.5)}
+.medal{font-size:64px;margin:6px 0}
+.help{color:#666;font-size:13px;margin-top:16px;text-align:center;line-height:1.9}
+#result-box{display:none}
+#result-box .card-row{font-size:15px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div class="hud" id="hud">
+    <div class="hud-row"><span class="hud-label">Время</span><div class="hud-val" id="t-time">00:00.0</div></div>
+    <div class="hud-row"><span class="hud-label">Скорость</span><div class="hud-val" id="t-speed">0.0 км/ч</div></div>
+    <div class="hud-row"><span class="hud-label">Выносливость</span><div id="stamina-bar"><div id="stamina-fill"></div></div></div>
+  </div>
+  <div id="wind-box"><span class="hud-label">Ветер</span><canvas id="wind-canvas" width="76" height="76"></canvas><div id="t-wind" style="font-size:13px;margin-top:3px">0 м/с</div></div>
+  <div id="lap-box"><span class="hud-label">Круг</span><div class="hud-val" id="t-lap">0 / 4</div></div>
+  <div id="shoot-hud"></div>
+  <div id="penalty-info"></div>
+  <div id="pos-display"></div>
+  <div id="msg"></div>
+  <canvas id="minimap" width="160" height="160"></canvas>
+  <div id="screen">
+    <h1>БИАТЛОН</h1>
+    <h2>Гонка Преследования</h2>
+    <div class="card">
+      <div class="card-row"><span>Движение</span><span>WASD / Стрелки</span></div>
+      <div class="card-row"><span>Спринт</span><span>SHIFT (тратит выносливость)</span></div>
+      <div class="card-row"><span>Стрельба</span><span>Мышь — прицел, ЛКМ — выстрел</span></div>
+      <div class="card-row"><span>На рубеже</span><span>Подъедь к рубежу и замедлись</span></div>
+    </div>
+    <button class="btn" id="btn-start">НА СТАРТ</button>
+    <div class="help">
+      4 круга · 2 огневых рубежа · 5 выстрелов на каждом<br>
+      Каждый промах = штрафный круг 150 м<br>
+      Ветер смещает пулю — учитывай при прицеливании!
+    </div>
+  </div>
+  <div id="result-box">
+    <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,20,.88);z-index:20;pointer-events:all">
+      <h1 style="font-size:48px;margin-bottom:4px">ФИНИШ</h1>
+      <div class="medal" id="r-medal"></div>
+      <div class="card" id="r-card"></div>
+      <button class="btn" id="btn-restart">ЗАНОВО</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+const MC=document.getElementById('minimap'),MX=MC.getContext('2d');
+const WC=document.getElementById('wind-canvas'),WX=WC.getContext('2d');
+let W,H;
+function resize(){W=C.width=innerWidth;H=C.height=innerHeight;}
+resize();addEventListener('resize',resize);
+
+let AC;
+function audio(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();return AC;}
+function snd(f,d,t='sine',v=.12){
+  try{const a=audio(),o=a.createOscillator(),g=a.createGain();
+  o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);
+  o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d);}catch(e){}
+}
+function sndShot(){snd(160,.12,'sawtooth',.25);snd(60,.25,'sine',.08);}
+function sndHit(){snd(900,.08,'sine',.12);setTimeout(()=>snd(1300,.08),60);}
+function sndMiss(){snd(220,.15,'triangle',.08);}
+
+const K={};let mx=0,my=0;
+addEventListener('keydown',e=>{K[e.code]=true;K[e.key.toLowerCase()]=true;});
+addEventListener('keyup',e=>{K[e.code]=false;K[e.key.toLowerCase()]=false;});
+C.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+C.addEventListener('contextmenu',e=>e.preventDefault());
+
+const NPT=300,TP=[];
+function genTrack(){
+  TP.length=0;const cx=600,cy=450,rx=420,ry=300;
+  for(let i=0;i<NPT;i++){
+    const a=i/NPT*Math.PI*2;
+    const w=Math.sin(a*3)*35+Math.cos(a*5)*20+Math.sin(a*7)*10;
+    TP.push({x:cx+(rx+w)*Math.cos(a),y:cy+(ry+w*.6)*Math.sin(a)});
+  }
+}
+genTrack();
+function tpGet(i){return TP[((i%NPT)+NPT)%NPT];}
+function tpLerp(t){
+  const idx=((t%1)+1)%1*NPT,i=Math.floor(idx),f=idx-i;
+  const a=tpGet(i),b=tpGet(i+1);
+  return{x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f};
+}
+function tpDir(t){
+  const a=tpLerp(t-.001),b=tpLerp(t+.001);
+  const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;
+  return{x:dx/l,y:dy/l};
+}
+function tpLen(){let l=0;for(let i=0;i<NPT;i++){const a=tpGet(i),b=tpGet(i+1);l+=Math.hypot(b.x-a.x,b.y-a.y);}return l;}
+const TRACK_LENGTH=tpLen();
+const SHOOT_T=[0.2,0.6];
+
+function fmt(ms){
+  const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000),d=Math.floor(ms%1000/100);
+  return`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${d}`;
+}
+let msgTimer=null;
+function showMsg(txt,dur=2000){
+  const el=document.getElementById('msg');el.textContent=txt;el.style.opacity=1;
+  clearTimeout(msgTimer);msgTimer=setTimeout(()=>el.style.opacity=0,dur);
+}
+
+const parts=[];
+function spark(x,y,vx,vy,life,col,sz=2){parts.push({x,y,vx,vy,life,ml:life,col,sz});}
+function updateParts(dt){
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=180*dt;p.life-=dt;
+    if(p.life<=0)parts.splice(i,1);
+  }
+}
+function drawParts(){
+  for(const p of parts){
+    X.globalAlpha=Math.max(0,p.life/p.ml);X.fillStyle=p.col;
+    X.beginPath();X.arc(p.x,p.y,p.sz*(p.life/p.ml),0,Math.PI*2);X.fill();
+  }
+  X.globalAlpha=1;
+}
+
+class AI{
+  constructor(name,col){
+    this.name=name;this.col=col;this.t=0;
+    this.speed=.018+Math.random()*.01;
+    this.shooting=false;this.shootTimer=0;this.shootsLeft=0;
+    this.totalHits=0;this.totalMisses=0;this.done=false;
+    this.penaltyDist=0;this.skill=.5+Math.random()*.4;
+    this.shootsDone=0;this.time=0;this.prevT=0;this.lap=0;this.sessionMisses=0;
+  }
+  update(dt){
+    if(this.done)return;
+    this.time+=dt*1000;
+    if(this.shooting){
+      this.shootTimer+=dt;
+      if(this.shootTimer>.5+Math.random()*.8){
+        this.shootTimer=0;this.shootsLeft--;
+        if(Math.random()<this.skill)this.totalHits++;else{this.totalMisses++;this.sessionMisses++;}
+        if(this.shootsLeft<=0){
+          this.shooting=false;this.shootsDone++;
+          if(this.sessionMisses>0)this.penaltyDist+=this.sessionMisses*150;
+          this.sessionMisses=0;
+        }
+      }
+      return;
+    }
+    if(this.penaltyDist>0){
+      this.penaltyDist-=this.speed*TRACK_LENGTH*.5*dt;
+      if(this.penaltyDist<0)this.penaltyDist=0;
+      return;
+    }
+    const spd=this.speed*(.93+Math.random()*.05);
+    this.prevT=this.t;this.t+=spd*dt;
+    if(this.t>=1)this.t-=1;
+    if(this.prevT>.85&&this.t<.15)this.lap++;
+    const shootLaps=[1,3];
+    for(let si=0;si<SHOOT_T.length;si++){
+      if(!this.shooting&&this.lap===shootLaps[si]&&this.shootsDone===si&&Math.abs(this.t-SHOOT_T[si])<.012){
+        this.shooting=true;this.shootsLeft=5;this.shootTimer=0;break;
+      }
+    }
+    if(this.lap>=4&&this.shootsDone>=SHOOT_T.length)this.done=true;
+  }
+}
+
+class Game{
+  constructor(){
+    this.state='countdown';
+    this.time=0;this.t=0;this.prevT=0;this.speed=0;this.stamina=100;
+    this.lap=0;this.shootIdx=0;
+    this.shootsFired=0;this.hits=0;this.misses=0;
+    this.penaltyCount=0;this.penaltyDist=0;
+    this.targets=[];this.wind={spd:0,ang:0};
+    this.ai=[];for(let i=0;i<5;i++)this.ai.push(new AI(AI_NAMES[i],AI_COLS[i]));
+    this.shakeT=0;this.shakeI=0;this.cdTimer=4;this.cdPhase=0;
+    this.enteredShoot=[false,false];
+  }
+  genWind(){this.wind.spd=1+Math.random()*8;this.wind.ang=Math.random()*Math.PI*2;}
+  initTargets(){
+    this.targets=[];for(let i=0;i<5;i++)this.targets.push({hit:false,hitT:0});
+    this.shootsFired=0;this.hits=0;this.misses=0;this.genWind();
+  }
+  enterShoot(){
+    this.state='shoot';this.speed=0;this.initTargets();
+    document.getElementById('shoot-hud').style.display='block';
+    showMsg('ОГНЕВОЙ РУБЕЖ '+(this.shootIdx+1),1500);
+    setTimeout(()=>{if(this.state==='shoot')showMsg('ПРИСТРЕЛИВАЙТЕСЬ!',1200);},1500);
+  }
+  fire(){
+    if(this.state!=='shoot'||this.shootsFired>=5)return;
+    this.shootsFired++;sndShot();this.shakeT=.12;this.shakeI=6;
+
+    const scopeW=400,scX=W/scopeW;
+    const tgtSX=W/2-scopeW/2*scX+(20+this.shootsFired*70)*scX;
+    const tgtSY=H/2;
+    const tgt=this.targets[this.shootsFired-1];
+
+    // Wind pushes bullet off center — player must compensate!
+    const windOffX=Math.cos(this.wind.ang)*this.wind.spd*4;
+    const windOffY=Math.sin(this.wind.ang)*this.wind.spd*4;
+
+    const effX=mx-windOffX,effY=my-windOffY;
+    const dist=Math.hypot(effX-tgtSX,effY-tgtSY);
+    const hr=22*scX*.9;
+
+    if(dist<hr){
+      tgt.hit=true;tgt.hitT=1;sndHit();
+      spark(tgtSX,tgtSY,(Math.random()-.5)*250,(Math.random()-.5)*250,.6,'#ff6633',3);
+    }else{
+      this.misses++;sndMiss();
+      spark(mx,my,(Math.random()-.5)*100,(Math.random()-.5)*100,.3,'#888',2);
+    }
+    if(this.shootsFired>=5)setTimeout(()=>this.exitShoot(),700);
+  }
+  exitShoot(){
+    const missed=5-this.hits;this.penaltyCount+=missed;this.penaltyDist=0;
+    document.getElementById('shoot-hud').style.display='none';
+    this.state='penalty';
+    if(missed>0)showMsg(`МИМО ${missed}×  —  ${missed} ШТРАФНЫХ КРУГОВ!`,2500);
+    else showMsg('ИДЕАЛЬНАЯ СТРЕЛЬБА!',1800);
+  }
+  update(dt){
+    if(this.state==='countdown'||this.state==='waiting'){
+      this.cdTimer-=dt;const sec=Math.ceil(this.cdTimer);
+      if(sec>0&&sec<=3&&this.cdPhase!==sec){this.cdPhase=sec;showMsg(String(sec),700);}
+      if(sec<=0&&this.cdPhase!==0){this.cdPhase=0;showMsg('СТАРТ!',800);}
+      if(this.cdTimer<=-.5&&this.state!=='ski')this.state='ski';
+      return;
+    }
+    if(this.state==='finish')return;
+
+    this.time+=dt*1000;updateParts(dt);
+    if(this.shakeT>0)this.shakeT-=dt;
+    for(const a of this.ai)a.update(dt);
+    for(const t of this.targets)if(t.hitT>0)t.hitT-=dt*3;
+
+    if(this.state==='shoot')return;
+
+    if(this.state==='penalty'){
+      this.speed=120;this.stamina=Math.min(100,this.stamina+20*dt);
+      const move=this.speed*dt;this.t+=move/TRACK_LENGTH;
+      if(this.t>=1)this.t-=1;this.penaltyDist+=move;
+      if(this.penaltyDist>=150){
+        this.penaltyCount--;this.penaltyDist=0;
+        if(this.penaltyCount<=0){this.state='ski';this.speed=0;showMsg('ШТРАФ ОТБЕЖАН!',1500);}
+        else showMsg(`ЕЩЁ ${this.penaltyCount} ШТРАФНЫХ!`,1000);
+      }
+      return;
+    }
+
+    if(this.state==='ski'){
+      let ax=0,ay=0;
+      if(K['w']||K['ArrowUp'])ay=-1;if(K['s']||K['ArrowDown'])ay=1;
+      if(K['a']||K['ArrowLeft'])ax=-1;if(K['d']||K['ArrowRight'])ax=1;
+      const sprint=K['ShiftLeft']||K['ShiftRight'];
+      let maxSpd=280;
+      if(ax||ay){this.speed+=400*dt;if(sprint&&this.stamina>0){maxSpd=420;this.stamina-=35*dt;}}
+      this.stamina=Math.max(0,Math.min(100,this.stamina+(ax||ay?0:30*dt)));
+      this.speed=Math.min(maxSpd,this.speed);
+      if(!ax&&!ay)this.speed*=Math.pow(.3,dt);
+      if(this.speed<1)this.speed=0;
+
+      const moveT=this.speed*dt/TRACK_LENGTH;
+      this.prevT=this.t;this.t+=moveT;
+      if(this.t>=1)this.t-=1;
+
+      if(moveT>0&&this.prevT>.85&&this.t<.15){this.lap++;this.enteredShoot=[false,false];}
+
+      const shootLaps=[1,3];
+      for(let si=0;si<SHOOT_T.length;si++){
+        if(!this.enteredShoot[si]&&this.lap===shootLaps[si]&&Math.abs(this.t-SHOOT_T[si])<.02&&this.speed<100){
+          this.enteredShoot[si]=true;this.shootIdx=si;this.enterShoot();break;
+        }
+      }
+      if(this.lap>=4&&this.state==='ski'){this.state='finish';showResults(this);}
+    }
+  }
+
+  draw(){
+    X.clearRect(0,0,W,H);
+    if(this.state==='ski'||this.state==='penalty'||this.state==='countdown'||this.state==='waiting'||this.state==='finish'){
+      this.drawSkiView();
+    }else if(this.state==='shoot'){
+      this.drawShootView();
+    }
+  }
+
+  drawSkiView(){
+    const g=X.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#1a1a3e');g.addColorStop(.4,'#2a3a5e');g.addColorStop(.7,'#3a5a7e');g.addColorStop(1,'#5a7a6e');
+    X.fillStyle=g;X.fillRect(0,0,W,H);
+
+    X.fillStyle='rgba(255,255,255,.35)';
+    for(let i=0;i<40;i++){
+      const sx=(i*137.5+i*i*.1)%W,sy=(i*73.3)%(H*.25);
+      X.beginPath();X.arc(sx,sy,.5+(i%3)*.4,0,Math.PI*2);X.fill();
+    }
+    X.fillStyle='#2a3040';X.beginPath();X.moveTo(0,H*.35);
+    for(let i=0;i<=W;i+=40)X.lineTo(i,H*.35-Math.sin(i*.008)*40-Math.cos(i*.012)*20);
+    X.lineTo(W,H);X.lineTo(0,H);X.fill();
+
+    X.save();
+    if(this.shakeT>0)X.translate((Math.random()-.5)*this.shakeI*this.shakeT*8,(Math.random()-.5)*this.shakeI*this.shakeT*8);
+
+    X.strokeStyle='#c8d8e8';X.lineWidth=26;X.lineCap='round';X.lineJoin='round';
+    X.beginPath();for(let i=0;i<=NPT;i++){const p=tpGet(i);i?X.lineTo(p.x,p.y):X.moveTo(p.x,p.y);}
+    X.closePath();X.stroke();
+    X.strokeStyle='rgba(255,255,255,.25)';X.lineWidth=1;X.setLineDash([6,10]);
+    X.beginPath();for(let i=0;i<=NPT;i++){const p=tpGet(i);i?X.lineTo(p.x,p.y):X.moveTo(p.x,p.y);}
+    X.closePath();X.stroke();X.setLineDash([]);
+
+    for(let si=0;si<SHOOT_T.length;si++){
+      const pos=tpLerp(SHOOT_T[si]),dir=tpDir(SHOOT_T[si]);
+      const px=-dir.y,py=dir.x;
+      const used=this.enteredShoot[si];
+      X.fillStyle=used?'#445':'#e8e0d0';
+      X.fillRect(pos.x-60+px*30,pos.y-30+py*30,120,60);
+      for(let t=0;t<5;t++){
+        X.fillStyle=used?'#555':'#333';X.beginPath();X.arc(pos.x-40+t*20+px*30,pos.y+py*30,8,0,Math.PI*2);X.fill();
+        X.fillStyle='#fff';X.beginPath();X.arc(pos.x-40+t*20+px*30,pos.y+py*30,3,0,Math.PI*2);X.fill();
+      }
+      X.fillStyle=used?'#888':'#c44';X.font='bold 12px sans-serif';X.textAlign='center';
+      X.fillText('РУБЕЖ '+(si+1),pos.x+px*55,pos.y+py*55+4);
+    }
+
+    const sfPos=tpLerp(0),sfDir=tpDir(0);
+    X.strokeStyle='#ff0';X.lineWidth=4;
+    X.beginPath();X.moveTo(sfPos.x-sfDir.y*15,sfPos.y+sfDir.x*15);X.lineTo(sfPos.x+sfDir.y*15,sfPos.y-sfDir.x*15);X.stroke();
+    X.fillStyle='#ff0';X.font='bold 11px sans-serif';X.textAlign='center';
+    X.fillText('СТАРТ/ФИНИШ',sfPos.x,sfPos.y-20);
+
+    for(const a of this.ai){if(a.done)continue;const pos=tpLerp(a.t),dir=tpDir(a.t);this.drawSkier(pos.x,pos.y,dir,a.col,false);}
+    const ppos=tpLerp(this.t),pdir=tpDir(this.t);
+    this.drawSkier(ppos.x,ppos.y,pdir,'#00ccff',true);
+
+    X.restore();
+
+    X.fillStyle='rgba(255,255,255,.4)';
+    for(let i=0;i<80;i++){
+      const sx=(i*97+this.time*.015*(1+i%3))%W,sy=(i*53+this.time*.04*(1+i%2))%H;
+      X.beginPath();X.arc(sx,sy,1+(i%2),0,Math.PI*2);X.fill();
+    }
+    drawParts();
+
+    document.getElementById('t-time').textContent=fmt(this.time);
+    document.getElementById('t-speed').textContent=(this.speed*.36).toFixed(1)+' км/ч';
+    document.getElementById('stamina-fill').style.width=this.stamina+'%';
+    document.getElementById('t-lap').textContent=Math.min(this.lap+1,4)+' / 4';
+
+    const pi=document.getElementById('penalty-info');
+    if(this.state==='penalty'&&this.penaltyCount>0){
+      pi.style.display='block';
+      pi.textContent=`Штраф: ${Math.ceil(this.penaltyCount*150-this.penaltyDist)}м`;
+    }else pi.style.display='none';
+
+    const posArr=[{name:'ВЫ',t:this.t,l:0}];
+    for(const a of this.ai)posArr.push({name:a.name,t:a.t,l:a.lap,done:a.done});
+    posArr.sort((a,b)=>{
+      if(a.done&&!b.done)return -1;if(!a.done&&b.done)return 1;
+      if(a.l!==b.l)return b.l-a.l;return b.t-a.t;
+    });
+    const pidx=posArr.findIndex(p=>p.name==='ВЫ')+1;
+    document.getElementById('pos-display').textContent=['-е','-е','-е','-е','-е','-е','-е','-е','-е','-е'][Math.min(pidx-1,9)].length?pidx+['-е','-е','-е','-е','-е','-е','-е','-е','-е','-е'][Math.min(pidx-1,9)]:'-е';
+
+    this.drawMinimap();this.drawWind();
+  }
+
+  drawSkier(x,y,dir,col,isP){
+    X.save();X.translate(x,y);X.rotate(Math.atan2(dir.y,dir.x));
+    X.strokeStyle='#ddd';X.lineWidth=2;
+    X.beginPath();X.moveTo(-12,-3);X.lineTo(-22,-6);X.stroke();
+    X.beginPath();X.moveTo(-12,3);X.lineTo(-22,6);X.stroke();
+    X.fillStyle=col;X.beginPath();X.ellipse(0,0,12,5,0,0,Math.PI*2);X.fill();
+    X.beginPath();X.arc(10,0,5,0,Math.PI*2);X.fill();
+    if(isP){X.shadowColor='#00ccff';X.shadowBlur=12;X.beginPath();X.arc(10,0,5,0,Math.PI*2);X.fill();X.shadowBlur=0;}
+    X.restore();
+  }
+
+  drawShootView(){
+    const g=X.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#1a2a4a');g.addColorStop(.5,'#2a3a5a');g.addColorStop(.51,'#6a6a4a');g.addColorStop(1,'#4a4a2a');
+    X.fillStyle=g;X.fillRect(0,0,W,H);
+
+    const windOffX=Math.cos(this.wind.ang)*this.wind.spd*4;
+    const windOffY=Math.sin(this.wind.ang)*this.wind.spd*4;
+
+    X.fillStyle='#ddd';X.font='bold 16px sans-serif';X.textAlign='center';
+    X.fillText(`Ветер: ${this.wind.spd.toFixed(1)} м/с`,W/2,36);
+    X.fillStyle='#ff8844';X.font='14px sans-serif';
+    X.fillText('Компенсируй смещение!',W/2,54);
+
+    const scopeW=400,scX=W/scopeW;
+    for(let i=0;i<5;i++){
+      const t=this.targets[i];
+      const sx=W/2-scopeW/2*scX+(20+i*70)*scX,sy=H/2;
+
+      X.fillStyle=t.hit?'#444':'#222';X.beginPath();X.arc(sx,sy,22*scX*.8,0,Math.PI*2);X.fill();
+      X.fillStyle=t.hit?'#666':'#fff';X.beginPath();X.arc(sx,sy,8*scX*.8,0,Math.PI*2);X.fill();
+      X.strokeStyle=t.hit?'#555':'#cc2222';X.lineWidth=2;X.beginPath();X.arc(sx,sy,22*scX*.8,0,Math.PI*2);X.stroke();
+      if(i===this.shootsFired&&!t.hit){
+        X.strokeStyle='rgba(255,255,0,.5)';X.lineWidth=2;X.beginPath();X.arc(sx,sy,28*scX*.8,0,Math.PI*2);X.stroke();
+      }
+      if(t.hitT>0){X.globalAlpha=t.hitT;X.fillStyle='#ff8844';X.beginPath();X.arc(sx,sy,35*scX*.8,0,Math.PI*2);X.fill();X.globalAlpha=1;}
+    }
+
+    // Crosshair with wind offset dot
+    X.save();X.translate(mx,my);
+    X.strokeStyle='rgba(255,50,50,.85)';X.lineWidth=2;
+    X.beginPath();X.moveTo(-18,0);X.lineTo(-6,0);X.moveTo(6,0);X.lineTo(18,0);X.stroke();
+    X.beginPath();X.moveTo(0,-18);X.lineTo(0,-6);X.moveTo(0,6);X.lineTo(0,18);X.stroke();
+    X.beginPath();X.arc(0,0,3,0,Math.PI*2);X.fillStyle='rgba(255,50,50,.7)';X.fill();
+    X.restore();
+
+    // Wind drift: small orange dot showing where bullet will actually land
+    const landX=mx-windOffX,landY=my-windOffY;
+    X.strokeStyle='rgba(255,160,50,.6)';X.lineWidth=1;X.setLineDash([3,3]);
+    X.beginPath();X.moveTo(mx,my);X.lineTo(landX,landY);X.stroke();X.setLineDash([]);
+    X.fillStyle='rgba(255,160,50,.8)';X.beginPath();X.arc(landX,landY,5,0,Math.PI*2);X.fill();
+    X.fillStyle='rgba(255,160,50,.5)';X.font='11px sans-serif';X.textAlign='left';
+    X.fillText('точка попадания',landX+10,landY+4);
+
+    drawParts();
+
+    let html='<div class="hud-label">ПАТРОНЫ</div><div style="margin:4px 0">';
+    for(let i=0;i<5;i++){
+      let cls=i<this.shootsFired?(this.targets[i].hit?'bullet-hit':'bullet-miss'):'bullet-unused';
+      html+=`<span class="bullet ${cls}"></span>`;
+    }
+    html+=`</div><div style="font-size:16px">Попаданий: ${this.hits} / ${this.shootsFired}</div>`;
+    document.getElementById('shoot-hud').innerHTML=html;
+  }
+
+  drawMinimap(){
+    MX.clearRect(0,0,160,160);const s=.14,ox=80-600*s,oy=80-450*s;
+    MX.strokeStyle='rgba(255,255,255,.3)';MX.lineWidth=2;
+    MX.beginPath();for(let i=0;i<=NPT;i++){const p=tpGet(i);i?MX.lineTo(p.x*s+ox,p.y*s+oy):MX.moveTo(p.x*s+ox,p.y*s+oy);}
+    MX.closePath();MX.stroke();
+    for(const a of this.ai){if(a.done)continue;const p=tpLerp(a.t);MX.fillStyle=a.col;MX.beginPath();MX.arc(p.x*s+ox,p.y*s+oy,3,0,Math.PI*2);MX.fill();}
+    const pp=tpLerp(this.t);MX.fillStyle='#00ccff';MX.beginPath();MX.arc(pp.x*s+ox,pp.y*s+oy,4,0,Math.PI*2);MX.fill();
+    MX.strokeStyle='#fff';MX.lineWidth=1;MX.stroke();
+  }
+
+  drawWind(){
+    WX.clearRect(0,0,76,76);WX.fillStyle='rgba(0,0,0,.4)';WX.fillRect(0,0,76,76);
+    WX.strokeStyle='rgba(255,255,255,.15)';WX.strokeRect(0,0,76,76);
+    WX.strokeStyle='rgba(255,255,255,.15)';WX.lineWidth=1;
+    WX.beginPath();WX.moveTo(38,5);WX.lineTo(38,71);WX.moveTo(5,38);WX.lineTo(71,38);WX.stroke();
+    WX.save();WX.translate(38,38);WX.rotate(this.wind.ang);
+    const len=18+this.wind.spd*2;
+    WX.strokeStyle='#ff6644';WX.lineWidth=3;
+    WX.beginPath();WX.moveTo(-len,0);WX.lineTo(len,0);WX.stroke();
+    WX.fillStyle='#ff6644';WX.beginPath();WX.moveTo(len+6,0);WX.lineTo(len-4,-5);WX.lineTo(len-4,5);WX.closePath();WX.fill();
+    WX.restore();
+    document.getElementById('t-wind').textContent=this.wind.spd.toFixed(1)+' м/с';
+  }
+}
+
+function showResults(g){
+  let positions=[{name:'Вы',time:g.time,hits:g.hits,misses:g.misses,col:'#00ccff',done:true}];
+  for(const a of g.ai){
+    positions.push({name:a.name,time:a.done?a.time:g.time*(.85+Math.random()*.4),col:a.col,hits:a.totalHits,misses:a.totalMisses,done:a.done});
+  }
+  positions.sort((a,b)=>a.time-b.time);
+  const pi=positions.findIndex(p=>p.name==='Вы');
+  let medal='🏅';if(pi===0)medal='🥇';else if(pi===1)medal='🥈';else if(pi===2)medal='🥉';
+  else medal=`${pi+1}-е место`;
+  document.getElementById('r-medal').textContent=medal;
+  let html='';
+  for(let i=0;i<positions.length;i++){
+    const p=positions[i];const icon=i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+    html+=`<div class="card-row" style="color:${p.col}"><span>${icon} ${p.name}</span><span>${fmt(p.time)}</span></div>`;
+  }
+  html+=`<div style="margin-top:12px;color:#888;font-size:13px;text-align:center">Попаданий: ${g.hits}/10 · Промахов: ${g.misses}</div>`;
+  document.getElementById('r-card').innerHTML=html;
+  document.getElementById('result-box').style.display='block';
+}
+
+let G=null,lastT=0;
+document.getElementById('btn-start').onclick=()=>{audio();document.getElementById('screen').classList.add('hidden');G=new Game();};
+document.getElementById('btn-restart').onclick=()=>{document.getElementById('result-box').style.display='none';G=new Game();};
+C.addEventListener('click',()=>{if(G)G.fire();});
+
+function loop(ts){
+  const dt=Math.min((ts-lastT)/1000,.04);lastT=ts;
+  if(G){G.update(dt);G.draw();}
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

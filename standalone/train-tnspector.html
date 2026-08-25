@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Train Inspector — 3D Локомотив</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e1a; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #fff; }
+#canvas3d { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+.hud { position: fixed; z-index: 10; pointer-events: none; }
+.hud * { pointer-events: auto; }
+.top-bar {
+  top: 0; left: 0; right: 0; height: 56px;
+  background: linear-gradient(180deg, rgba(0,20,40,0.95), rgba(0,20,40,0.0));
+  display: flex; align-items: center; padding: 0 24px; gap: 20px;
+}
+.top-bar h1 { font-size: 18px; color: #ff6622; letter-spacing: 2px; text-transform: uppercase; }
+.progress-wrap {
+  flex: 1; max-width: 400px; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; width: 0%; background: linear-gradient(90deg, #ff6622, #ffaa00);
+  border-radius: 4px; transition: width 0.5s ease;
+}
+.progress-text { font-size: 13px; color: #ccaa88; min-width: 60px; text-align: right; }
+.round-badge {
+  background: rgba(255,102,34,0.15); border: 1px solid #ff6622;
+  padding: 4px 14px; border-radius: 20px; font-size: 12px; color: #ff6622;
+}
+.guide-panel {
+  position: fixed; bottom: 20px; left: 20px; z-index: 10;
+  width: 320px; background: rgba(20,10,0,0.85);
+  border: 1px solid rgba(255,102,34,0.3); border-radius: 12px;
+  padding: 16px; backdrop-filter: blur(10px);
+  transition: all 0.5s ease;
+}
+.guide-panel.hidden { transform: translateY(120%); opacity: 0; pointer-events: none; }
+.guide-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: radial-gradient(circle, #ff6622, #662200);
+  border: 2px solid #ff6622; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; animation: guidePulse 2s ease-in-out infinite;
+}
+@keyframes guidePulse {
+  0%,100% { box-shadow: 0 0 10px rgba(255,102,34,0.3); }
+  50% { box-shadow: 0 0 25px rgba(255,102,34,0.6); }
+}
+.guide-name { font-size: 11px; color: #ff6622; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.guide-text { font-size: 14px; color: #e0c8b0; line-height: 1.5; }
+.guide-hint {
+  margin-top: 10px; padding: 8px 12px; background: rgba(255,102,34,0.1);
+  border-left: 3px solid #ff6622; border-radius: 0 6px 6px 0;
+  font-size: 12px; color: #cc8855;
+}
+.quiz-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: rgba(0,5,15,0.85); display: flex; align-items: center;
+  justify-content: center; backdrop-filter: blur(5px);
+  transition: opacity 0.4s; opacity: 0; pointer-events: none;
+}
+.quiz-overlay.active { opacity: 1; pointer-events: auto; }
+.quiz-card {
+  background: rgba(20,10,0,0.95); border: 1px solid rgba(255,102,34,0.4);
+  border-radius: 16px; padding: 32px; max-width: 520px; width: 90%;
+  text-align: center;
+}
+.quiz-card h2 { color: #ff6622; font-size: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.quiz-question { font-size: 18px; color: #f0e8e0; margin: 16px 0 24px; line-height: 1.5; }
+.quiz-options { display: flex; flex-direction: column; gap: 10px; }
+.quiz-option {
+  padding: 14px 20px; background: rgba(80,40,0,0.4);
+  border: 1px solid rgba(255,102,34,0.2); border-radius: 10px;
+  font-size: 15px; color: #ccaa88; cursor: pointer; transition: all 0.2s;
+  text-align: left;
+}
+.quiz-option:hover { background: rgba(120,60,0,0.5); border-color: #ff6622; color: #fff; }
+.quiz-option.correct { background: rgba(0,200,100,0.3); border-color: #00ff88; color: #00ff88; }
+.quiz-option.wrong { background: rgba(200,50,50,0.3); border-color: #ff4444; color: #ff6666; }
+.quiz-score { font-size: 14px; color: #ccaa88; margin-top: 16px; }
+.quiz-next {
+  margin-top: 20px; padding: 12px 32px; background: linear-gradient(135deg, #ff6622, #cc4400);
+  border: none; border-radius: 8px; font-size: 14px; color: #fff;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+  transition: transform 0.2s;
+}
+.quiz-next:hover { transform: scale(1.05); }
+.arrow-indicator {
+  position: fixed; z-index: 15; pointer-events: none;
+  transition: all 0.3s ease;
+}
+.arrow-indicator svg { filter: drop-shadow(0 0 8px rgba(255,102,34,0.8)); }
+.arrow-label {
+  position: absolute; white-space: nowrap; font-size: 12px;
+  color: #ff6622; text-shadow: 0 0 10px rgba(255,102,34,0.5);
+  top: -20px; left: 50%; transform: translateX(-50%);
+}
+.notification {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
+  z-index: 25; padding: 12px 28px; border-radius: 10px;
+  font-size: 14px; opacity: 0; transition: all 0.4s ease;
+  pointer-events: none;
+}
+.notification.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.notification.success {
+  background: rgba(0,200,100,0.2); border: 1px solid #00ff88; color: #00ff88;
+}
+.notification.info {
+  background: rgba(255,150,50,0.2); border: 1px solid #ffaa44; color: #ffaa44;
+}
+.parts-panel {
+  position: fixed; top: 60px; right: 16px; z-index: 10;
+  width: 240px; max-height: calc(100vh - 80px); overflow-y: auto;
+  background: rgba(20,10,0,0.8); border: 1px solid rgba(255,102,34,0.2);
+  border-radius: 10px; padding: 12px;
+}
+.part-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px; margin-bottom: 4px; border-radius: 6px;
+  transition: background 0.2s; cursor: pointer;
+}
+.part-item:hover { background: rgba(255,102,34,0.1); }
+.part-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid #553; background: transparent;
+  transition: all 0.3s;
+}
+.part-item.found .part-dot { background: #00ff88; border-color: #00ff88; }
+.part-item.current .part-dot { background: #ff6622; border-color: #ff6622; animation: dotPulse 1s infinite; }
+@keyframes dotPulse { 0%,100% { box-shadow: 0 0 4px #ff6622; } 50% { box-shadow: 0 0 12px #ff6622; } }
+.part-name { font-size: 13px; color: #ccaa88; }
+.part-item.found .part-name { color: #00ff88; }
+.part-item.current .part-name { color: #ff6622; }
+.start-screen {
+  position: fixed; inset: 0; z-index: 50;
+  background: radial-gradient(ellipse at center, #1a1008 0%, #0a0604 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: opacity 0.8s;
+}
+.start-screen.hidden { opacity: 0; pointer-events: none; }
+.start-screen h1 {
+  font-size: 36px; color: #ff6622; letter-spacing: 4px;
+  text-transform: uppercase; margin-bottom: 8px;
+  text-shadow: 0 0 30px rgba(255,102,34,0.4);
+}
+.start-screen .subtitle { font-size: 14px; color: #885533; margin-bottom: 40px; letter-spacing: 2px; }
+.start-screen .train-icon { font-size: 80px; margin-bottom: 30px; animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+.start-btn {
+  padding: 16px 48px; background: linear-gradient(135deg, #ff6622, #aa4400);
+  border: none; border-radius: 12px; font-size: 16px; color: #fff;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.start-btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(255,102,34,0.4); }
+.start-desc { margin-top: 20px; font-size: 13px; color: #665544; max-width: 400px; text-align: center; line-height: 1.6; }
+.final-screen {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(5,3,0,0.95);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.8s;
+}
+.final-screen.active { opacity: 1; pointer-events: auto; }
+.final-screen h1 { font-size: 32px; color: #00ff88; margin-bottom: 10px; }
+.final-stats { font-size: 15px; color: #ccaa88; margin: 6px 0; }
+.final-score {
+  font-size: 64px; color: #ff6622; margin: 20px 0;
+  text-shadow: 0 0 40px rgba(255,102,34,0.5);
+}
+.restart-btn {
+  margin-top: 30px; padding: 14px 40px; background: linear-gradient(135deg, #ff6622, #aa4400);
+  border: none; border-radius: 10px; font-size: 15px; color: #fff;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+}
+.view-buttons {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10;
+  display: flex; gap: 8px; flex-wrap: wrap; max-width: 300px; justify-content: flex-end;
+}
+.view-btn {
+  padding: 8px 14px; background: rgba(30,15,0,0.8);
+  border: 1px solid rgba(255,102,34,0.3); border-radius: 8px;
+  font-size: 12px; color: #ccaa88; cursor: pointer; transition: all 0.2s;
+}
+.view-btn:hover { border-color: #ff6622; color: #ff6622; }
+.view-btn.active { background: rgba(255,102,34,0.2); border-color: #ff6622; color: #ff6622; }
+</style>
+</head>
+<body>
+<canvas id="canvas3d"></canvas>
+
+<div class="start-screen" id="startScreen">
+  <div class="train-icon">🚂</div>
+  <h1>Train Inspector</h1>
+  <div class="subtitle">3D Инспекция локомотива</div>
+  <button class="start-btn" onclick="startGame()">Начать инспекцию</button>
+  <div class="start-desc">
+    Осмотрите локомотив со всех сторон. Найдите 10 ключевых деталей паровоза.
+    Ответьте на вопросы викторины, чтобы доказать свою компетентность.
+  </div>
+</div>
+
+<div class="final-screen" id="finalScreen">
+  <h1>Инспекция завершена</h1>
+  <div class="final-stats" id="finalParts"></div>
+  <div class="final-score" id="finalScore"></div>
+  <div class="final-stats" id="finalRank"></div>
+  <button class="restart-btn" onclick="location.reload()">Новая инспекция</button>
+</div>
+
+<div class="hud top-bar" id="topBar" style="display:none;">
+  <h1>Train Inspector</h1>
+  <div class="round-badge" id="roundBadge">Раунд 1/4</div>
+  <div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text" id="progressText">0/10</div>
+</div>
+
+<div class="parts-panel" id="partsPanel" style="display:none;"></div>
+
+<div class="guide-panel hidden" id="guidePanel">
+  <div class="guide-avatar">👷</div>
+  <div class="guide-name">Машинист Иваныч</div>
+  <div class="guide-text" id="guideText">Добро пожаловать!</div>
+  <div class="guide-hint" id="guideHint" style="display:none;"></div>
+</div>
+
+<div class="quiz-overlay" id="quizOverlay">
+  <div class="quiz-card">
+    <h2 id="quizTitle">Викторина</h2>
+    <div class="quiz-question" id="quizQuestion"></div>
+    <div class="quiz-options" id="quizOptions"></div>
+    <div class="quiz-score" id="quizScore"></div>
+    <button class="quiz-next" id="quizNext" style="display:none;" onclick="nextQuizQuestion()">Далее</button>
+  </div>
+</div>
+
+<div class="arrow-indicator" id="arrowIndicator" style="display:none;">
+  <svg width="40" height="40" viewBox="0 0 40 40">
+    <polygon points="20,0 35,35 20,25 5,35" fill="#ff6622" opacity="0.9"/>
+  </svg>
+  <div class="arrow-label" id="arrowLabel"></div>
+</div>
+
+<div class="notification" id="notification"></div>
+
+<div class="view-buttons" id="viewButtons" style="display:none;">
+  <button class="view-btn active" onclick="setView('auto')">Авто</button>
+  <button class="view-btn" onclick="setView('front')">Перед</button>
+  <button class="view-btn" onclick="setView('back')">Зад</button>
+  <button class="view-btn" onclick="setView('left')">Левый борт</button>
+  <button class="view-btn" onclick="setView('right')">Правый борт</button>
+  <button class="view-btn" onclick="setView('top')">Сверху</button>
+  <button class="view-btn" onclick="setView('side')">Сбоку</button>
+  <button class="view-btn" onclick="toggleExplode()">Взрыв-схема</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const TRAIN_PARTS = [
+  {
+    id: 'boiler', name: 'Котёл', section: 'Основное',
+    desc: 'Главный цилиндр паровоза, где вода превращается в пар.',
+    position: [0, 0.5, 1.5], color: 0x222222,
+    quiz: {
+      question: 'Какую функцию выполняет котёл паровоза?',
+      options: [
+        'Нагревает воду и превращает её в пар',
+        'Хранит топливо',
+        'Управляет движением',
+        'Охлаждает двигатель'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'firebox', name: 'Топка', section: 'Основное',
+    desc: 'Камера сгорания, куда подаётся уголь или дрова.',
+    position: [0, -0.3, -2.5], color: 0x8B0000,
+    quiz: {
+      question: 'Что сгорает в топке паровоза?',
+      options: [
+        'Уголь или дрова',
+        'Бензин',
+        'Газ',
+        'Электричество'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'smokestack', name: 'Дымовая труба', section: 'Кузов',
+    desc: 'Выводит дым и отработанный пар из топки наружу.',
+    position: [0, 2.0, 3.0], color: 0x1a1a1a,
+    quiz: {
+      question: 'Зачем нужна дымовая труба?',
+      options: [
+        'Выводить дым и отработанный пар',
+        'Подавать сигнал другим поездам',
+        'Охлаждать котёл',
+        'Заправлять водой'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'dome', name: 'Паровой купол', section: 'Основное',
+    desc: 'Выступ на котле, где собирается сухой пар перед подачей в цилиндры.',
+    position: [0, 1.2, 0.5], color: 0x333333,
+    quiz: {
+      question: 'Для чего служит паровой купол?',
+      options: [
+        'Собирает сухой пар перед подачей в цилиндры',
+        'Хранит запас воды',
+        'Служит вентиляцией',
+        'Крепит дымовую трубу'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'cabin', name: 'Машинное отделение', section: 'Кузов',
+    desc: 'Кабина машиниста с органами управления и приборами.',
+    position: [0, 0.8, -4.0], color: 0x444444,
+    quiz: {
+      question: 'Где находится машинист во время движения?',
+      options: [
+        'В машинном отделении (кабине) в задней части',
+        'На крыше котла',
+        'В передней части локомотива',
+        'Под поездом'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'driveWheel', name: 'Ведущее колесо', section: 'Ходовая',
+    desc: 'Большое колесо, передающее движение от шатуна к рельсам.',
+    position: [1.0, -1.3, 0], color: 0x555555,
+    quiz: {
+      question: 'Чем ведущее колесо отличается от малых колёс?',
+      options: [
+        'Оно больше по диаметру и передаёт тягу',
+        'Оно меньше и служит упором',
+        'Оно сделано из дерева',
+        'Оно не касается рельсов'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'smallWheel', name: 'Буксирное колесо', section: 'Ходовая',
+    desc: 'Малое колесо спереди, поддерживающее локомотив на поворотах.',
+    position: [1.0, -1.3, 3.5], color: 0x4a4a4a,
+    quiz: {
+      question: 'Какую роль играют буксирные (малые) колёса?',
+      options: [
+        'Поддерживают локомотив на кривых участках пути',
+        'Основная сила тяги',
+        'Останавливают поезд',
+        'Приводят в движение компрессор'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'piston', name: 'Поршень и цилиндр', section: 'Силовая',
+    desc: 'Пар поступает сюда и двигает поршень, вращая колёса.',
+    position: [0.9, -0.5, 2.0], color: 0x666666,
+    quiz: {
+      question: 'Как пар приводит колёса в движение?',
+      options: [
+        'Давление пара двигает поршень, поршень вращает колесо через шатун',
+        'Пар напрямую крутит колёса',
+        'Пар подаётся на тормоза',
+        'Пар конденсируется и толкает вагоны'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'bell', name: 'Колокол', section: 'Сигнализация',
+    desc: 'Подаёт звуковой сигнал при подходе к переезду и станциям.',
+    position: [0, 1.8, -1.5], color: 0xB8860B,
+    quiz: {
+      question: 'Для чего служит колокол на паровозе?',
+      options: [
+        'Подавать звуковой сигнал предупреждения',
+        'Отмерять время пути',
+        'Показывать скорость',
+        'Указывать направление ветра'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'headlight', name: 'Фара', section: 'Сигнализация',
+    desc: 'Освещает путь в тёмное время суток и служит сигналом.',
+    position: [0, 0.8, 4.5], color: 0xDDAA00,
+    quiz: {
+      question: 'Какую роль играет фара на паровозе?',
+      options: [
+        'Освещает путь и служит предупредительным сигналом',
+        'Греет котёл',
+        'Охлаждает тормоза',
+        'Измеряет давление пара'
+      ],
+      correct: 0
+    }
+  }
+];
+
+const GUIDE_SCRIPTS = {
+  welcome: 'Добро пожаловать, инспектор! Я — машинист Иваныч. Покажу вам паровоз. Начнём с осмотра котла.',
+  boiler: 'Котёл — сердце паровоза. В нём вода нагревается до состояния пара, который потом толкает поршни.',
+  firebox: 'Топка — там горит уголь или дрова. Чем жарче топка, тем быстрее паровоз!',
+  smokestack: 'Дымовая труба выводит дым от горящего топлива и отработанный пар наружу.',
+  dome: 'Паровой купол — резервуар для сухого пара. Отсюда пар идёт в цилиндры чистым и горячим.',
+  cabin: 'Машинное отделение — ваш рабочий стол. Здесь рычаги, манометры и песочница.',
+  driveWheel: 'Ведущие колёса — самые большие. Они принимают усилие от шатунов и двигают поезд!',
+  smallWheel: 'Буксирные колёса маленькие, но важные — они помогают на кривых и уменьшают вибрацию.',
+  piston: 'Поршень — рабочая лошадка. Давление пара двигает его взад-вперёд, а шатун крутит колесо.',
+  bell: 'Колокол — главный звук на станции. Бим-бим — поезд отходит!',
+  headlight: 'Фара освещает путь ночью и предупреждает о приближении паровоза.',
+  quiz_intro: 'Теперь проверим ваши знания! Ответьте на вопросы о частях локомотива.',
+  done: 'Инспекция завершена! Вы отлично разбираетесь в паровозах, инспектор!'
+};
+
+let scene, camera, renderer, trainGroup;
+let raycaster, mouse;
+let partMeshes = [];
+let currentPartIndex = 0;
+let foundParts = new Set();
+let currentRound = 1;
+let quizScore = 0;
+let quizIndex = 0;
+let exploded = false;
+let autoRotate = true;
+let targetCameraPos = null;
+let targetLookAt = new THREE.Vector3(0, 0, 0);
+let clock;
+let arrowVisible = false;
+
+function initScene() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0e1a, 0.012);
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(8, 4, 10);
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  clock = new THREE.Clock();
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  scene.add(new THREE.AmbientLight(0x443322, 0.5));
+  const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+  dirLight.position.set(10, 15, 8);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(2048, 2048);
+  dirLight.shadow.camera.near = 0.5;
+  dirLight.shadow.camera.far = 50;
+  dirLight.shadow.camera.left = -20;
+  dirLight.shadow.camera.right = 20;
+  dirLight.shadow.camera.top = 10;
+  dirLight.shadow.camera.bottom = -10;
+  scene.add(dirLight);
+  scene.add(new THREE.DirectionalLight(0x886644, 0.3).translateX(-5).translateY(3));
+  scene.add(new THREE.PointLight(0xff6622, 0.5, 15).translateY(3));
+
+  const groundGeom = new THREE.PlaneGeometry(200, 200);
+  const groundMat = new THREE.MeshPhongMaterial({ color: 0x1a1410 });
+  const ground = new THREE.Mesh(groundGeom, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -1.8;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  const skyGeom = new THREE.SphereGeometry(100, 32, 32);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, uniforms: {},
+    vertexShader: `varying vec3 vWP; void main(){ vWP=(modelMatrix*vec4(position,1.0)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader: `varying vec3 vWP; void main(){ float h=normalize(vWP).y; vec3 t=vec3(0.08,0.05,0.12); vec3 b=vec3(0.15,0.1,0.08); gl_FragColor=vec4(mix(b,t,max(h,0.0)),1.0);}`
+  });
+  scene.add(new THREE.Mesh(skyGeom, skyMat));
+
+  createTracks();
+
+  trainGroup = new THREE.Group();
+  scene.add(trainGroup);
+  buildTrain();
+  buildPartsList();
+  updateProgress();
+}
+
+function createTracks() {
+  const railMat = new THREE.MeshPhongMaterial({ color: 0x888888, specular: 0x444444 });
+  const sleeperMat = new THREE.MeshPhongMaterial({ color: 0x4a3520 });
+  for (let side = -1; side <= 1; side += 2) {
+    const railGeom = new THREE.BoxGeometry(0.06, 0.1, 40);
+    const rail = new THREE.Mesh(railGeom, railMat);
+    rail.position.set(side * 0.75, -1.75, 0);
+    rail.receiveShadow = true;
+    scene.add(rail);
+  }
+  for (let z = -18; z <= 18; z += 1) {
+    const slGeom = new THREE.BoxGeometry(2.0, 0.08, 0.15);
+    const sl = new THREE.Mesh(slGeom, sleeperMat);
+    sl.position.set(0, -1.78, z);
+    sl.receiveShadow = true;
+    scene.add(sl);
+  }
+}
+
+function buildTrain() {
+  const ironMat = new THREE.MeshPhongMaterial({ color: 0x222222, specular: 0x444444 });
+  const darkMat = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
+
+  const boilerGeom = new THREE.CylinderGeometry(0.8, 0.8, 6, 16);
+  boilerGeom.rotateZ(Math.PI / 2);
+  boilerGeom.rotateY(Math.PI / 2);
+  const boiler = new THREE.Mesh(boilerGeom, ironMat);
+  boiler.position.set(0, 0.5, 1.5);
+  boiler.castShadow = true;
+  boiler.name = 'boiler';
+  trainGroup.add(boiler);
+
+  const fireboxGeom = new THREE.BoxGeometry(1.2, 1.0, 1.5);
+  const fireboxMat = new THREE.MeshPhongMaterial({ color: 0x8B0000, specular: 0x333333 });
+  const firebox = new THREE.Mesh(fireboxGeom, fireboxMat);
+  firebox.position.set(0, -0.3, -2.5);
+  firebox.castShadow = true;
+  firebox.name = 'firebox';
+  trainGroup.add(firebox);
+
+  const stackGeom = new THREE.CylinderGeometry(0.15, 0.25, 1.5, 10);
+  const stack = new THREE.Mesh(stackGeom, darkMat);
+  stack.position.set(0, 2.0, 3.0);
+  stack.castShadow = true;
+  stack.name = 'smokestack';
+  trainGroup.add(stack);
+
+  const domeGeom = new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const dome = new THREE.Mesh(domeGeom, ironMat);
+  dome.position.set(0, 1.2, 0.5);
+  dome.castShadow = true;
+  dome.name = 'dome';
+  trainGroup.add(dome);
+
+  const cabinGeom = new THREE.BoxGeometry(1.8, 2.0, 2.2);
+  const cabinMat = new THREE.MeshPhongMaterial({ color: 0x444444, specular: 0x222222 });
+  const cabin = new THREE.Mesh(cabinGeom, cabinMat);
+  cabin.position.set(0, 0.8, -4.0);
+  cabin.castShadow = true;
+  cabin.name = 'cabin';
+  trainGroup.add(cabin);
+
+  const winGeom = new THREE.PlaneGeometry(0.5, 0.5);
+  const winMat = new THREE.MeshPhongMaterial({ color: 0x88bbff, emissive: 0x223355, side: THREE.DoubleSide });
+  [1, -1].forEach(side => {
+    const win = new THREE.Mesh(winGeom, winMat);
+    win.position.set(side * 0.91, 1.2, -3.5);
+    win.rotation.y = side > 0 ? 0 : Math.PI;
+    trainGroup.add(win);
+  });
+  const winFront = new THREE.Mesh(winGeom, winMat);
+  winFront.position.set(0, 1.2, -2.89);
+  trainGroup.add(winFront);
+
+  const wheelGeom = new THREE.CylinderGeometry(1.0, 1.0, 0.15, 24);
+  wheelGeom.rotateX(Math.PI / 2);
+  const wheelMat = new THREE.MeshPhongMaterial({ color: 0x555555, specular: 0x888888 });
+  [0, -1.5].forEach(z => {
+    const wheel = new THREE.Mesh(wheelGeom, wheelMat);
+    wheel.position.set(1.0, -1.3, z);
+    wheel.castShadow = true;
+    wheel.name = 'driveWheel';
+    trainGroup.add(wheel);
+    const wheel2 = wheel.clone();
+    wheel2.position.x = -1.0;
+    trainGroup.add(wheel2);
+  });
+
+  const smallWheelGeom = new THREE.CylinderGeometry(0.5, 0.5, 0.12, 16);
+  smallWheelGeom.rotateX(Math.PI / 2);
+  const sw = new THREE.Mesh(smallWheelGeom, wheelMat);
+  sw.position.set(1.0, -1.3, 3.5);
+  sw.castShadow = true;
+  sw.name = 'smallWheel';
+  trainGroup.add(sw);
+  const sw2 = sw.clone();
+  sw2.position.x = -1.0;
+  trainGroup.add(sw2);
+
+  const cylGeom = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 10);
+  cylGeom.rotateZ(Math.PI / 2);
+  const piston = new THREE.Mesh(cylGeom, new THREE.MeshPhongMaterial({ color: 0x666666, specular: 0xaaaaaa }));
+  piston.position.set(0.9, -0.5, 2.0);
+  piston.castShadow = true;
+  piston.name = 'piston';
+  trainGroup.add(piston);
+  const piston2 = piston.clone();
+  piston2.position.x = -0.9;
+  trainGroup.add(piston2);
+
+  const bellGeom = new THREE.CylinderGeometry(0.18, 0.25, 0.3, 12);
+  const bellMat = new THREE.MeshPhongMaterial({ color: 0xB8860B, specular: 0xddaa44 });
+  const bell = new THREE.Mesh(bellGeom, bellMat);
+  bell.position.set(0, 1.8, -1.5);
+  bell.castShadow = true;
+  bell.name = 'bell';
+  trainGroup.add(bell);
+
+  const hlGeom = new THREE.SphereGeometry(0.2, 10, 10);
+  const hlMat = new THREE.MeshPhongMaterial({ color: 0xDDAA00, emissive: 0x664400 });
+  const headlight = new THREE.Mesh(hlGeom, hlMat);
+  headlight.position.set(0, 0.8, 4.5);
+  headlight.castShadow = true;
+  headlight.name = 'headlight';
+  trainGroup.add(headlight);
+
+  const frameGeom = new THREE.BoxGeometry(1.6, 0.12, 8);
+  const frameMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
+  const frame = new THREE.Mesh(frameGeom, frameMat);
+  frame.position.set(0, -1.1, 0);
+  frame.castShadow = true;
+  trainGroup.add(frame);
+
+  const bufGeom = new THREE.BoxGeometry(1.6, 0.3, 0.15);
+  const bufMat = new THREE.MeshPhongMaterial({ color: 0x4a4a4a });
+  const bufFront = new THREE.Mesh(bufGeom, bufMat);
+  bufFront.position.set(0, -1.0, 4.6);
+  trainGroup.add(bufFront);
+  const bufBack = bufFront.clone();
+  bufBack.position.z = -5.1;
+  trainGroup.add(bufBack);
+
+  const rodGeom = new THREE.CylinderGeometry(0.03, 0.03, 2.5, 4);
+  rodGeom.rotateZ(Math.PI / 2);
+  const rodMat = new THREE.MeshPhongMaterial({ color: 0x888888 });
+  const rod = new THREE.Mesh(rodGeom, rodMat);
+  rod.position.set(0, -1.3, -0.75);
+  trainGroup.add(rod);
+
+  const smokeMat = new THREE.MeshBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.4 });
+  for (let i = 0; i < 5; i++) {
+    const puffGeom = new THREE.SphereGeometry(0.3 + i * 0.15, 8, 8);
+    const puff = new THREE.Mesh(puffGeom, smokeMat.clone());
+    puff.position.set(0.1 * Math.sin(i), 2.5 + i * 0.5, 3.0 - i * 0.2);
+    puff.name = 'smoke_' + i;
+    trainGroup.add(puff);
+  }
+
+  TRAIN_PARTS.forEach(part => {
+    const obj = trainGroup.getObjectByName(part.id);
+    if (obj) partMeshes.push({ obj, data: part });
+  });
+}
+
+let gameState = 'start';
+
+function startGame() {
+  gameState = 'exploring';
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('topBar').style.display = 'flex';
+  document.getElementById('partsPanel').style.display = 'block';
+  document.getElementById('viewButtons').style.display = 'flex';
+  showGuide('welcome');
+  highlightCurrentPart();
+  animate();
+}
+
+function buildPartsList() {
+  const panel = document.getElementById('partsPanel');
+  panel.innerHTML = '<div style="font-size:11px;color:#ff6622;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Комплектующие</div>';
+  TRAIN_PARTS.forEach((part, i) => {
+    const div = document.createElement('div');
+    div.className = 'part-item' + (i === 0 ? ' current' : '');
+    div.id = 'part-item-' + part.id;
+    div.innerHTML = `<div class="part-dot"></div><div class="part-name">${part.name}</div>`;
+    div.onclick = () => focusOnPart(part.id);
+    panel.appendChild(div);
+  });
+}
+
+function updateProgress() {
+  const pct = (foundParts.size / TRAIN_PARTS.length) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = foundParts.size + '/' + TRAIN_PARTS.length;
+  document.getElementById('roundBadge').textContent = 'Раунд ' + currentRound + '/4';
+}
+
+function showGuide(key) {
+  document.getElementById('guidePanel').classList.remove('hidden');
+  document.getElementById('guideText').textContent = GUIDE_SCRIPTS[key] || key;
+  const hintEl = document.getElementById('guideHint');
+  if (currentRound <= 2 && !foundParts.has(TRAIN_PARTS[currentPartIndex]?.id)) {
+    hintEl.style.display = 'block';
+    const part = TRAIN_PARTS[currentPartIndex];
+    if (part) {
+      const dir = getPartDirection(part);
+      hintEl.textContent = 'Подсказка: посмотрите ' + dir;
+    }
+  } else {
+    hintEl.style.display = 'none';
+  }
+}
+
+function getPartDirection(part) {
+  const pos = part.position;
+  if (pos[2] > 2) return 'в сторону носа →';
+  if (pos[2] < -2) return 'в сторону кормы ←';
+  if (pos[0] > 0.5) return 'на правый борт';
+  if (pos[0] < -0.5) return 'на левый борт';
+  if (pos[1] > 1.5) return 'наверх (труба, купол)';
+  return 'на центр корпуса';
+}
+
+function highlightCurrentPart() {
+  if (currentPartIndex >= TRAIN_PARTS.length) return;
+  const part = TRAIN_PARTS[currentPartIndex];
+  const item = document.getElementById('part-item-' + part.id);
+  document.querySelectorAll('.part-item').forEach(el => el.classList.remove('current'));
+  if (item) {
+    item.classList.add('current');
+    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  showGuide(part.id);
+  updateArrow(part);
+}
+
+function updateArrow(part) {
+  if (!part || gameState !== 'exploring') {
+    document.getElementById('arrowIndicator').style.display = 'none';
+    arrowVisible = false;
+    return;
+  }
+  arrowVisible = true;
+  const el = document.getElementById('arrowIndicator');
+  el.style.display = 'block';
+  document.getElementById('arrowLabel').textContent = part.name;
+}
+
+function checkClick(event) {
+  if (gameState !== 'exploring') return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(trainGroup.children, true);
+  for (const hit of intersects) {
+    let obj = hit.object;
+    while (obj.parent && obj.parent !== trainGroup) obj = obj.parent;
+    const name = obj.name;
+    const partIdx = TRAIN_PARTS.findIndex(p => p.id === name);
+    if (partIdx >= 0 && !foundParts.has(name)) {
+      foundPart(name, partIdx);
+      return;
+    }
+  }
+}
+
+function foundPart(partId, partIdx) {
+  foundParts.add(partId);
+  const part = TRAIN_PARTS[partIdx];
+  showNotification('Найдено: ' + part.name + ' — ' + part.desc, 'success');
+  const item = document.getElementById('part-item-' + partId);
+  if (item) item.classList.add('found');
+  const obj = trainGroup.getObjectByName(partId);
+  if (obj && obj.material) {
+    obj.material.emissive = new THREE.Color(0x00ff88);
+    obj.material.emissiveIntensity = 0.5;
+    setTimeout(() => { if (obj.material) obj.material.emissiveIntensity = 0; }, 2000);
+  }
+  updateProgress();
+  if (foundParts.size === TRAIN_PARTS.length) {
+    currentRound = 3;
+    updateProgress();
+    setTimeout(() => {
+      showGuide('quiz_intro');
+      setTimeout(startQuiz, 2000);
+    }, 2500);
+  } else {
+    currentPartIndex = TRAIN_PARTS.findIndex(p => !foundParts.has(p.id));
+    if (currentPartIndex >= 0) setTimeout(() => highlightCurrentPart(), 1500);
+  }
+}
+
+function startQuiz() {
+  gameState = 'quiz';
+  currentRound = 3;
+  updateProgress();
+  document.getElementById('arrowIndicator').style.display = 'none';
+  quizIndex = 0;
+  quizScore = 0;
+  showQuizQuestion();
+}
+
+function showQuizQuestion() {
+  if (quizIndex >= TRAIN_PARTS.length) { finishQuiz(); return; }
+  const part = TRAIN_PARTS[quizIndex];
+  document.getElementById('quizOverlay').classList.add('active');
+  document.getElementById('quizTitle').textContent = 'Викторина — Вопрос ' + (quizIndex + 1) + '/' + TRAIN_PARTS.length;
+  document.getElementById('quizQuestion').textContent = part.quiz.question;
+  document.getElementById('quizScore').textContent = 'Правильных ответов: ' + quizScore + '/' + quizIndex;
+  document.getElementById('quizNext').style.display = 'none';
+  const optionsEl = document.getElementById('quizOptions');
+  optionsEl.innerHTML = '';
+  part.quiz.options.forEach((opt, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'quiz-option';
+    btn.textContent = String.fromCharCode(65 + i) + ') ' + opt;
+    btn.onclick = () => answerQuiz(i, part.quiz.correct);
+    optionsEl.appendChild(btn);
+  });
+}
+
+function answerQuiz(selected, correct) {
+  const options = document.querySelectorAll('.quiz-option');
+  options.forEach((opt, i) => {
+    opt.onclick = null;
+    if (i === correct) opt.classList.add('correct');
+    if (i === selected && selected !== correct) opt.classList.add('wrong');
+  });
+  if (selected === correct) quizScore++;
+  document.getElementById('quizScore').textContent = 'Правильных ответов: ' + quizScore + '/' + (quizIndex + 1);
+  document.getElementById('quizNext').style.display = 'inline-block';
+}
+
+function nextQuizQuestion() {
+  quizIndex++;
+  showQuizQuestion();
+}
+
+function finishQuiz() {
+  document.getElementById('quizOverlay').classList.remove('active');
+  currentRound = 4;
+  updateProgress();
+  const pct = Math.round((quizScore / TRAIN_PARTS.length) * 100);
+  let rank;
+  if (pct >= 90) rank = 'Главный инженер';
+  else if (pct >= 70) rank = 'Старший машинист';
+  else if (pct >= 50) rank = 'Помощник машиниста';
+  else rank = 'Стажёр';
+  document.getElementById('finalParts').textContent = 'Деталей найдено: ' + foundParts.size + '/' + TRAIN_PARTS.length;
+  document.getElementById('finalScore').textContent = quizScore + '/' + TRAIN_PARTS.length;
+  document.getElementById('finalRank').textContent = 'Звание: ' + rank + ' (' + pct + '%)';
+  setTimeout(() => document.getElementById('finalScreen').classList.add('active'), 1000);
+}
+
+function setView(view) {
+  autoRotate = false;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  switch(view) {
+    case 'auto': autoRotate = true; break;
+    case 'front': targetCameraPos = new THREE.Vector3(0, 2, 14); break;
+    case 'back': targetCameraPos = new THREE.Vector3(0, 2, -14); break;
+    case 'left': targetCameraPos = new THREE.Vector3(-12, 2, 0); break;
+    case 'right': targetCameraPos = new THREE.Vector3(12, 2, 0); break;
+    case 'top': targetCameraPos = new THREE.Vector3(0, 14, 0.1); break;
+    case 'side': targetCameraPos = new THREE.Vector3(0, 1, 12); break;
+  }
+}
+
+function focusOnPart(partId) {
+  const part = TRAIN_PARTS.find(p => p.id === partId);
+  if (!part) return;
+  autoRotate = false;
+  const p = part.position;
+  const dir = new THREE.Vector3(p[0], p[1] + 2, p[2]).normalize();
+  targetCameraPos = new THREE.Vector3(p[0] + dir.x * 5, Math.max(p[1] + 2, 2), p[2] + dir.z * 5);
+  targetLookAt = new THREE.Vector3(p[0], p[1], p[2]);
+  const obj = trainGroup.getObjectByName(partId);
+  if (obj && obj.material) {
+    obj.material.emissive = new THREE.Color(0xff6622);
+    obj.material.emissiveIntensity = 0.4;
+    setTimeout(() => { if (obj.material) obj.material.emissiveIntensity = 0; }, 3000);
+  }
+  if (gameState === 'exploring') {
+    const idx = TRAIN_PARTS.findIndex(p2 => p2.id === partId);
+    if (idx >= 0) { currentPartIndex = idx; highlightCurrentPart(); }
+  }
+}
+
+function toggleExplode() {
+  exploded = !exploded;
+  const factor = exploded ? 1.5 : 1;
+  TRAIN_PARTS.forEach(part => {
+    const obj = trainGroup.getObjectByName(part.id);
+    if (obj) {
+      const tp = part.position;
+      if (exploded) {
+        obj.userData.savedPos = obj.position.clone();
+        obj.position.x = tp[0] * factor;
+        obj.position.y = tp[1] * factor;
+        obj.position.z = tp[2] * factor;
+      } else if (obj.userData.savedPos) {
+        obj.position.copy(obj.userData.savedPos);
+      }
+    }
+  });
+}
+
+function showNotification(text, type) {
+  const el = document.getElementById('notification');
+  el.textContent = text;
+  el.className = 'notification ' + type + ' show';
+  setTimeout(() => el.className = 'notification', 4000);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  if (autoRotate) {
+    const radius = 10;
+    camera.position.x = Math.sin(t * 0.15) * radius;
+    camera.position.z = Math.cos(t * 0.15) * radius;
+    camera.position.y = 3 + Math.sin(t * 0.1) * 1;
+    camera.lookAt(0, 0, 0);
+  } else if (targetCameraPos) {
+    camera.position.lerp(targetCameraPos, 0.03);
+    camera.lookAt(targetLookAt);
+    if (camera.position.distanceTo(targetCameraPos) < 0.1) targetCameraPos = null;
+  }
+
+  for (let i = 0; i < 5; i++) {
+    const puff = trainGroup.getObjectByName('smoke_' + i);
+    if (puff) {
+      puff.position.x = 0.1 * Math.sin(t * 2 + i) + i * 0.05;
+      puff.position.y = 2.5 + i * 0.5 + Math.sin(t + i) * 0.2;
+      puff.position.z = 3.0 - i * 0.2;
+      puff.scale.setScalar(1 + Math.sin(t * 0.5 + i) * 0.15);
+      puff.material.opacity = 0.4 - i * 0.07;
+    }
+  }
+
+  if (arrowVisible && currentPartIndex < TRAIN_PARTS.length) {
+    const part = TRAIN_PARTS[currentPartIndex];
+    const worldPos = new THREE.Vector3(...part.position);
+    trainGroup.localToWorld(worldPos);
+    worldPos.project(camera);
+    const x = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-worldPos.y * 0.5 + 0.5) * window.innerHeight;
+    const el = document.getElementById('arrowIndicator');
+    el.style.left = x + 'px';
+    el.style.top = (y - 50) + 'px';
+    el.style.opacity = 0.5 + Math.sin(t * 4) * 0.5;
+  }
+
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+document.getElementById('canvas3d').addEventListener('click', checkClick);
+
+let isDragging = false;
+let prevMouse = { x: 0, y: 0 };
+let cameraTheta = 0;
+let cameraPhi = 0.5;
+let cameraRadius = 10;
+
+document.addEventListener('mousedown', (e) => {
+  if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
+    isDragging = true;
+    prevMouse = { x: e.clientX, y: e.clientY };
+    autoRotate = false;
+    targetCameraPos = null;
+  }
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  cameraTheta -= dx * 0.005;
+  cameraPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, cameraPhi - dy * 0.005));
+  prevMouse = { x: e.clientX, y: e.clientY };
+  camera.position.x = Math.sin(cameraTheta) * Math.cos(cameraPhi) * cameraRadius;
+  camera.position.y = Math.sin(cameraPhi) * cameraRadius;
+  camera.position.z = Math.cos(cameraTheta) * Math.cos(cameraPhi) * cameraRadius;
+  camera.lookAt(0, 0, 0);
+});
+
+document.addEventListener('mouseup', () => isDragging = false);
+document.addEventListener('wheel', (e) => {
+  cameraRadius = Math.max(5, Math.min(25, cameraRadius + e.deltaY * 0.01));
+});
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' && currentPartIndex < TRAIN_PARTS.length - 1) {
+    currentPartIndex++;
+    highlightCurrentPart();
+  } else if (e.key === 'ArrowLeft' && currentPartIndex > 0) {
+    currentPartIndex--;
+    highlightCurrentPart();
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    if (currentPartIndex < TRAIN_PARTS.length) focusOnPart(TRAIN_PARTS[currentPartIndex].id);
+  } else if (e.key === 'r' || e.key === 'R') {
+    autoRotate = !autoRotate;
+  }
+});
+
+initScene();
+animate();
+</script>
+</body>
+</html>

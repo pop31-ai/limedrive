@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Mech Kings</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a14;color:#d8d8e8;font-family:Consolas,'Courier New',monospace;overflow:hidden;height:100vh}
+canvas{display:block;cursor:default}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+"use strict";
+const CV=document.getElementById("c"),G=CV.getContext("2d");
+let W,H;
+function resize(){W=CV.width=innerWidth;H=CV.height=innerHeight}
+resize();onresize=resize;
+
+// --- HELPERS ---
+function rr(x,y,w,h,r){G.beginPath();G.moveTo(x+r,y);G.lineTo(x+w-r,y);G.quadraticCurveTo(x+w,y,x+w,y+r);G.lineTo(x+w,y+h-r);G.quadraticCurveTo(x+w,y+h,x+w-r,y+h);G.lineTo(x+r,y+h);G.quadraticCurveTo(x,y+h,x,y+h-r);G.lineTo(x,y+r);G.quadraticCurveTo(x,y,x+r,y);G.closePath()}
+function shuf(a){for(let i=a.length-1;i>0;i--){let j=Math.random()*i+1|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function pick(a){return a[Math.random()*a.length|0]}
+function clamp(v,a,b){return v<a?a:v>b?b:v}
+
+// --- CARD DATABASE (300) ---
+let CID=0;
+function M(n,tp,cost,rar,atk,def,el,desc){return{id:CID++,name:n,type:tp,cost,rarity:rar,atk:atk||0,def:def||0,el:el||"none",desc:desc||""}}
+const CARDS=[];
+// base
+CARDS.push(M("Удар","atk",1,"C",6,0,"none","6 урона"));
+CARDS.push(M("Блок","def",1,"C",0,5,"none","5 щита"));
+CARDS.push(M("Искра","atk",1,"C",4,0,"air","4 урона"));
+// attack pool
+const AT=[
+["Резак",8,1,"C","8 урона"],["Рывок",4,1,"C","4 урона"],["Дробитель",12,2,"U","12 урона"],
+["Плазма",10,2,"U","10 урона"],["Лед. стрела",7,1,"U","7 ур, slow"],["Теневой",9,2,"R","9 урона"],
+["Током",5,1,"C","5 ур, shock"],["Огненный",8,1,"U","8 ур, burn"],["Копьё",7,1,"C","7 ур"],
+["Серпантин",3,1,"C","3 ур x2"],["Ракета",14,2,"R","14 урона"],["Двойной",5,1,"C","5 ур x2"],
+["Взмах",4,1,"C","4 ур + 3 щит"],["Кислота",6,1,"U","6 ур, -2 щит"],["Буря",11,2,"R","11 урона"],
+["Камнепад",9,2,"U","9 ур, stun"],["Гром",10,2,"R","10 ур, shock"],["Таран",15,3,"R","15 ур, -5 HP"],
+["Кинжал тьмы",6,1,"U","6 ур, +3 HP"],["Режущий",8,1,"C","8 урона"],["Нож",5,1,"C","5 урона"],
+["Протаранить",7,1,"U","7 урона"],["Огонь mech",9,2,"U","9 урона"],["Лазер",13,2,"R","13 урона"],
+["Очередь",4,1,"C","3 ур x3"],["Снайпер",16,3,"R","16 урона"],["Бурлушка",2,1,"C","2 ур, draw"],
+["Молот",10,2,"U","10 ур + 2 щит"],["Яд",4,1,"C","4 ур, poison"],["Плевок",3,1,"C","3 ур, burn"],
+["Разряд",6,1,"U","6 ур, shock"],["Щупальце",7,1,"U","7 урона"],["Резонанс",5,1,"U","5 ур x2"],
+["Пожирание",8,2,"R","8 ур + 4 HP"],["Кам.кулак",9,2,"U","9 ур + 3 щит"],["Раствор.",6,1,"U","6 ур, -щит"],
+["Сломать",11,2,"R","11 урона"],["Камнебой",7,1,"C","7 урона"],["Капкан",5,1,"U","5 ур, stun"],
+["Дождь",3,1,"C","3 ур x4"],["Пламя",6,1,"C","6 ур + burn"],["Волна",8,1,"U","8 ур, -щит"],
+["Поглощ.",4,1,"U","4 ур + 4 HP"],["Буря клинк.",10,2,"R","10 урона"],["Эл.шок",7,1,"U","7 ур, shock"],
+["Тяж.удар",12,2,"R","12 урона"],["Косм.луч",15,3,"E","15 урона"],["Взрыв",10,2,"R","10 ур, -3 HP"],
+["Нулевой",20,3,"L","20 урона"],["Хвост",6,1,"C","6 ур + 2 щит"],["Форс",8,2,"R","8 ур + draw"],
+["Рывок+",5,1,"C","5 ур + draw"],["Холод",4,1,"C","4 ур, stun"],["Разрез",9,2,"U","9 урона"],
+["Пожар",7,1,"U","7 ур, burn"],["Токс.стрела",8,2,"R","8 ур, poison"],["Вихрь",6,1,"U","6 ур x2"],
+["Разлом",11,2,"R","11 урона"],["Коготь",9,2,"U","9 ур + heal"],["Молния",7,1,"U","7 ур, shock"],
+["Кров.клинок",10,2,"R","10 ур + 3 HP"],["Иск.удар",5,1,"C","5 урона"],["Такт.удар",7,1,"C","7 урона"],
+["Резон.удар",9,1,"U","9 урона"],["Термитный",8,1,"U","8 ур + burn"],["Коррозия",6,1,"C","6 ур, -щит"],
+["Электрокнут",6,1,"C","6 урона"],["Фазовый",10,1,"U","10 урона"],["Ионный",11,1,"R","11 урона"],
+["Грав.удар",10,1,"U","10 урона"],["Призрачный",9,1,"U","9 урона"],["Плазм.кнут",10,1,"U","10 урона"],
+["Рад.удар",6,1,"C","6 урона"],["Терм.пушка",9,1,"U","9 урона"],["Крио.луч",12,1,"R","12 урона"],
+["Инфракрас.",6,1,"C","6 урона"],["Импульсный",9,1,"U","9 урона"],["Плазм.шар",13,2,"R","13 урона"],
+["Теневой луч",14,2,"R","14 урона"],["Нейтр.удар",16,3,"E","16 урона"],["Косм.бластер",18,3,"E","18 урона"],
+["Фазовый луч",15,3,"E","15 урона"],["Грав.бластер",16,3,"E","16 урона"],["Нейтр.бластер",17,3,"E","17 урона"],
+["Косм.кластер",17,3,"E","17 урона"],["Корроз.бластер",5,1,"C","5 урона"],["Лазер.пистолет",5,1,"C","5 урона"]
+];
+AT.forEach(a=>CARDS.push(M(a[0],"atk",a[2],a[3],a[1],0,"fire",a[4])));
+// defense pool
+const DF=[
+["Ст.щит",8,1,"C","8 щита"],["Ремонт",1,0,"C","+6 HP"],["Барьер",10,2,"R","10 щита"],
+["Реген",2,1,"U","+3 HP/ход x3"],["Засада",7,1,"U","7 щит, x2 след."],["Отбивка",5,1,"C","5 щит + 3 ур"],
+["Прочн.",9,2,"U","9 щита"],["Пластин.",6,1,"C","6 щита"],["Энергощит",4,1,"U","4 щит + draw"],
+["Восст.",2,1,"U","+8 HP"],["Отражение",5,1,"U","5 щит + 3 ур врагу"],["Стена",12,2,"R","12 щита"],
+["Неуязвим.",3,3,"L","免疫 1 ход"],["Дым",4,1,"U","4 щит + dodge"],["Ремкомпл.",2,1,"C","+4 HP + 3 щит"],
+["+5 HP",1,0,"C","+5 HP"],["Кам.кожа",8,1,"U","8 щита"],["Нейтр.",0,1,"U","Снять debuffs"],
+["Зеркало",6,1,"R","6 щит, отразить"],["Ген.щитов",10,2,"R","10 щита"],["Армир.",5,1,"C","5 щит + 2 ур"],
+["+3 HP",0,0,"C","+3 HP"],["Стаб.",4,1,"C","4 щит + draw"],["Сил.поле",7,1,"U","7 щит + shock"],
+["+6 HP",2,1,"U","+6 HP"],["Корпус",9,2,"U","9 щита"],["Изоляция",3,1,"U","3 щит +免疫 1"],
+["Бронеж.",5,1,"C","5 щита"],["Накопит.",4,1,"U","4 щит + 4 след."],["Двойн.бр.",8,2,"R","8 щита"],
+["Рем.дрон",2,1,"C","+5 HP + 2 щит"],["Рефлекс",4,1,"U","4 щит + dodge"],["+7 HP",2,1,"U","+7 HP"],
+["Грав.щит",9,2,"R","9 щита"],["Отбой",5,1,"C","5 щит + толк."],["Панцирь",6,1,"C","6 щита"],
+["+2 energy",0,1,"U","+2 энергии"],["Абляция",4,1,"U","4 щит, -1 HP"],["Обшивка",7,1,"U","7 щита"],
+["Импульс",2,1,"C","2 щит + draw 2"],["+15 HP",3,3,"L","+15 HP"],["Охлажд.",5,1,"U","5 щит + slow"],
+["Ков.щит",10,2,"R","10 щита"],["Вампир.",3,1,"U","3 щит + 3 HP"],["Энергоп.",6,1,"U","6 щит + draw"],
+["Рем.систем",2,1,"C","+6 HP"],["Укрепл.",4,1,"C","4 щит + 2 ур"],["Последн.",15,3,"L","15 щита"],
+["Ион.щит",8,1,"R","8 щита"],["Крист.бр.",11,2,"E","11 щита"],["Экзощит",9,2,"R","9 щит + draw"],
+["Неразр.",6,2,"R","6 щит + 3 HP"],["Напр.бак",10,2,"E","10 щита"],["Двойной слой",8,1,"U","8 щита"],
+["Рефлекс.",4,1,"U","5 щита"],["Самоп.",1,0,"C","+5 HP"],["Энергосетка",4,1,"C","4 щит"],
+["Отбивка.",5,1,"C","5 щит"],["Корпус.",9,1,"U","9 щита"]
+];
+DF.forEach(a=>CARDS.push(M(a[0],"def",a[2],a[3],0,a[1],"earth",a[4])));
+// skill pool
+const SK=[
+["Сканирование",1,0,"C","Draw 1"],["Перезагрузка",2,1,"U","Перемешать сброс"],["Приоритет",0,0,"C","+1 energy"],
+["Анализ",1,1,"U","Draw 2"],["Улучшение",2,1,"U","+2 урона навсегда"],["Обнаружение",0,0,"C","Draw 1"],
+["Дисперсия",2,1,"U","Снять effects врага"],["Эвакуация",1,1,"U","Сброс, draw 4"],["Охота",2,1,"R","+3 урона 3 хода"],
+["Протокол",1,1,"U","+3 щита 3 хода"],["Захват",1,1,"U","+2 HP"],["Взлом",2,1,"R","x2 след. щит"],
+["Нагнетание",2,1,"R","+3 ур. 3 хода"],["Стратегия",1,1,"U","Draw 1 + +1 energy"],["Тактика",0,0,"C","Draw 1"],
+["Обход",1,1,"R","След. атака bypass щит"],["Форсировка",2,2,"R","x2 атака этот ход"],["Энергосеть",1,1,"U","+2 energy след."],
+["Анализ уязв.",1,1,"R","Враг x2 урона 1 ход"],["Отход",1,1,"U","Draw 3, discard 2"],["Радиопомехи",2,2,"R","Враг пропускает"],
+["Пауза",1,0,"C","+1 energy + draw"],["Реконфиг.",1,1,"U","Заменить карту"],["Диспетчер",2,2,"E","Играть 2 доп. карты"],
+["Ускорение",1,1,"R","+2 energy"],["Оптимизация",0,0,"C","След. карта -1 cost"],["Подавление",2,1,"U","Враг -2 урона 3 хода"],
+["Захват карт",1,1,"R","Украсть карту врага"],["Перенац.",0,0,"C","Сменить цель"],["Самоподкачка",2,1,"R","+1 energy + draw 2"],
+["Кодекс",1,1,"R","+1 урон навсегда"],["Компьютер",1,0,"C","Draw 1 + +1 energy"],["Экстр.",0,1,"R","Если HP<20: +15 HP"],
+["Разведка",1,1,"U","Посмотреть колоду"],["Слияние",2,2,"E","Объединить 2 карты"],["Терминал",1,1,"U","Draw 2, discard 1"],
+["Прогноз",0,1,"U","След. 3 карты -1 cost"],["Команда",1,0,"C","+2 щита + draw"],["Цель",1,1,"U","След. атака +5 урона"],
+["Скопировать",2,2,"E","Скопировать карту"],["Стройка",1,1,"U","+2 ур. навсегда"],["Тактика.",1,1,"U","+1 energy + draw"],
+["Инструкция",0,0,"C","Draw 1"],["Расчёт",1,1,"R","+1 ур. навсегда"],["План",1,1,"U","Draw 2"]
+];
+SK.forEach(a=>CARDS.push(M(a[0],"skl",a[1],a[3],0,0,"air",a[4])));
+// mech pool
+const MC=[
+["Разведчик",2,1,"U","Призвать: 4 HP, 3 ур"],["Танк",4,2,"R","Призвать: 12 HP, 4 ур"],["Снайпер",3,1,"U","Призвать: 5 HP, 8 ур"],
+["Медик",3,1,"U","Призвать: 6 HP, +3 HP/ход"],["Инженер",2,1,"C","Призвать: 4 HP, +1 energy"],["Штурмовик",4,2,"R","Призвать: 8 HP, 6 ур"],
+["Разрушит.",5,3,"E","Призвать: 10 HP, 10 ур"],["Страж",3,1,"U","Призвать: 8 HP, 5 щит/ход"],["Призрак",4,2,"R","Призвать: 5 HP, stealth"],
+["Огнемёт",3,1,"U","Призвать: 6 HP, 3 ур, burn"],["Ледокол",3,1,"U","Призвать: 7 HP, 4 ур, slow"],["Шаман",4,2,"R","Призвать: 4 HP, +4 HP/ход"],
+["Дрон",1,0,"C","Призвать: 2 HP, draw/ход"],["Камнестр.",5,3,"E","Призвать: 15 HP, 3 ур"],["Вампироид",4,2,"R","Призвать: 8 HP, +3 HP/ход"],
+["Плам.дух",3,1,"U","Призвать: 5 HP, 5 ур, burn"],["Вод.страж",3,1,"U","Призвать: 6 HP, 3 щит/ход"],["Молниен.",2,1,"C","Призвать: 3 HP, 4 ур"],
+["Боевой мех",5,3,"E","Призвать: 12 HP, 7 ур"],["Рем.дрон",2,1,"C","Призвать: 3 HP, +3 HP/ход"],["Тень",3,1,"U","Призвать: 4 HP, 6 ур"],
+["Изверг",6,3,"L","Призвать: 15 HP, 10 ур"],["Лед.элем.",5,2,"R","Призвать: 10 HP, 5 ур, freeze"],["Зем.титан",6,3,"L","Призвать: 20 HP, 6 ур"],
+["Возд.демон",5,2,"R","Призвать: 8 HP, 8 ур"],["Некромех",5,2,"E","Призвать: 10 HP,复活"],["Робопёс",1,0,"C","Призвать: 2 HP, 2 ур"],
+["Огн.страж",4,2,"R","Призвать: 9 HP, 5 ур"],["Крист.голем",4,2,"R","Призвать: 8 HP, 8 щит"],["Тен.охотн.",4,2,"R","Призвать: 7 HP, 6 ур"],
+["Косм.дрон",3,1,"U","Призвать: 4 HP, draw 2/ход"],["Боев.таран",5,2,"R","Призвать: 14 HP, 8 ур"],["Плазм.турель",3,1,"U","Призвать: 5 HP, 7 ур"],
+["Лед.щит",4,2,"R","Призвать: 10 HP, 10 щит"],["Дух леса",3,1,"U","Призвать: 6 HP, +4 HP/ход"],["Ст.волк",3,1,"U","Призвать: 7 HP, 5 ур"],
+["Молниев.",2,1,"C","Призвать: 3 HP, 6 ур"],["Территория",4,2,"R","Призвать: 8 HP, -2 ур врагу"],["Иск.мех",3,1,"U","Призвать: 6 HP, 4 ур, shock"],
+["Вод.змей",4,2,"R","Призвать: 7 HP, 5 ур, slow"],["Кам.страж",4,2,"R","Призвать: 12 HP, 4 щит/ход"],["Ветр.всадн.",3,1,"U","Призвать: 5 HP, 7 ур"],
+["Пожират.",5,2,"R","Призвать: 9 HP, 7 ур"],["Робот-повар",1,0,"C","Призвать: 2 HP, +2 HP/ход"],["Огн.дракон",6,3,"L","Призвать: 14 HP, 10 ур"],
+["Лед.король",5,2,"E","Призвать: 12 HP, 6 ур, freeze"],["Громоотв.",2,1,"C","Призвать: 4 HP, reflect"],["Ст.феникс",6,3,"L","Призвать: 10 HP, rebirth"],
+["Косм.червь",5,2,"E","Призвать: 15 HP, 8 ур"],["Эл.угорь",3,1,"U","Призвать: 5 HP, shock 3"],["Мор.лев",3,1,"U","Призвать: 6 HP, 4 щит/ход"]
+];
+MC.forEach(a=>CARDS.push(M(a[0],"mch",a[1],a[3],a[1],0,"none",a[4])));
+// event pool
+const EV=[
+["Магн.буря",0,0,"R","Мехи +2 ур. 3 хода"],["Радиация",0,0,"U","Враг -5, вы -2 HP"],["Дождь",0,0,"C","Снять горения"],
+["Землетряс.",0,0,"R","Все -4 HP"],["Солнце",0,0,"U","Враг stun 1"],["Туман",0,0,"C","dodge 3, 2 хода"],
+["Наводнение",0,0,"U","Враг -3 щит"],["Засада!",0,0,"U","Враг -8 HP"],["Ресурсы",0,0,"C","+8 кредитов"],
+["Станция",0,0,"C","+10 HP"],["Торговец",0,0,"R","+3 карты"],["Поломка",0,0,"C","-1 energy 3 хода"],
+["Вирус",0,0,"U","Враг -3 ур. 3 хода"],["Перегрев",0,0,"U","Мехи +3 ур. 1 ход"],["Лед.шторм",0,0,"R","Враг slow 2"],
+["Рой дронов",0,0,"R","3 дрона по 2 HP"],["Тайник",0,0,"R","1 редкая карта"],["Ловушка",0,0,"C","-5 HP"],
+["Энергосеть",0,0,"C","+2 energy"],["Сыворотка",0,0,"C","+8 HP"],["Портал",0,0,"U","Сброс в колоду"],
+["Магнит",0,0,"C","След. карта -2 cost"],["Пожар",0,0,"U","Враг -6 HP"],["Химикаты",0,0,"C","+3 щит мехам"],
+["Награда",0,0,"R","+15 кредитов"],["Удача",0,0,"R","Draw 4"],["Проклятие",0,0,"C","-5 HP"],
+["Взлом",0,0,"R","x2 кредиты"],["Ремонт",0,0,"C","Мех +5 HP"],["Подкрепл.",0,0,"U","Draw 2 атак"],
+["Диверсия",0,0,"U","Враг -2 ур. 3 хода"],["Припасы",0,0,"C","+5 HP + 5 кр."],["Газ",0,0,"U","Враг -4, вы -4 HP"],
+["Радар",0,0,"C","Посмотреть колоду"],["Сберегат.",0,0,"R","+1 energy навсегда"],["Кухня",0,0,"C","+6 HP"],
+["Опасность",0,0,"U","-3 HP, draw 3"],["Автомат",0,0,"C","Карта за 5 кр."],["Гравияция",0,0,"R","Враг stun 2"],
+["Боевой дух",0,0,"R","+2 ур. 5 ходов"],["Рой+",0,0,"E","5 дронов по 2 HP"],["Суперсыворотка",0,0,"E","+15 HP"]
+];
+EV.forEach(a=>CARDS.push(M(a[0],"evt",a[1],a[3],0,0,"shadow",a[4])));
+// item pool
+const IT=[
+["Усил.пушка",2,2,"R","+2 ур. атакам"],["Бронепл.",2,1,"U","+2 щит/ход"],["Энергояч.",2,1,"U","+1 energy/ход"],
+["Наноремонт",2,1,"U","+1 HP/ход"],["Турбо",2,2,"R","+1 draw/ход"],["Катана",2,2,"R","Атаки -1 cost"],
+["Перчатка",2,3,"E","+4 ур. атакам"],["Экзоскелет",2,2,"R","+5 щит в начале"],["Реакт.ранец",2,2,"R","+3 energy 1 ход"],
+["Дрон-разведч.",2,1,"U","Draw 2 в начале"],["Плазм.резерв.",2,2,"R","Огонь +3 ур."],["Крио-модуль",2,1,"U","Вода slow +1"],
+["Грав.якорь",2,1,"U","Мехи +3 HP"],["Теневой ген.",2,2,"R","Shadow +4 ур."],["Стабилиз.",2,2,"R","+3 max HP"],
+["Нейронный чип",2,2,"R","+1 draw/ход"],["Пulsар",2,3,"E","1-й удар x2"],["Солнц.батарея",2,3,"E","+2 energy/ход"],
+["Жел.воля",2,2,"R","-1 урон от всех"],["Двуручник",2,2,"R","+6 ур., -2 def"],["Регенератор",2,2,"R","+2 HP/ход"],
+["Ловкость",2,1,"U","+1 energy, draw"],["Невидимость",2,3,"E","Stealth 1 ход"],["Ион.щит",2,2,"R","+8 щит в начале"],
+["Огнемёт+",2,1,"U","Burn +2 ко всем"],["Цепн.молот",2,2,"R","10+ ур: stun"],["Арена",2,3,"E","+1 слот мехов"],
+["Зелье HP",1,0,"U","+20 HP"],["Телепорт",2,3,"L","Уйти из боя"],["Финальная",3,3,"L","x2 урона 1 ход"]
+];
+IT.forEach(a=>CARDS.push(M(a[0],"itm",a[1],a[2],0,0,"none",a[4])));
+
+// ════════════════════════════════════════
+// GAME STATE
+// ════════════════════════════════════════
+let S=null, scr="menu", mx=0, my=0, clk=false;
+let BT={logs:[],pTurn:true,anim:false};
+let SHOP=[],EVT=null,RWARD=[],FORGE={s1:null,s2:null};
+let particles=[];
+
+CV.onmousemove=e=>{mx=e.clientX;my=e.clientY};
+CV.onclick=e=>{clk=true;mx=e.clientX;my=e.clientY};
+CV.ontouchstart=e=>{e.preventDefault();mx=e.touches[0].clientX;my=e.touches[0].clientY;clk=true};
+
+function mkGame(){
+  S={floor:1,hp:60,mhp:60,nrg:3,mnrg:3,cr:15,sh:0,
+    deck:[],hand:[],draw:[],dsc:[],exh:[],
+    mechs:[],perm:{atk:0,draw:0,nrg:0,burn:0,mhp:0},
+    map:[],mrow:0,en:null,btl:false,
+    kills:0,cp:0,col:new Set()};
+  for(let i=0;i<6;i++)S.deck.push({...CARDS[0],u:Math.random()});
+  for(let i=0;i<4;i++)S.deck.push({...CARDS[1],u:Math.random()});
+  for(let i=0;i<3;i++)S.deck.push({...CARDS[2],u:Math.random()});
+  for(let i=0;i<2;i++){let c=pick(CARDS.filter(x=>x.type==="atk"&&x.rarity==="C"));S.deck.push({...c,u:Math.random()})}
+  shuf(S.deck);S.col=new Set(S.deck.map(c=>c.id));genMap();
+}
+
+// ════════════════════════════════════════
+// MAP
+// ════════════════════════════════════════
+function genMap(){
+  S.map=[];const R=8;
+  for(let r=0;r<R;r++){
+    let n=3+(Math.random()*3|0),row=[];
+    for(let c=0;c<n;c++){
+      let t="bat";
+      if(r===0)t="bat";else if(r===R-1)t="bos";
+      else{let x=Math.random();t=x<.4?"bat":x<.55?"evt":x<.7?"shp":x<.8?"frg":"rst"}
+      row.push({r,c,t,vis:false,conn:[]});
+    }
+    S.map.push(row);
+  }
+  for(let r=0;r<R-1;r++){
+    let fr=S.map[r],to=S.map[r+1];
+    fr.forEach(n=>{
+      let ts=[];
+      if(to.length<=fr.length){let ci=Math.round(n.c*(to.length-1)/(fr.length-1));ts.push(ci);if(Math.random()<.4&&ci>0)ts.push(ci-1);if(Math.random()<.4&&ci<to.length-1)ts.push(ci+1)}
+      else{let ci=Math.round(n.c*(to.length-1)/(fr.length-1));ts.push(ci);if(ci+1<to.length)ts.push(ci+1)}
+      [...new Set(ts)].forEach(t=>{if(!n.conn.includes(t))n.conn.push(t)});
+    });
+    to.forEach((_,ci)=>{if(!fr.some(n=>n.conn.includes(ci))){let best=fr[0],bd=99;fr.forEach(n=>{let d=Math.abs(n.c-ci);if(d<bd){bd=d;best=n}});best.conn.push(ci)}});
+  }
+  S.mrow=0;
+}
+
+// ════════════════════════════════════════
+// ENEMIES
+// ════════════════════════════════════════
+const ENM=[
+  ["Дрон",18,5,"Простой дрон"],["Робопёс",22,6,"Быстрый"],["Spider",28,7,"Ядовитый"],
+  ["Танк",38,8,"Крепкий"],["Снайпер",20,11,"Точный"],["Страж",42,5,"+3 щит/ход",0,3],
+  ["Огнемёт.",24,6,"+2 burn",2],["Ледяной",32,5,"slow +1",0,0,1],
+  ["Тень",22,13,"Смертоносный"],["Рой",30,4,"x3 атака",0,0,0,3],
+  ["Некро",38,7,"Воскрешает"],["Босс-дрон",65,11,"Модиф."],
+  ["Рыцарь",50,9,"Крепкий"],["Кибер-волк",26,10,"x2 атака",0,0,0,2],
+  ["Голем",55,8,"Сильный"]
+];
+const BOSSES=[
+  ["Кор.Огня",90,13,"Пламя",3],["Кор.Льда",95,11,"Мороз",0,2],
+  ["Кор.Теней",85,15,"Тьма"],["Кор.Земли",105,10,"Несокр.",0,0,0,0,5],
+  ["Император",130,16,"Финал",2,1]
+];
+
+function mkEn(fl,boss){
+  let t=boss?BOSSES[fl-1]:pick(ENM.slice(0,Math.min(ENM.length,4+fl*2)));
+  let m=1+fl*.18;
+  return{n:t[0],hp:Math.floor(t[1]*m),mhp:Math.floor(t[1]*m),atk:Math.floor(t[2]*m),d:t[3],
+    burn:t[4]||0,slow:t[5]||0,atkN:t[6]||1,boss:!!boss,
+    intent:"atk",idmg:0,stun:0,sh:0,vuln:0,weak:0};
+}
+
+function genIntent(e){
+  if(e.stun>0){e.intent="stun";return}
+  let r=Math.random();
+  if(r<.6){e.intent="atk";e.idmg=e.atk}
+  else if(r<.8){e.intent="sh";e.idmg=e.atk*.6|0}
+  else{e.intent="buf";e.idmg=0}
+}
+
+// ════════════════════════════════════════
+// BATTLE
+// ════════════════════════════════════════
+function startBtl(boss){
+  S.btl=true;S.sh=0;S.en=mkEn(S.floor,boss);genIntent(S.en);
+  BT={logs:[],pTurn:true,anim:false};
+  S.draw=shuf(S.deck.map(c=>({...c})));S.hand=[];S.dsc=[];S.exh=[];S.mechs=[];
+  S.nrg=S.mnrg+S.perm.nrg;drawN(5+S.perm.draw);scr="bat";btlLog("Бой: "+S.en.n+"!");
+}
+
+function drawN(n){for(let i=0;i<n;i++){if(!S.draw.length){if(!S.dsc.length)break;S.draw=shuf(S.dsc.map(c=>({...c})));S.dsc=[]}if(S.draw.length)S.hand.push(S.draw.pop())}}
+
+function btlLog(t,c){BT.logs.push({t,c:c||"#777"});if(BT.logs.length>8)BT.logs.shift()}
+
+function playCard(i){
+  if(!BT.pTurn||BT.anim)return;
+  let c=S.hand[i];if(!c||c.cost>S.nrg)return;
+  S.nrg-=c.cost;S.hand.splice(i,1);S.cp++;S.dsc.push(c);
+  execCard(c);btlLog("> "+c.name,"#cc4");
+  if(S.en.hp<=0)return endBtl(true);
+  drawN(S.perm.draw);
+}
+
+function execCard(c){
+  let e=S.en,ab=S.perm.atk,d=c.desc;
+  if(c.type==="atk"){
+    let dmg=c.atk+ab;
+    if(e.vuln>0){dmg=dmg*1.5|0;e.vuln--}
+    if(e.weak>0)dmg=Math.max(1,dmg-2);
+    if(d.includes("x2"))dmg*=2;
+    e.hp-=dmg;btlLog("-"+dmg+" врагу","#e55");
+    if(S.perm.burn>0)e.burn+=S.perm.burn;
+    if(d.includes("burn"))e.burn+=2;
+    if(d.includes("slow"))e.slow++;
+    if(d.includes("shock"))e.stun++;
+    if(d.includes("heal")){let h=3;S.hp=Math.min(S.hp+h,S.mhp);btlLog("+"+h+" HP","#4a6")}
+    if(d.includes("draw"))drawN(1);
+    if(d.includes("-5 HP")){S.hp-=5;btlLog("-5 HP自己","#a44")}
+    if(d.includes("-3 HP")){S.hp-=3;btlLog("-3 HP自己","#a44")}
+  } else if(c.type==="def"){
+    if(c.def>0){S.sh+=c.def;btlLog("+"+c.def+" щит","#5ae")}
+    if(d.includes("+6 HP")){S.hp=Math.min(S.hp+6,S.mhp);btlLog("+6 HP","#4a6")}
+    if(d.includes("+8 HP")){S.hp=Math.min(S.hp+8,S.mhp);btlLog("+8 HP","#4a6")}
+    if(d.includes("+15 HP")){S.hp=Math.min(S.hp+15,S.mhp);btlLog("+15 HP!","#4a6")}
+    if(d.includes("+7 HP")){S.hp=Math.min(S.hp+7,S.mhp);btlLog("+7 HP","#4a6")}
+    if(d.includes("+5 HP")){S.hp=Math.min(S.hp+5,S.mhp);btlLog("+5 HP","#4a6")}
+    if(d.includes("+4 HP")){S.hp=Math.min(S.hp+4,S.mhp);btlLog("+4 HP","#4a6")}
+    if(d.includes("+3 HP")){S.hp=Math.min(S.hp+3,S.mhp);btlLog("+3 HP","#4a6")}
+    if(d.includes("draw"))drawN(d.includes("2")?2:1);
+    if(d.includes("+2能量")||d.includes("+2 энер"))S.nrg+=2;
+    if(d.includes("отразить")){e.stun++;btlLog("Отражено!","#a4f")}
+    if(d.includes("免疫"))S.sh+=999;
+    if(d.includes("3 ур врагу")){e.hp-=3;btlLog("-3 врагу","#e55")}
+    if(d.includes("2 ур врагу")){e.hp-=2;btlLog("-2 врагу","#e55")}
+    if(d.includes("Снять"))btlLog("Очищено","#4a6");
+  } else if(c.type==="mch"){
+    if(S.mechs.length<4){
+      let hp=5+S.perm.mhp+c.atk,atk=Math.max(2,c.atk*.5|0);
+      S.mechs.push({n:c.name,hp,mhp:hp,atk});btlLog("Призван: "+c.name+" HP"+hp,"#d73");
+    } else btlLog("Мехов макс.","#a66");
+  } else if(c.type==="skl"){
+    if(d.includes("Draw 1"))drawN(1);
+    if(d.includes("Draw 2"))drawN(2);
+    if(d.includes("Draw 3"))drawN(3);
+    if(d.includes("Draw 4"))drawN(4);
+    if(d.includes("+1 energy")||d.includes("+1 energ"))S.nrg++;
+    if(d.includes("+2 energy"))S.nrg+=2;
+    if(d.includes("+2 ур. навсегда")||d.includes("+2 ур навсегда")){S.perm.atk+=2;btlLog("+2 урон!","#c4")}
+    if(d.includes("+3 ур. навсегда")){S.perm.atk+=3;btlLog("+3 урон!","#c4")}
+    if(d.includes("+1 урон навсегда")||d.includes("+1 ур. навсегда")){S.perm.atk++;btlLog("+1 урон!","#c4")}
+    if(d.includes("пропускает"))e.stun++;
+    if(d.includes("x2 урона"))e.vuln++;
+    if(d.includes("Сброс, draw 4")){S.dsc.push(...S.hand);S.hand=[];drawN(4);btlLog("Сброс+draw 4","#888")}
+    if(d.includes("Перемешать")){S.draw.push(...S.dsc);S.dsc=[];shuf(S.draw);btlLog("Перемешано","#888")}
+    if(d.includes("+2 HP")){S.hp=Math.min(S.hp+2,S.mhp);btlLog("+2 HP","#4a6")}
+    if(d.includes("+3 HP")){S.hp=Math.min(S.hp+3,S.mhp);btlLog("+3 HP","#4a6")}
+    if(d.includes("-2 урона"))e.weak+=3;
+    if(d.includes("bypass"))btlLog("Bypass","#aa4");
+    if(d.includes("x2 атака"))btlLog("x2 атака!","#c4");
+    if(d.includes("Скопировать")&&S.hand.length>0){let rc=S.hand[0];S.hand.push({...rc,u:Math.random()});btlLog("Скопировано!","#c4")}
+  } else if(c.type==="itm"){
+    S.mechs=[]; // just mark as collected
+    if(d.includes("+2 ур.")){S.perm.atk+=2;btlLog("+2 урон навсегда!","#c4")}
+    if(d.includes("+4 ур.")){S.perm.atk+=4;btlLog("+4 урон навсегда!","#c4")}
+    if(d.includes("+6 ур.")){S.perm.atk+=6;btlLog("+6 урон навсегда!","#c4")}
+    if(d.includes("+2 щит"))S.sh+=2;
+    if(d.includes("+5 щит"))S.sh+=5;
+    if(d.includes("+8 щит"))S.sh+=8;
+    if(d.includes("+1 energy/ход")){S.perm.nrg++;S.nrg++}
+    if(d.includes("+2 energy/ход")){S.perm.nrg+=2;S.nrg+=2}
+    if(d.includes("+1 draw/ход")){S.perm.draw++;drawN(1)}
+    if(d.includes("+20 HP")){S.hp=Math.min(S.hp+20,S.mhp);btlLog("+20 HP!","#4a6")}
+    if(d.includes("+3 max HP")){S.mhp+=3;S.hp+=3}
+    if(d.includes("Мехи +3 HP"))S.perm.mhp+=3;
+    if(d.includes("Burn +2"))S.perm.burn+=2;
+    if(d.includes("Stealth"))S.sh+=999;
+    if(d.includes("x2 урона"))btlLog("x2!","#c4");
+    if(d.includes("Уйти")){btlLog("Побег!","#4a6")}
+    btlLog("Предмет: "+c.name,"#da3");
+    // Restore mechs array (was cleared for item type)
+  } else if(c.type==="evt"){
+    if(d.includes("враг -5")||d.includes("Враг -5")){S.en.hp-=5;btlLog("-5 врагу","#e55")}
+    if(d.includes("Враг -6")){S.en.hp-=6;btlLog("-6 врагу","#e55")}
+    if(d.includes("Враг -4")){S.en.hp-=4;btlLog("-4 врагу","#e55")}
+    if(d.includes("враг -8")){S.en.hp-=8;btlLog("-8 врагу","#e55")}
+    if(d.includes("враг -3")){S.en.hp-=3;btlLog("-3 врагу","#e55")}
+    if(d.includes("вы -2")){S.hp-=2;btlLog("-2 HP","#a44")}
+    if(d.includes("вы -4")){S.hp-=4;btlLog("-4 HP","#a44")}
+    if(d.includes("все -4")){S.en.hp-=4;S.hp-=4;btlLog("-4 всем","#a44")}
+    if(d.includes("-5 HP")){S.hp-=5;btlLog("-5 HP","#a44")}
+    if(d.includes("-3 HP")){S.hp-=3;btlLog("-3 HP","#a44")}
+    if(d.includes("+8 кредитов")||d.includes("+8 кр")){S.cr+=8;btlLog("+8 кр","#da3")}
+    if(d.includes("+15 кредитов")||d.includes("+15 кр")){S.cr+=15;btlLog("+15 кр","#da3")}
+    if(d.includes("x2 кредиты")){S.cr*=2;btlLog("x2 кредиты!","#da3")}
+    if(d.includes("+10 HP")){S.hp=Math.min(S.hp+10,S.mhp);btlLog("+10 HP","#4a6")}
+    if(d.includes("+8 HP")){S.hp=Math.min(S.hp+8,S.mhp);btlLog("+8 HP","#4a6")}
+    if(d.includes("+6 HP")){S.hp=Math.min(S.hp+6,S.mhp);btlLog("+6 HP","#4a6")}
+    if(d.includes("+5 HP + 5")){S.hp=Math.min(S.hp+5,S.mhp);S.cr+=5;btlLog("+5 HP +5 кр","#4a6")}
+    if(d.includes("+3 карты")){for(let i=0;i<3;i++)S.hand.push({...pick(CARDS),u:Math.random()});btlLog("+3 карты","#c4")}
+    if(d.includes("редкая")){let r=CARDS.filter(x=>x.rarity==="R"||x.rarity==="E");S.hand.push({...pick(r),u:Math.random()});btlLog("Редкая!","#48f")}
+    if(d.includes("Draw 4"))drawN(4);
+    if(d.includes("Draw 2 атак")){let a=CARDS.filter(x=>x.type==="atk");for(let i=0;i<2;i++)S.hand.push({...pick(a),u:Math.random()})}
+    if(d.includes("+2 energy"))S.nrg+=2;
+    if(d.includes("Враг stun 2"))e.stun+=2;
+    if(d.includes("Враг stun 1"))e.stun++;
+    if(d.includes("slow 2"))e.slow+=2;
+    if(d.includes("-1 energy 3")){S.mnrg=Math.max(1,S.mnrg-1);btlLog("-1 max energy","#a44")}
+    if(d.includes("+2 ур. 5 ходов")){S.perm.atk+=2;btlLog("+2 урон!","#c4")}
+    if(d.includes("Мехи +2 ур.")){S.mechs.forEach(m=>m.atk+=2);btlLog("Мехи +2!","#d73")}
+    if(d.includes("5 дронов")){for(let i=0;i<5;i++)if(S.mechs.length<4)S.mechs.push({n:"Дрон",hp:2,mhp:2,atk:1});btlLog("+5 дронов","#d73")}
+    if(d.includes("3 дрона")){for(let i=0;i<3;i++)if(S.mechs.length<4)S.mechs.push({n:"Дрон",hp:2,mhp:2,atk:1});btlLog("+3 дрона","#d73")}
+    if(d.includes("+15 HP")){S.hp=Math.min(S.hp+15,S.mhp);btlLog("+15 HP","#4a6")}
+    if(d.includes("+1 energy навсегда")){S.perm.nrg++;btlLog("+1 energy!","#4af")}
+  }
+}
+
+function dmgEnemy(d){
+  if(S.en.vuln>0){d=d*1.5|0;S.en.vuln--}
+  if(S.en.weak>0)d=Math.max(1,d-2);
+  S.en.hp-=d;
+}
+
+function dmgPlayer(d){
+  if(S.sh>0){let ab=Math.min(d,S.sh);S.sh-=d;d-=d;if(ab)btlLog("Щит -"+ab,"#5ae")}
+  if(d>0){S.hp-=d;btlLog("-"+d+" HP","#e55")}
+}
+
+function enemyTurn(){
+  let e=S.en;
+  if(e.stun>0){e.stun--;btlLog(e.n+" stun","#888")}
+  else{
+    if(e.intent==="atk"){
+      let d=e.idmg;
+      if(e.atkN>1){let s=d/e.atkN|0;for(let i=0;i<e.atkN;i++)dmgPlayer(s)}
+      else dmgPlayer(d);
+    } else if(e.intent==="sh"){e.sh+=e.idmg;btlLog(e.n+" щит+"+e.idmg,"#5ae")}
+    else if(e.intent==="buf"){e.atk+=2;btlLog(e.n+" +2 ур","#d73")}
+  }
+  if(e.burn>0){e.hp-=e.burn;btlLog("Огонь -"+e.burn,"#e42");e.burn=Math.max(0,e.burn-1)}
+  if(e.slow>0)e.slow--;
+  for(let m of S.mechs){if(m.hp>0){dmgEnemy(m.atk);btlLog(m.n+": -"+m.atk,"#d73")}}
+  S.mechs=S.mechs.filter(m=>m.hp>0);
+}
+
+function endBtl(won){
+  S.btl=false;
+  if(won){
+    S.kills++;
+    if(S.en.boss){
+      let rw=CARDS.filter(x=>x.rarity==="E"||x.rarity==="L");
+      RWARD=[pick(rw),pick(rw),pick(rw)];S.cr+=20;
+      scr="rwd";
+    } else {
+      let pool=CARDS.filter(x=>x.type!=="bos");
+      let rw=[];
+      for(let i=0;i<3;i++){let r=Math.random(),ra=r<.05?"L":r<.12?"E":r<.3?"R":r<.55?"U":"C";rw.push({...pick(pool.filter(x=>x.rarity===ra)),u:Math.random()})}
+      RWARD=rw;S.cr+=3+S.floor;scr="rwd";
+    }
+  } else scr="over";
+}
+
+function endTurn(){
+  BT.pTurn=false;BT.anim=true;BT.logs=[];
+  setTimeout(()=>{
+    enemyTurn();
+    if(S.en.hp<=0){endBtl(true);return}
+    if(S.hp<=0){endBtl(false);return}
+    S.nrg=S.mnrg+S.perm.nrg;S.sh=0;drawN(5+S.perm.draw);genIntent(S.en);
+    BT.pTurn=true;BT.anim=false;
+  },350);
+}
+
+// ════════════════════════════════════════
+// SHOP / EVENT / FORGE
+// ════════════════════════════════════════
+function openShop(){
+  SHOP=[];
+  let pool=CARDS.filter(x=>x.type!=="bos");
+  for(let i=0;i<6;i++){let c=pick(pool);SHOP.push({...c,price:{C:5,U:10,R:20,E:35,L:60}[c.rarity]+c.cost*2,u:Math.random()})}
+  scr="shp";
+}
+
+const EVTS=[
+  {t:"Заброшенная мастерская",d:"Старое помещение с механизмами.",ch:["Обыскать","Починить","Уйти"],
+  fx:[()=>{let c=pick(CARDS);S.deck.push({...c,u:Math.random()});return"Найдено: "+c.name},
+      ()=>{S.hp=Math.min(S.hp+12,S.mhp);return"+12 HP"},
+      ()=>"Ничего"]},
+  {t:"Таинственный торговец",d:"Фигура в плаще.",ch:["Купить 15 кр","Ограбить","Уйти"],
+  fx:[()=>{if(S.cr>=15){S.cr-=15;let c=pick(CARDS.filter(x=>x.rarity==="R"||x.rarity==="E"));S.deck.push({...c,u:Math.random()});return"Куплено: "+c.name}return"Нет кр!"},
+      ()=>{if(Math.random()<.5){S.cr+=20;return"+20 кр!"}S.hp-=10;return"-10 HP!"},
+      ()=>"Уходите"]},
+  {t:"Радиоактивная зона",d:"Земля светится.",ch:["Принять дозу","Обыскать","Уйти"],
+  fx:[()=>{S.mhp+=5;S.hp+=5;return"+5 max HP"},
+      ()=>{if(Math.random()<.5){S.cr+=10;return"+10 кр"}S.hp-=8;return"-8 HP"},
+      ()=>"Уходите"]},
+  {t:"Старый арсенал",d:"Оружие и детали.",ch:["Взять детали","Обыскать","Уйти"],
+  fx:[()=>{S.hp=Math.min(S.hp+8,S.mhp);return"+8 HP"},
+      ()=>{let c=pick(CARDS.filter(x=>x.rarity==="R"));S.deck.push({...c,u:Math.random()});return"Карта: "+c.name},
+      ()=>"Уходите"]},
+  {t:"Энергокристалл",d:"Мерцающий камень.",ch:["Впитать","Разрядить","Уйти"],
+  fx:[()=>{S.mnrg++;S.nrg++;return"+1 max energy!"},
+      ()=>{S.hp=Math.min(S.hp+15,S.mhp);return"+15 HP"},
+      ()=>"Уходите"]},
+  {t:"Брошенный лагерь",d:"Кто-то был здесь.",ch:["Поесть","Обыскать","Уйти"],
+  fx:[()=>{S.hp=Math.min(S.hp+10,S.mhp);return"+10 HP"},
+      ()=>{S.cr+=8;return"+8 кр"},
+      ()=>"Уходите"]},
+  {t:"Торговый автомат",d:"Старый автомат.",ch:["10 кредитов","Уйти"],
+  fx:[()=>{if(S.cr>=10){S.cr-=10;let c=pick(CARDS.filter(x=>x.rarity!=="C"));S.deck.push({...c,u:Math.random()});return"Карта: "+c.name}return"Нет кр!"},
+      ()=>"Уходите"]},
+  {t:"Странная машина",d:"Гудящий механизм.",ch:["Активировать","Уйти"],
+  fx:[()=>{let r=Math.random();if(r<.4){S.mhp+=3;S.hp+=3;return"+3 max HP"}if(r<.7){S.cr+=12;return"+12 кр"}S.hp-=5;return"-5 HP"},
+      ()=>"Уходите"]}
+];
+function openEvt(){EVT={...pick(EVTS),done:false,result:""};scr="evt"}
+function openForge(){FORGE={s1:null,s2:null};scr="frg"}
+
+// ════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════
+const RCLR={C:"#888",U:"#4a4",R:"#48f",E:"#a4f",L:"#da3"};
+const TCLR={atk:"#e55",def:"#5ae",skl:"#8c4",mch:"#d73",evt:"#c7d",itm:"#da3"};
+// Stamp / symbol drawing helpers
+function stampDiamond(cx,cy,sz,col){
+  G.strokeStyle=col;G.lineWidth=1;
+  G.beginPath();G.moveTo(cx,cy-sz);G.lineTo(cx+sz,cy);G.lineTo(cx,cy+sz);G.lineTo(cx-sz,cy);G.closePath();G.stroke();
+}
+function stampCircle(cx,cy,sz,col){
+  G.strokeStyle=col;G.lineWidth=1;
+  G.beginPath();G.arc(cx,cy,sz,0,Math.PI*2);G.stroke();
+}
+function stampCross(cx,cy,sz,col){
+  G.strokeStyle=col;G.lineWidth=1;
+  G.beginPath();G.moveTo(cx-sz,cy-sz);G.lineTo(cx+sz,cy+sz);G.moveTo(cx+sz,cy-sz);G.lineTo(cx-sz,cy+sz);G.stroke();
+}
+function stampStar5(cx,cy,sz,col){
+  G.strokeStyle=col;G.lineWidth=1;G.beginPath();
+  for(let i=0;i<10;i++){
+    let a=i*Math.PI/5-Math.PI/2,r=i%2?sz*.45:sz;
+    let px2=cx+Math.cos(a)*r,py2=cy+Math.sin(a)*r;
+    i===0?G.moveTo(px2,py2):G.lineTo(px2,py2);
+  }G.closePath();G.stroke();
+}
+function stampHex(cx,cy,sz,col){
+  G.strokeStyle=col;G.lineWidth=1;G.beginPath();
+  for(let i=0;i<6;i++){let a=i*Math.PI/3-Math.PI/6;let px2=cx+Math.cos(a)*sz,py2=cy+Math.sin(a)*sz;i===0?G.moveTo(px2,py2):G.lineTo(px2,py2)}
+  G.closePath();G.stroke();
+}
+function drawCornerDecor(x,y,w,h,col){
+  G.strokeStyle=col;G.lineWidth=.5;
+  let s=6;
+  // top-left
+  G.beginPath();G.moveTo(x+2,y+2+s);G.lineTo(x+2,y+2);G.lineTo(x+2+s,y+2);G.stroke();
+  // top-right
+  G.beginPath();G.moveTo(x+w-2-s,y+2);G.lineTo(x+w-2,y+2);G.lineTo(x+w-2,y+2+s);G.stroke();
+  // bottom-left
+  G.beginPath();G.moveTo(x+2,y+h-2-s);G.lineTo(x+2,y+h-2);G.lineTo(x+2+s,y+h-2);G.stroke();
+  // bottom-right
+  G.beginPath();G.moveTo(x+w-2-s,y+h-2);G.lineTo(x+w-2,y+h-2);G.lineTo(x+w-2,y+h-2-s);G.stroke();
+}
+function drawHorizLine(x,y,w,col){
+  G.strokeStyle=col;G.lineWidth=.5;
+  G.beginPath();G.moveTo(x,y);G.lineTo(x+w,y);G.stroke();
+}
+
+const TYPE_SYM={atk:["⚔","🗡","🗡","⚔","⚡"],def:["🛡","🔰","⛨","🛡","🏛"],
+  skl:["✦","◇","⚙","✧","◈"],mch:["⚙","🤖","⚙","🔧","⚙"],
+  evt:["⚡","!","☢","⚠","★"],itm:["◆","◇","⬡","♦","✦"],bos:["👑","♛","♚","👑","♛"]};
+const EL_SYM={fire:"🔥",water:"💧",earth:"🌍",air:"💨",shadow:"🌑",none:""};
+const EL_CLR2={fire:"#e04020",water:"#3080d0",earth:"#80a030",air:"#90c0e0",shadow:"#7040a0",none:"#444"};
+
+function rCard(c,x,y,w,h,hv,can){
+  G.save();
+  let rc=RCLR[c.rarity]||"#888";
+  let isRare=c.rarity==="R"||c.rarity==="E"||c.rarity==="L";
+
+  // Glow for rare+
+  if(isRare){
+    G.shadowColor=rc;G.shadowBlur=hv?18:10;
+  } else {
+    G.shadowColor="rgba(0,0,0,.4)";G.shadowBlur=hv?10:5;
+  }
+  G.shadowOffsetY=hv?3:1;
+
+  // Card body
+  let bodyGrad=G.createLinearGradient(x,y,x,y+h);
+  bodyGrad.addColorStop(0,"#18182a");bodyGrad.addColorStop(1,"#0e0e1a");
+  G.fillStyle=bodyGrad;rr(x,y,w,h,5);G.fill();
+  G.shadowColor="transparent";
+
+  // Outer border
+  let borderCol=can!==false?rc:"#333";
+  if(hv && can!==false) borderCol="#4e8";
+  if(hv && can===false) borderCol="#a44";
+  G.strokeStyle=borderCol;G.lineWidth=hv?2.5:1.5;rr(x,y,w,h,5);G.stroke();
+
+  // Corner decorations
+  if(isRare) drawCornerDecor(x,y,w,h,rc+"80");
+
+  // Type header stripe
+  let tc=TCLR[c.type]||"#888";
+  G.fillStyle=tc+"18";G.fillRect(x+1,y+1,w-2,15);
+
+  // Cost circle
+  G.fillStyle="#080810";G.beginPath();G.arc(x+11,y+9,8,0,Math.PI*2);G.fill();
+  let costCol="#556"; // default grey
+  if(can!==false){
+    costCol=c.cost<=S.nrg?"#4e8":"#da4"; // green=affordable, amber=borderline
+  } else {
+    costCol="#a44"; // red=can't play
+  }
+  G.fillStyle=costCol;G.beginPath();G.arc(x+11,y+9,7,0,Math.PI*2);G.fill();
+  G.fillStyle="#000";G.font="bold 9px monospace";G.textAlign="center";G.textBaseline="middle";
+  G.fillText(c.cost,x+11,y+9.5);
+
+  // Name
+  G.fillStyle=rc;G.font="bold 7.5px sans-serif";G.textAlign="left";G.textBaseline="alphabetic";
+  let nm=c.name.length>13?c.name.slice(0,12)+"..":c.name;
+  G.fillText(nm,x+21,y+10);
+
+  // --- ART ZONE ---
+  let artY=y+18,artH=Math.max(30,h*.36|0);
+  // art background with subtle grid
+  G.fillStyle="#060610";G.fillRect(x+3,artY,w-6,artH);
+  G.strokeStyle="#111";G.lineWidth=.3;
+  for(let gy=artY;gy<artY+artH;gy+=5){G.beginPath();G.moveTo(x+3,gy);G.lineTo(x+w-3,gy);G.stroke()}
+  for(let gx=x+3;gx<x+w-3;gx+=5){G.beginPath();G.moveTo(gx,artY);G.lineTo(gx,artY+artH);G.stroke()}
+
+  let cx2=x+w/2,cy2=artY+artH/2;
+  let elc=EL_CLR2[c.el]||"#444";
+  let syms=TYPE_SYM[c.type]||["?"];
+  let mainSym=syms[c.id%syms.length];
+
+  // Type-specific art
+  if(c.type==="atk"){
+    // Sword cross
+    G.strokeStyle=elc;G.lineWidth=2;
+    G.beginPath();G.moveTo(cx2,cy2-artH*.35);G.lineTo(cx2,cy2+artH*.35);G.stroke();
+    G.beginPath();G.moveTo(cx2-artH*.25,cy2-artH*.05);G.lineTo(cx2+artH*.25,cy2-artH*.05);G.stroke();
+    // hilt
+    G.fillStyle=elc;G.fillRect(cx2-6,cy2+artH*.12,12,3);
+    // dots at ends
+    G.beginPath();G.arc(cx2,cy2-artH*.35,2,0,Math.PI*2);G.fill();
+    G.beginPath();G.arc(cx2,cy2+artH*.35,2,0,Math.PI*2);G.fill();
+    // stamp
+    stampDiamond(cx2+artH*.25,cy2-artH*.2,4,rc+"50");
+  } else if(c.type==="def"){
+    // Shield shape
+    G.strokeStyle=elc;G.lineWidth=2;G.beginPath();
+    G.moveTo(cx2,cy2+artH*.35);G.lineTo(cx2-artH*.3,cy2);G.lineTo(cx2-artH*.3,cy2-artH*.25);
+    G.lineTo(cx2,cy2-artH*.38);G.lineTo(cx2+artH*.3,cy2-artH*.25);G.lineTo(cx2+artH*.3,cy2);G.closePath();
+    G.stroke();G.fillStyle=elc+"15";G.fill();
+    // inner diamond
+    stampDiamond(cx2,cy2,artH*.12,elc+"60");
+  } else if(c.type==="skl"){
+    // Star burst
+    stampStar5(cx2,cy2,artH*.3,rc+"70");
+    stampStar5(cx2,cy2,artH*.15,rc+"40");
+    // connecting lines
+    G.strokeStyle=rc+"30";G.lineWidth=.5;
+    for(let i=0;i<8;i++){let a=i*Math.PI/4;G.beginPath();G.moveTo(cx2,cy2);G.lineTo(cx2+Math.cos(a)*artH*.38,cy2+Math.sin(a)*artH*.38);G.stroke()}
+  } else if(c.type==="mch"){
+    // Robot head
+    G.strokeStyle=elc;G.lineWidth=1.5;
+    G.strokeRect(cx2-artH*.2,cy2-artH*.15,artH*.4,artH*.3);
+    // eyes
+    G.fillStyle=rc;G.fillRect(cx2-artH*.12,cy2-4,4,4);G.fillRect(cx2+artH*.04,cy2-4,4,4);
+    // mouth
+    G.strokeStyle=elc;G.beginPath();G.moveTo(cx2-artH*.1,cy2+artH*.08);G.lineTo(cx2+artH*.1,cy2+artH*.08);G.stroke();
+    // antenna
+    G.beginPath();G.moveTo(cx2,cy2-artH*.15);G.lineTo(cx2,cy2-artH*.32);G.stroke();
+    G.fillStyle=rc;G.beginPath();G.arc(cx2,cy2-artH*.34,2,0,Math.PI*2);G.fill();
+    // gear stamp
+    stampHex(cx2-artH*.22,cy2+artH*.2,5,elc+"50");
+  } else if(c.type==="evt"){
+    // Lightning bolt
+    G.strokeStyle=rc;G.lineWidth=2.5;G.beginPath();
+    G.moveTo(cx2+2,cy2-artH*.38);G.lineTo(cx2-6,cy2-artH*.05);G.lineTo(cx2+3,cy2-artH*.02);
+    G.lineTo(cx2-2,cy2+artH*.38);G.stroke();
+    // energy rings
+    G.strokeStyle=rc+"30";G.lineWidth=.8;
+    G.beginPath();G.arc(cx2,cy2,artH*.28,0,Math.PI*2);G.stroke();
+    G.beginPath();G.arc(cx2,cy2,artH*.18,0,Math.PI*2);G.stroke();
+  } else if(c.type==="itm"){
+    // Diamond frame
+    stampDiamond(cx2,cy2,artH*.3,rc+"70");
+    stampDiamond(cx2,cy2,artH*.2,rc+"40");
+    // cross inside
+    stampCross(cx2,cy2,artH*.1,elc+"50");
+  } else if(c.type==="bos"){
+    // Crown
+    G.strokeStyle=rc;G.lineWidth=2;G.beginPath();
+    G.moveTo(cx2-artH*.3,cy2+artH*.15);G.lineTo(cx2-artH*.3,cy2-artH*.05);
+    G.lineTo(cx2-artH*.15,cy2+artH*.05);G.lineTo(cx2,cy2-artH*.3);
+    G.lineTo(cx2+artH*.15,cy2+artH*.05);G.lineTo(cx2+artH*.3,cy2-artH*.05);
+    G.lineTo(cx2+artH*.3,cy2+artH*.15);G.closePath();G.stroke();G.fillStyle=rc+"20";G.fill();
+    // gems
+    G.fillStyle="#e04040";G.beginPath();G.arc(cx2-artH*.15,cy2+artH*.05,2.5,0,Math.PI*2);G.fill();
+    G.fillStyle="#4080e0";G.beginPath();G.arc(cx2,cy2-artH*.15,2.5,0,Math.PI*2);G.fill();
+    G.fillStyle="#40c040";G.beginPath();G.arc(cx2+artH*.15,cy2+artH*.05,2.5,0,Math.PI*2);G.fill();
+  }
+
+  // Element symbol
+  let esym=EL_SYM[c.el]||"";
+  if(esym){G.font="8px sans-serif";G.textAlign="right";G.fillText(esym,x+w-5,artY+10)}
+
+  // Legendary shimmer effect
+  if(c.rarity==="L"){
+    let t=Date.now()*.003;
+    G.globalAlpha=.12+.08*Math.sin(t);
+    let shimmer=G.createLinearGradient(x,y+h*(.3+Math.sin(t)*.3),x,y+h*(.5+Math.sin(t)*.3));
+    shimmer.addColorStop(0,"transparent");shimmer.addColorStop(.5,"#fff");shimmer.addColorStop(1,"transparent");
+    G.fillStyle=shimmer;G.fillRect(x,y,w,h);
+    G.globalAlpha=1;
+  }
+  // Epic sparkle
+  if(c.rarity==="E"){
+    let t=Date.now()*.002;
+    for(let i=0;i<3;i++){
+      let sx2=x+5+(w-10)*((Math.sin(t+i*2.1)+1)/2);
+      let sy2=artY+3+artH*((Math.cos(t*1.3+i*1.7)+1)/2);
+      G.fillStyle="#fff";G.globalAlpha=.3+.2*Math.sin(t+i);
+      G.beginPath();G.arc(sx2,sy2,1.2,0,Math.PI*2);G.fill();
+    }
+    G.globalAlpha=1;
+  }
+
+  // Type line
+  let ty=artY+artH+2;
+  G.fillStyle="#444";G.font="5.5px sans-serif";G.textAlign="center";
+  G.fillText((c.type).toUpperCase()+" \u00B7 "+(c.el||"none").toUpperCase(),x+w/2,ty+6);
+
+  // Divider line
+  drawHorizLine(x+4,ty+9,w-8,rc+"30");
+
+  // Description
+  G.fillStyle="#999";G.font="6.5px sans-serif";G.textAlign="left";
+  let lines=[],ln="",maxW2=w-8;
+  for(let w2 of (c.desc||"").split(" ")){let t=ln+w2+" ";if(G.measureText(t).width>maxW2&&ln){lines.push(ln.trim());ln=w2+" "}else ln=t}lines.push(ln.trim());
+  let dy=ty+16;
+  for(let l of lines.slice(0,3)){G.fillText(l,x+4,dy);dy+=8}
+
+  // Bottom stat bar
+  let by2=y+h-12;
+  // type stamp
+  G.fillStyle=rc+"40";G.font="5px monospace";G.textAlign="left";
+  G.fillText(mainSym,x+4,by2+3);
+
+  // Stats
+  G.textAlign="left";
+  if(c.atk>0){G.fillStyle="#e55";G.font="bold 8px monospace";G.fillText("\u2694:"+c.atk,x+16,by2+3)}
+  if(c.def>0){G.fillStyle="#5ae";G.font="bold 8px monospace";G.textAlign="right";G.fillText("\uD83D\uDEE1:"+c.def,x+w-4,by2+3)}
+
+  // Rarity stamp at bottom-center
+  G.textAlign="center";
+  let rstamps={C:".",U:"..",R:"\u2605",E:"\u2605\u2605",L:"\u2605\u2605\u2605"};
+  G.fillStyle=rc+"60";G.font="6px monospace";
+  G.fillText(rstamps[c.rarity]||"",x+w/2,by2+3);
+
+  // Hover + availability overlay
+  if(hv){
+    if(can!==false){
+      // GREEN = playable
+      G.fillStyle="rgba(40,200,80,.15)";rr(x+1,y+1,w-2,h-2,4);G.fill();
+      G.strokeStyle="rgba(40,200,80,.6)";G.lineWidth=2;rr(x+1,y+1,w-2,h-2,4);G.stroke();
+    } else {
+      // RED = can't play
+      G.fillStyle="rgba(200,40,40,.12)";rr(x+1,y+1,w-2,h-2,4);G.fill();
+      G.strokeStyle="rgba(200,40,40,.5)";G.lineWidth=2;rr(x+1,y+1,w-2,h-2,4);G.stroke();
+      // X mark
+      G.strokeStyle="rgba(200,40,40,.3)";G.lineWidth=2;
+      G.beginPath();G.moveTo(x+4,y+4);G.lineTo(x+w-4,y+h-4);G.moveTo(x+w-4,y+4);G.lineTo(x+4,y+h-4);G.stroke();
+    }
+  }
+
+  G.restore();
+}
+
+function rScr(){
+  G.fillStyle="#0a0a14";G.fillRect(0,0,W,H);
+  ({menu:rMenu,map:rMap,bat:rBat,shp:rShp,evt:rEvt,rwd:rRwd,over:rOver,frg:rFrg,col:rCol})[scr]();
+  for(let i=particles.length-1;i>=0;i--){
+    let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=.03;
+    if(p.life<=0){particles.splice(i,1);continue}
+    G.globalAlpha=p.life;G.fillStyle=p.c;G.fillRect(p.x,p.y,3,3);
+  }
+  G.globalAlpha=1;clk=false;requestAnimationFrame(rScr);
+}
+
+function pAdd(x,y,c,n){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:1,c})}
+
+// MENU
+function rMenu(){
+  G.textAlign="center";
+  let g=G.createLinearGradient(W/2-200,0,W/2+200,0);
+  g.addColorStop(0,"#f0d070");g.addColorStop(1,"#a06010");
+  G.fillStyle=g;G.font="bold 56px sans-serif";G.fillText("MECH KINGS",W/2,H/2-20);
+  G.fillStyle="#d4a84360";G.font="14px sans-serif";G.fillText("300 карт / Рогалик / Карточная игра",W/2,H/2+12);
+  let btns=[["НОВАЯ ИГРА",H/2+60,()=>{mkGame();scr="map"}],["КОЛЛЕКЦИЯ",H/2+105,()=>scr="col"]];
+  for(let[bt,by,fn]of btns){
+    let bx=W/2-100,h=mx>bx&&mx<bx+200&&my>by&&my<by+36;
+    G.fillStyle=h?"#d4a843":"#12121f";G.strokeStyle=h?"#d4a843":"#2a2a40";G.lineWidth=1;
+    rr(bx,by,200,36,4);G.fill();rr(bx,by,200,36,4);G.stroke();
+    G.fillStyle=h?"#000":"#d4a843";G.font="bold 13px sans-serif";G.fillText(bt,W/2,by+22);
+    if(h&&clk)fn();
+  }
+}
+
+// MAP
+function rMap(){
+  G.fillStyle="#12121f";G.fillRect(0,0,W,40);G.strokeStyle="#2a2a40";G.beginPath();G.moveTo(0,40);G.lineTo(W,40);G.stroke();
+  G.font="12px monospace";G.textAlign="left";
+  G.fillStyle="#d4a843";G.fillText("Этаж "+S.floor+"/5",10,26);
+  G.fillStyle="#e55";G.fillText("HP:"+S.hp+"/"+S.mhp,100,26);
+  G.fillStyle="#5ae";G.fillText("SH:"+S.sh,220,26);
+  G.fillStyle="#da3";G.fillText("$:"+S.cr,310,26);
+  G.fillStyle="#888";G.fillText("К:"+S.deck.length,390,26);
+  let mt=56,mh=H-mt-10,rh=mh/S.map.length;
+  // connections
+  G.lineWidth=1;
+  for(let r=0;r<S.map.length-1;r++){
+    S.map[r].forEach(n=>{
+      let fx=30+n.c*((W-60)/(S.map[r].length-1||1)),fy=mt+r*rh+rh/2;
+      n.conn.forEach(ci=>{
+        let tx=30+ci*((W-60)/(S.map[r+1].length-1||1)),ty=mt+(r+1)*rh+rh/2;
+        G.strokeStyle=(n.vis&&S.mrow>r)?"#d4a84330":"#1a1a2a";G.beginPath();G.moveTo(fx,fy);G.lineTo(tx,ty);G.stroke();
+      });
+    });
+  }
+  // nodes
+  let icons={bat:"E",evt:"?",shp:"$",frg:"F",rst:"+",bos:"K"};
+  for(let r=0;r<S.map.length;r++){
+    S.map[r].forEach((n,c)=>{
+      let nx=30+c*((W-60)/(S.map[r].length-1||1)),ny=mt+r*rh+rh/2,sz=18;
+      let acc=false;
+      if(r===S.mrow){if(S.mrow===0&&!n.vis)acc=true;else if(S.mrow>0){let pr=S.map[S.mrow-1];if(pr&&pr.some(p=>p.vis&&p.conn.includes(c)))acc=true}}
+      let h=mx>nx-sz&&mx<nx+sz&&my>ny-sz&&my<ny+sz;
+      G.fillStyle=n.vis?"#1a1a2f":acc?(n.t==="bos"?"#3a1a1a":"#1a2a2a"):"#12121f";
+      G.strokeStyle=n.vis?"#333":acc?(n.t==="bos"?"#e55":"#4b4"):"#2a2a40";
+      if(h&&acc){G.strokeStyle="#d4a843";G.shadowColor="#d4a843";G.shadowBlur=10}
+      G.lineWidth=2;G.beginPath();G.arc(nx,ny,sz,0,Math.PI*2);G.fill();G.stroke();G.shadowColor="transparent";
+      G.font="14px monospace";G.textAlign="center";G.textBaseline="middle";
+      G.fillStyle=n.vis?"#444":"#ccc";G.fillText(icons[n.t]||"?",nx,ny);
+      G.textBaseline="alphabetic";
+      if(h&&acc&&clk){
+        n.vis=true;
+        if(n.t==="bat")startBtl(false);
+        else if(n.t==="bos")startBtl(true);
+        else if(n.t==="evt")openEvt();
+        else if(n.t==="shp")openShop();
+        else if(n.t==="frg")openForge();
+        else if(n.t==="rst"){S.hp=Math.min(S.hp+(S.mhp*.3|0),S.mhp);pAdd(W/2,H/2,"#4a6",15);advMap()}
+      }
+    });
+  }
+}
+
+function advMap(){
+  S.mrow++;
+  if(S.mrow>=S.map.length){
+    if(S.floor>=5){scr="over";return}
+    S.floor++;genMap();S.hp=Math.min(S.hp+15,S.mhp);
+  }
+  scr="map";
+}
+
+// BATTLE
+function rBat(){
+  let e=S.en;
+  G.fillStyle="#12121f";G.fillRect(0,0,W,130);G.strokeStyle="#c4404020";G.beginPath();G.moveTo(0,130);G.lineTo(W,130);G.stroke();
+  G.textAlign="center";
+  G.fillStyle=e.boss?"#d4a843":"#e55";G.font=(e.boss?"bold 16px":"bold 13px")+" sans-serif";G.fillText(e.n,W/2,22);
+  G.fillStyle="#888";G.font="10px sans-serif";G.fillText(e.d,W/2,36);
+  // hp bar
+  let bw=200,bx=W/2-bw/2,by=42;
+  G.fillStyle="#1a1a2a";rr(bx,by,bw,10,5);G.fill();
+  G.fillStyle=e.boss?"#d4a843":"#e55";rr(bx,by,bw*Math.max(0,e.hp/e.mhp),10,5);G.fill();
+  G.fillStyle="#fff";G.font="9px monospace";G.fillText(Math.max(0,e.hp)+"/"+e.mhp,W/2,by+8);
+  if(e.sh>0){G.fillStyle="#5ae";G.fillText("SH:"+e.sh,bx+bw+25,by+8)}
+  // intent
+  let it="",ic="#d73";
+  if(e.stun>0){it="STUN";ic="#888"}
+  else if(e.intent==="atk"){it="A:"+e.idmg+(e.atkN>1?" x"+e.atkN:"");ic="#e55"}
+  else if(e.intent==="sh"){it="SH:"+e.idmg;ic="#5ae"}
+  else if(e.intent==="buf"){it="BUFF";ic="#d73"}
+  G.fillStyle=ic;G.font="11px sans-serif";G.fillText(it,W/2,by+26);
+  // status
+  let sx=W/2-bw/2,sy=by+34;G.font="10px sans-serif";G.textAlign="left";
+  if(e.burn>0){G.fillStyle="#e42";G.fillText("BR:"+e.burn,sx,sy);sx+=35}
+  if(e.slow>0){G.fillStyle="#48d";G.fillText("SL:"+e.slow,sx,sy);sx+=35}
+  if(e.vuln>0){G.fillStyle="#da3";G.fillText("VU:"+e.vuln,sx,sy);sx+=35}
+  if(e.weak>0){G.fillStyle="#aaa";G.fillText("WK:"+e.weak,sx,sy)}
+
+  // log
+  G.fillStyle="#0c0c18";G.fillRect(6,136,180,60);G.strokeStyle="#222";G.lineWidth=.5;G.strokeRect(6,136,180,60);
+  G.font="9px monospace";G.textAlign="left";
+  let ly=148;for(let l of BT.logs.slice(-6)){G.fillStyle=l.c;G.fillText(l.t,10,ly);ly+=9}
+
+  // player status
+  let px=W-180,py=136;
+  G.fillStyle="#12121f";G.fillRect(px-6,py,178,60);G.strokeStyle="#2a2a40";G.lineWidth=.5;G.strokeRect(px-6,py,178,60);
+  G.fillStyle="#888";G.font="10px sans-serif";G.textAlign="left";
+  G.fillText("HP:"+S.hp+"/"+S.mhp,px,py+14);
+  G.fillStyle="#1a1a2a";G.fillRect(px+60,py+6,80,6);G.fillStyle="#e40";G.fillRect(px+60,py+6,80*(S.hp/S.mhp),6);
+  G.fillStyle="#5ae";G.fillText("SH:"+S.sh,px,py+28);
+  G.fillStyle="#4cd";G.fillText("N:"+S.nrg+"/"+S.mnrg,px+60,py+28);
+  G.fillStyle="#d73";G.fillText("M:"+S.mechs.length+"/4",px+130,py+28);
+  let my2=py+40;
+  for(let m of S.mechs){G.fillStyle="#d73";G.font="8px monospace";G.fillText(m.n+" H:"+m.hp+" A:"+m.atk,px,my2+8);my2+=10}
+
+  // hand
+  let hY=H-168,tw=S.hand.length*95,sx2=(W-tw)/2;
+  for(let i=0;i<S.hand.length;i++){
+    let cx=sx2+i*95,cy=hY;
+    let h=mx>cx&&mx<cx+105&&my>cy&&my<cy+150;
+    let can=BT.pTurn&&S.nrg>=S.hand[i].cost&&!BT.anim;
+    rCard(S.hand[i],cx,cy,105,150,h,can);
+    if(h&&clk&&can)playCard(i);
+  }
+  // end turn
+  let bw2=120,by2=H-30,bx2=W/2-bw2/2;
+  let h2=mx>bx2&&mx<bx2+bw2&&my>by2&&my<by2+26;
+  G.fillStyle=BT.pTurn?(h2?"#d4a843":"#1a2a2a"):"#111";G.strokeStyle=BT.pTurn?(h2?"#d4a843":"#4b4"):"#333";
+  G.lineWidth=1;rr(bx2,by2,bw2,26,3);G.fill();rr(bx2,by2,bw2,26,3);G.stroke();
+  G.fillStyle=BT.pTurn?"#000":"#555";G.font="bold 11px sans-serif";G.textAlign="center";
+  G.fillText("END TURN",W/2,by2+17);
+  if(h2&&clk&&BT.pTurn&&!BT.anim)endTurn();
+  G.fillStyle="#333";G.font="9px monospace";G.textAlign="center";
+  G.fillText("DRAW:"+S.draw.length+" DSC:"+S.dsc.length,W/2,H-6);
+}
+
+// SHOP
+function rShp(){
+  G.fillStyle="#12121f";G.fillRect(0,0,W,44);G.fillStyle="#d4a843";G.font="bold 18px sans-serif";G.textAlign="center";
+  G.fillText("SHOP  $:"+S.cr,W/2,28);
+  G.fillStyle="#888";G.font="12px sans-serif";G.fillText("BUY:",W/2,64);
+  let iw=115,tw=SHOP.length*iw,sx=(W-tw)/2;
+  for(let i=0;i<SHOP.length;i++){
+    let c=SHOP[i],cx=sx+i*iw;
+    let h=mx>cx&&mx<cx+105&&my>72&&my<222;
+    rCard(c,cx,72,105,150,h,S.cr>=c.price);
+    G.fillStyle=S.cr>=c.price?"#da3":"#633";G.font="bold 10px monospace";G.textAlign="center";
+    G.fillText("$"+c.price,cx+52,228);
+    if(h&&clk&&S.cr>=c.price){S.cr-=c.price;S.deck.push({...CARDS[c.id],u:Math.random()});SHOP.splice(i,1);pAdd(cx+50,150,"#da3",12);break}
+  }
+  G.fillStyle="#888";G.font="12px sans-serif";G.fillText("SELL (click to sell):",W/2,260);
+  let sY=272;
+  let perR=Math.floor((W-40)/95);
+  for(let i=0;i<S.deck.length;i++){
+    let c=S.deck[i],row=i/perR|0,col=i%perR;
+    let dx=20+col*95,dy=sY+row*120;
+    let h=mx>dx&&mx<dx+85&&my>dy&&my<dy+115;
+    G.save();G.scale(.8,.8);rCard(c,dx/.8,dy/.8,85/.8,115/.8,h);G.restore();
+    G.fillStyle="#da3";G.font="8px monospace";G.textAlign="center";G.fillText("$"+({C:2,U:5,R:10,E:17,L:30}[c.rarity]||2),dx+42,dy+122);
+    if(h&&clk){S.cr+={C:2,U:5,R:10,E:17,L:30}[c.rarity]||2;S.deck.splice(i,1);break}
+  }
+  let bw=140,bh=30,bx=W/2-bw/2,by=H-38;
+  let h=mx>bx&&mx<bx+bw&&my>by&&my<by+bh;
+  G.fillStyle=h?"#d4a843":"#12121f";G.strokeStyle="#d4a843";G.lineWidth=1;rr(bx,by,bw,bh,3);G.fill();rr(bx,by,bw,bh,3);G.stroke();
+  G.fillStyle="#000";G.font="bold 12px sans-serif";G.fillText("LEAVE",W/2,by+20);
+  if(h&&clk)advMap();
+}
+
+// EVENT
+function rEvt(){
+  G.fillStyle="#12121f";G.fillRect(0,0,W,44);G.fillStyle="#c7d";G.font="bold 18px sans-serif";G.textAlign="center";
+  G.fillText("EVENT",W/2,28);
+  if(!EVT.done){
+    G.fillStyle="#ddd";G.font="16px sans-serif";G.fillText(EVT.t,W/2,80);
+    G.fillStyle="#999";G.font="12px sans-serif";G.fillText(EVT.d,W/2,100);
+    let cy=130;
+    for(let i=0;i<EVT.ch.length;i++){
+      let bw=300,bh=32,bx=W/2-bw/2;
+      let h=mx>bx&&mx<bx+bw&&my>cy&&my<cy+bh;
+      G.fillStyle=h?"#2a2a4a":"#1a1a2a";G.strokeStyle=h?"#c7d":"#2a2a40";G.lineWidth=1;
+      rr(bx,cy,bw,bh,3);G.fill();rr(bx,cy,bw,bh,3);G.stroke();
+      G.fillStyle=h?"#c7d":"#ccc";G.font="13px sans-serif";G.fillText(EVT.ch[i],W/2,cy+21);
+      if(h&&clk){EVT.result=EVT.fx[i]();EVT.done=true}
+      cy+=42;
+    }
+  } else {
+    G.fillStyle="#ddd";G.font="15px sans-serif";G.fillText(EVT.result,W/2,H/2-10);
+    let bw=140,bh=30,bx=W/2-bw/2,by=H/2+20;
+    let h=mx>bx&&mx<bx+bw&&my>by&&my<by+bh;
+    G.fillStyle=h?"#d4a843":"#12121f";G.strokeStyle="#d4a843";G.lineWidth=1;rr(bx,by,bw,bh,3);G.fill();rr(bx,by,bw,bh,3);G.stroke();
+    G.fillStyle="#000";G.font="bold 12px sans-serif";G.fillText("NEXT",W/2,by+20);
+    if(h&&clk)advMap();
+  }
+}
+
+// REWARD
+function rRwd(){
+  G.fillStyle="#12121f";G.fillRect(0,0,W,44);G.fillStyle="#d4a843";G.font="bold 18px sans-serif";G.textAlign="center";
+  G.fillText("REWARD",W/2,28);
+  G.fillStyle="#999";G.font="13px sans-serif";G.fillText("Выберите 1 карту:",W/2,64);
+  let tw=RWARD.length*115,sx=(W-tw)/2;
+  for(let i=0;i<RWARD.length;i++){
+    let c=RWARD[i],cx=sx+i*115;
+    let h=mx>cx&&mx<cx+105&&my>72&&my<222;
+    rCard(c,cx,72,105,150,h);
+    if(h&&clk){S.deck.push({...c,u:Math.random()});S.col.add(c.id);pAdd(cx+50,150,"#da3",15);advMap();break}
+  }
+}
+
+// GAME OVER
+function rOver(){
+  let won=S.floor>=5;
+  G.fillStyle="#12121f";rr(W/2-200,H/2-120,400,240,6);G.fill();G.strokeStyle=won?"#d4a843":"#e55";G.lineWidth=2;rr(W/2-200,H/2-120,400,240,6);G.stroke();
+  G.textAlign="center";
+  G.fillStyle=won?"#d4a843":"#e55";G.font="bold 28px sans-serif";G.fillText(won?"WIN!":"GAME OVER",W/2,H/2-70);
+  G.fillStyle="#888";G.font="13px sans-serif";
+  G.fillText("Этаж: "+S.floor+"/5  Убито: "+S.kills+"  Карт: "+S.deck.length,W/2,H/2-30);
+  G.fillText("Коллекция: "+S.col.size+"/"+CARDS.length,W/2,H/2);
+  let by=H/2+30;
+  let h=mx>W/2-80&&mx<W/2+80&&my>by&&my<by+32;
+  G.fillStyle=h?"#d4a843":"#12121f";G.strokeStyle="#d4a843";G.lineWidth=1;rr(W/2-80,by,160,32,3);G.fill();rr(W/2-80,by,160,32,3);G.stroke();
+  G.fillStyle="#000";G.font="bold 13px sans-serif";G.fillText("NEW GAME",W/2,by+21);
+  if(h&&clk){mkGame();scr="map"}
+  let h2=mx>W/2-80&&mx<W/2+80&&my>by+42&&my<by+74;
+  G.fillStyle=h2?"#888":"#12121f";G.strokeStyle="#666";rr(W/2-80,by+42,160,32,3);G.fill();rr(W/2-80,by+42,160,32,3);G.stroke();
+  G.fillStyle="#888";G.fillText("MENU",W/2,by+63);
+  if(h2&&clk)scr="menu";
+}
+
+// FORGE
+function rFrg(){
+  G.fillStyle="#12121f";G.fillRect(0,0,W,44);G.fillStyle="#d73";G.font="bold 18px sans-serif";G.textAlign="center";
+  G.fillText("FORGE",W/2,28);
+  G.fillStyle="#888";G.font="12px sans-serif";G.fillText("Select 2 cards to merge",W/2,60);
+  // slots
+  let s1x=W/2-240,s2x=W/2+40,sy=75,sw=105,sh=150;
+  G.strokeStyle=FORGE.s1?"#d4a843":"#333";G.lineWidth=1;G.setLineDash([4,4]);rr(s1x,sy,sw,sh,5);G.stroke();G.setLineDash([]);
+  if(FORGE.s1)rCard(FORGE.s1,s1x,sy,sw,sh,false);
+  G.fillStyle="#d4a843";G.font="20px sans-serif";G.fillText("+",W/2-20,sy+75);
+  G.strokeStyle=FORGE.s2?"#d4a843":"#333";G.setLineDash([4,4]);rr(s2x,sy,sw,sh,5);G.stroke();G.setLineDash([]);
+  if(FORGE.s2)rCard(FORGE.s2,s2x,sy,sw,sh,false);
+  if(FORGE.s1&&FORGE.s2){
+    G.fillStyle="#d4a843";G.font="20px sans-serif";G.fillText("->",W/2+20,sy+75);
+    let res={...FORGE.s1,name:FORGE.s1.name+"+",atk:FORGE.s1.atk+3,def:FORGE.s1.def+3,cost:Math.max(0,FORGE.s1.cost-1),rarity:"E",u:Math.random()};
+    rCard(res,W/2+100,sy,sw,sh,false);
+  }
+  // deck
+  G.fillStyle="#888";G.font="11px sans-serif";G.fillText("YOUR DECK:",W/2,sy+sh+20);
+  let dY=sy+sh+28;
+  let perR=Math.floor((W-40)/95);
+  for(let i=0;i<S.deck.length;i++){
+    let c=S.deck[i],row=i/perR|0,col=i%perR;
+    let dx=20+col*95,dy=dY+row*110;
+    let isSel=(FORGE.s1&&FORGE.s1.u===c.u)||(FORGE.s2&&FORGE.s2.u===c.u);
+    let h=mx>dx&&mx<dx+85&&my>dy&&my<dy+105;
+    G.save();G.scale(.82,.82);rCard(c,dx/.82,dy/.82,85/.82,105/.82,h&&!isSel,!isSel);G.restore();
+    if(isSel){G.strokeStyle="#d4a843";G.lineWidth=2;G.strokeRect(dx,dy,85,105)}
+    if(h&&clk&&!isSel){
+      if(!FORGE.s1)FORGE.s1=c;else if(!FORGE.s2)FORGE.s2=c;
+      break;
+    }
+  }
+  if(FORGE.s1&&FORGE.s2){
+    let bw=140,bh=30,bx=W/2-bw/2,by=H-36;
+    let h=mx>bx&&mx<bx+bw&&my>by&&my<by+bh;
+    G.fillStyle=h?"#d73":"#12121f";G.strokeStyle="#d73";G.lineWidth=1;rr(bx,by,bw,bh,3);G.fill();rr(bx,by,bw,bh,3);G.stroke();
+    G.fillStyle="#000";G.font="bold 12px sans-serif";G.fillText("FORGE!",W/2,by+20);
+    if(h&&clk){
+      let i1=S.deck.findIndex(c=>c.u===FORGE.s1.u),i2=S.deck.findIndex(c=>c.u===FORGE.s2.u);
+      if(i1>=0)S.deck.splice(i1,1);if(i2>=0)S.deck.splice(i2,1);
+      S.deck.push({...FORGE.s1,name:FORGE.s1.name+"+",atk:FORGE.s1.atk+3,def:FORGE.s1.def+3,cost:Math.max(0,FORGE.s1.cost-1),rarity:"E",u:Math.random()});
+      FORGE={s1:null,s2:null};advMap();
+    }
+  }
+  let lw=W-160,ly=H-36;
+  let hl=mx>lw&&mx<lw+140&&my>ly&&my<ly+30;
+  G.fillStyle=hl?"#888":"#12121f";G.strokeStyle="#666";G.lineWidth=1;rr(lw,ly,140,30,3);G.fill();rr(lw,ly,140,30,3);G.stroke();
+  G.fillStyle="#888";G.font="bold 12px sans-serif";G.fillText("LEAVE",lw+70,ly+20);
+  if(hl&&clk)advMap();
+}
+
+// COLLECTION
+function rCol(){
+  G.fillStyle="#12121f";G.fillRect(0,0,W,44);G.fillStyle="#d4a843";G.font="bold 18px sans-serif";G.textAlign="center";
+  G.fillText("COLLECTION: "+S.col.size+"/"+CARDS.length,W/2,28);
+  let perR=Math.floor((W-40)/100);
+  let sy=52;
+  let shown=CARDS.filter(c=>S.col.has(c.id));
+  for(let i=0;i<shown.length;i++){
+    let c=shown[i],row=i/perR|0,col=i%perR;
+    let dx=20+col*100,dy=sy+row*120;
+    let h=mx>dx&&mx<dx+90&&my>dy&&my<dy+115;
+    G.save();G.scale(.85,.85);rCard(c,dx/.85,dy/.85,90/.85,115/.85,h);G.restore();
+  }
+  if(!shown.length){G.fillStyle="#555";G.font="14px sans-serif";G.fillText("Начните игру, чтобы открывать карты!",W/2,H/2)}
+  let bw=140,bh=30,bx=W/2-bw/2,by=H-36;
+  let h=mx>bx&&mx<bx+bw&&my>by&&my<by+bh;
+  G.fillStyle=h?"#d4a843":"#12121f";G.strokeStyle="#d4a843";G.lineWidth=1;rr(bx,by,bw,bh,3);G.fill();rr(bx,by,bw,bh,3);G.stroke();
+  G.fillStyle="#000";G.font="bold 12px sans-serif";G.fillText("BACK",W/2,by+20);
+  if(h&&clk)scr="menu";
+}
+
+// Fix: item cards broke mechs array, restore it
+const _origExec=execCard;
+// Fix: when type is item, don't clear mechs
+const origExecCard=execCard;
+execCard=function(c){
+  if(c.type==="itm"){
+    // just run item effects without touching mechs
+    let e=S.en,d=c.desc,ab=S.perm.atk;
+    if(d.includes("+2 ур.")){S.perm.atk+=2;btlLog("+2 урон!","#c4")}
+    if(d.includes("+4 ур.")){S.perm.atk+=4;btlLog("+4 урон!","#c4")}
+    if(d.includes("+6 ур.")){S.perm.atk+=6;btlLog("+6 урон!","#c4")}
+    if(d.includes("+2 щит"))S.sh+=2;
+    if(d.includes("+5 щит"))S.sh+=5;
+    if(d.includes("+8 щит"))S.sh+=8;
+    if(d.includes("+1 energy/ход")){S.perm.nrg++;S.nrg++}
+    if(d.includes("+2 energy/ход")){S.perm.nrg+=2;S.nrg+=2}
+    if(d.includes("+1 draw/ход")){S.perm.draw++;drawN(1)}
+    if(d.includes("+20 HP")){S.hp=Math.min(S.hp+20,S.mhp);btlLog("+20 HP!","#4a6")}
+    if(d.includes("+3 max HP")){S.mhp+=3;S.hp+=3}
+    if(d.includes("Мехи +3 HP"))S.perm.mhp+=3;
+    if(d.includes("Burn +2"))S.perm.burn+=2;
+    if(d.includes("Stealth"))S.sh+=999;
+    if(d.includes("x2 урона"))btlLog("x2!","#c4");
+    btlLog("Item: "+c.name,"#da3");
+    return;
+  }
+  // For non-item, run normally
+  let e=S.en,ab=S.perm.atk,dd=c.desc;
+  if(c.type==="atk"){
+    let dmg=c.atk+ab;
+    if(e.vuln>0){dmg=dmg*1.5|0;e.vuln--}
+    if(e.weak>0)dmg=Math.max(1,dmg-2);
+    if(dd.includes("x2"))dmg*=2;
+    e.hp-=dmg;btlLog("-"+dmg+" врагу","#e55");
+    if(S.perm.burn>0)e.burn+=S.perm.burn;
+    if(dd.includes("burn"))e.burn+=2;
+    if(dd.includes("slow"))e.slow++;
+    if(dd.includes("shock"))e.stun++;
+    if(dd.includes("heal")){S.hp=Math.min(S.hp+3,S.mhp);btlLog("+3 HP","#4a6")}
+    if(dd.includes("draw"))drawN(1);
+    if(dd.includes("-5 HP")){S.hp-=5;btlLog("-5 HP","#a44")}
+    if(dd.includes("-3 HP")){S.hp-=3;btlLog("-3 HP","#a44")}
+  } else if(c.type==="def"){
+    if(c.def>0){S.sh+=c.def;btlLog("+"+c.def+" щит","#5ae")}
+    if(dd.includes("+6 HP")){S.hp=Math.min(S.hp+6,S.mhp);btlLog("+6 HP","#4a6")}
+    if(dd.includes("+8 HP")){S.hp=Math.min(S.hp+8,S.mhp);btlLog("+8 HP","#4a6")}
+    if(dd.includes("+15 HP")){S.hp=Math.min(S.hp+15,S.mhp);btlLog("+15 HP","#4a6")}
+    if(dd.includes("+7 HP")){S.hp=Math.min(S.hp+7,S.mhp);btlLog("+7 HP","#4a6")}
+    if(dd.includes("+5 HP")){S.hp=Math.min(S.hp+5,S.mhp);btlLog("+5 HP","#4a6")}
+    if(dd.includes("+4 HP")){S.hp=Math.min(S.hp+4,S.mhp);btlLog("+4 HP","#4a6")}
+    if(dd.includes("+3 HP")){S.hp=Math.min(S.hp+3,S.mhp);btlLog("+3 HP","#4a6")}
+    if(dd.includes("draw"))drawN(dd.includes("2")?2:1);
+    if(dd.includes("+2能量")||dd.includes("+2 энер"))S.nrg+=2;
+    if(dd.includes("отразить")){e.stun++;btlLog("Отражено!","#a4f")}
+    if(dd.includes("免疫"))S.sh+=999;
+    if(dd.includes("3 ур врагу")){e.hp-=3;btlLog("-3 врагу","#e55")}
+    if(dd.includes("2 ур врагу")){e.hp-=2;btlLog("-2 врагу","#e55")}
+    if(dd.includes("Снять"))btlLog("Очищено","#4a6");
+  } else if(c.type==="mch"){
+    if(S.mechs.length<4){
+      let hp=5+S.perm.mhp+c.atk,atk=Math.max(2,c.atk*.5|0);
+      S.mechs.push({n:c.name,hp,mhp:hp,atk});btlLog("Summon: "+c.name+" HP"+hp,"#d73");
+    } else btlLog("Max mechs","#a66");
+  } else if(c.type==="skl"){
+    if(dd.includes("Draw 1"))drawN(1);
+    if(dd.includes("Draw 2"))drawN(2);
+    if(dd.includes("Draw 3"))drawN(3);
+    if(dd.includes("Draw 4"))drawN(4);
+    if(dd.includes("+1 energy")||dd.includes("+1 energ"))S.nrg++;
+    if(dd.includes("+2 energy"))S.nrg+=2;
+    if(dd.includes("+2 ур. навсегда")||dd.includes("+2 ур навсегда")){S.perm.atk+=2;btlLog("+2 урон!","#c4")}
+    if(dd.includes("+3 ур. навсегда")){S.perm.atk+=3;btlLog("+3 урон!","#c4")}
+    if(dd.includes("+1 урон навсегда")||dd.includes("+1 ур. навсегда")){S.perm.atk++;btlLog("+1 урон!","#c4")}
+    if(dd.includes("пропускает"))e.stun++;
+    if(dd.includes("x2 урона"))e.vuln++;
+    if(dd.includes("Сброс, draw 4")){S.dsc.push(...S.hand);S.hand=[];drawN(4);btlLog("Сброс+4","#888")}
+    if(dd.includes("Перемешать")){S.draw.push(...S.dsc);S.dsc=[];shuf(S.draw);btlLog("Shuffle","#888")}
+    if(dd.includes("+2 HP")){S.hp=Math.min(S.hp+2,S.mhp);btlLog("+2 HP","#4a6")}
+    if(dd.includes("+3 HP")){S.hp=Math.min(S.hp+3,S.mhp);btlLog("+3 HP","#4a6")}
+    if(dd.includes("-2 урона"))e.weak+=3;
+    if(dd.includes("Скопировать")&&S.hand.length>0){let rc=S.hand[0];S.hand.push({...rc,u:Math.random()});btlLog("Copy!","#c4")}
+  } else if(c.type==="evt"){
+    if(dd.includes("враг -5")||dd.includes("Враг -5")){e.hp-=5;btlLog("-5","#e55")}
+    if(dd.includes("Враг -6")){e.hp-=6;btlLog("-6","#e55")}
+    if(dd.includes("Враг -4")){e.hp-=4;btlLog("-4","#e55")}
+    if(dd.includes("враг -8")){e.hp-=8;btlLog("-8","#e55")}
+    if(dd.includes("враг -3")){e.hp-=3;btlLog("-3","#e55")}
+    if(dd.includes("вы -2")){S.hp-=2;btlLog("-2 HP","#a44")}
+    if(dd.includes("вы -4")){S.hp-=4;btlLog("-4 HP","#a44")}
+    if(dd.includes("все -4")){e.hp-=4;S.hp-=4;btlLog("-4 all","#a44")}
+    if(dd.includes("-5 HP")&&!dd.includes("враг")){S.hp-=5;btlLog("-5","#a44")}
+    if(dd.includes("-3 HP")&&!dd.includes("враг")){S.hp-=3;btlLog("-3","#a44")}
+    if(dd.includes("+8 кредитов")||dd.includes("+8 кр")){S.cr+=8;btlLog("+8$","#da3")}
+    if(dd.includes("+15 кредитов")){S.cr+=15;btlLog("+15$","#da3")}
+    if(dd.includes("x2 кредиты")){S.cr*=2;btlLog("x2$","#da3")}
+    if(dd.includes("+10 HP")){S.hp=Math.min(S.hp+10,S.mhp);btlLog("+10 HP","#4a6")}
+    if(dd.includes("+8 HP")&&!dd.includes("кр")){S.hp=Math.min(S.hp+8,S.mhp);btlLog("+8 HP","#4a6")}
+    if(dd.includes("+6 HP")){S.hp=Math.min(S.hp+6,S.mhp);btlLog("+6 HP","#4a6")}
+    if(dd.includes("+5 HP + 5")){S.hp=Math.min(S.hp+5,S.mhp);S.cr+=5;btlLog("+5 HP+5$","#4a6")}
+    if(dd.includes("+15 HP")){S.hp=Math.min(S.hp+15,S.mhp);btlLog("+15 HP","#4a6")}
+    if(dd.includes("+3 карты")){for(let i=0;i<3;i++)S.hand.push({...pick(CARDS),u:Math.random()});btlLog("+3 cards","#c4")}
+    if(dd.includes("редкая")){let r=CARDS.filter(x=>x.rarity==="R"||x.rarity==="E");S.hand.push({...pick(r),u:Math.random()});btlLog("Rare!","#48f")}
+    if(dd.includes("Draw 4"))drawN(4);
+    if(dd.includes("Draw 2 атак")){let a=CARDS.filter(x=>x.type==="atk");for(let i=0;i<2;i++)S.hand.push({...pick(a),u:Math.random()})}
+    if(dd.includes("+2 energy"))S.nrg+=2;
+    if(dd.includes("Враг stun 2"))e.stun+=2;
+    if(dd.includes("Враг stun 1"))e.stun++;
+    if(dd.includes("slow 2"))e.slow+=2;
+    if(dd.includes("-1 energy 3")){S.mnrg=Math.max(1,S.mnrg-1);btlLog("-1 max nrg","#a44")}
+    if(dd.includes("+2 ур. 5 ходов")){S.perm.atk+=2;btlLog("+2 урон!","#c4")}
+    if(dd.includes("Мехи +2 ур.")){S.mechs.forEach(m=>m.atk+=2);btlLog("Mechs +2!","#d73")}
+    if(dd.includes("5 дронов")){for(let i=0;i<5;i++)if(S.mechs.length<4)S.mechs.push({n:"Drone",hp:2,mhp:2,atk:1});btlLog("+5 drones","#d73")}
+    if(dd.includes("3 дрона")){for(let i=0;i<3;i++)if(S.mechs.length<4)S.mechs.push({n:"Drone",hp:2,mhp:2,atk:1});btlLog("+3 drones","#d73")}
+    if(dd.includes("+1 energy навсегда")){S.perm.nrg++;btlLog("+1 nrg!","#4af")}
+  }
+};
+
+rScr();
+</script>
+</body>
+</html>

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Волейбол: Контратака</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a2e;
+  color: #e8ecff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+}
+#wrap {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  padding: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+#boardWrap { position: relative; text-align: center; }
+canvas {
+  display: block;
+  border: 2px solid #2a3f6b;
+  border-radius: 10px;
+  box-shadow: 0 0 40px rgba(0, 120, 255, 0.25);
+  cursor: pointer;
+}
+#panel {
+  width: 330px;
+  background: linear-gradient(180deg, #101b3a, #0c1430);
+  border: 1px solid #2a3f6b;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#panel h1 {
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: #00ff88;
+  text-shadow: 0 0 18px rgba(0,255,136,0.6);
+  text-align: center;
+}
+.sub { font-size: 12px; color: #7f8fc0; text-align: center; margin-top: -6px; }
+h3 {
+  font-size: 13px;
+  color: #00ffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #22365f;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+#planBox {
+  background: rgba(0,255,136,0.07);
+  border: 1px solid rgba(0,255,136,0.3);
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 40px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+#planBox .tag { color: #00ff88; font-weight: bold; }
+.zrow { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.zname { width: 62px; font-size: 12px; color: #a8b6e8; }
+.zbar { flex: 1; height: 14px; background: #0d1531; border-radius: 7px; overflow: hidden; border: 1px solid #22365f; }
+.zfill { height: 100%; width: 0%; border-radius: 7px; transition: width 0.35s; }
+.zfill.z0 { background: linear-gradient(90deg,#ffb84d,#ff7b00); }
+.zfill.z1 { background: linear-gradient(90deg,#4dffb8,#00c96b); }
+.zfill.z2 { background: linear-gradient(90deg,#4db8ff,#0077ff); }
+.zrow.active .zbar { box-shadow: 0 0 12px rgba(255,140,60,0.8); }
+.zrow.active .zname { color: #fff; font-weight: bold; }
+.zmark { font-size: 11px; color: #ffb84d; }
+#status {
+  font-size: 14px;
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: #0d1531;
+  border: 1px solid #22365f;
+}
+#status.you { border-color: #00ff88; color: #00ff88; }
+#status.ai { border-color: #ffb84d; color: #ffb84d; }
+#status.done { border-color: #ff5566; color: #ff5566; }
+#scoreLine {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  background: #0d1531;
+  border: 1px solid #22365f;
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+#scoreLine .you { color: #00ff88; font-weight: bold; }
+#scoreLine .ai { color: #ffb84d; font-weight: bold; }
+#movesList {
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 12px;
+  font-family: Consolas, monospace;
+  background: #0d1531;
+  border-radius: 8px;
+  padding: 8px;
+  border: 1px solid #22365f;
+  line-height: 1.6;
+}
+#movesList .pt { color: #00ff88; }
+#movesList .rec { color: #7fb3ff; }
+#movesList .ai { color: #ffb84d; }
+button {
+  padding: 11px 18px;
+  font-size: 14px;
+  border: 2px solid #00ff88;
+  background: transparent;
+  color: #00ff88;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+button:hover { background: #00ff88; color: #0a0a2e; box-shadow: 0 0 25px rgba(0,255,136,0.5); }
+#doneBtn {
+  border-color: #00ffff;
+  color: #00ffff;
+  display: none;
+  margin-top: 10px;
+}
+#doneBtn:hover { background: #00ffff; color: #0a0a2e; box-shadow: 0 0 25px rgba(0,255,255,0.5); }
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,8,25,0.92);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 18px;
+  z-index: 20;
+}
+#overlay h2 { font-size: 32px; letter-spacing: 4px; text-shadow: 0 0 25px #00ff88; text-align: center; }
+#overlay .desc { max-width: 640px; text-align: center; color: #a8b6e8; font-size: 14px; line-height: 1.55; padding: 0 24px; }
+#overlay .sideBtns { display: flex; gap: 16px; }
+.hint { font-size: 11px; color: #5c6a9a; text-align: center; }
+.legend { font-size: 11px; color: #5c6a9a; line-height: 1.5; }
+.legend b { color: #8aa0d8; }
+#stepsBox { font-size: 12px; color: #00ffff; text-align: center; display: none; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="boardWrap">
+    <canvas id="game"></canvas>
+    <button id="doneBtn">Готово — начать атаку</button>
+    <div id="stepsBox">Перемещения: <span id="stepsVal">2</span></div>
+  </div>
+  <div id="panel">
+    <h1>ВОЛЕЙБОЛ: КОНТРАТАКА</h1>
+    <div class="sub">ИИ по принципу трёх линий</div>
+    <div>
+      <h3>План ИИ</h3>
+      <div id="planBox">Расстановка...</div>
+    </div>
+    <div>
+      <h3>Слабейшая линия противника</h3>
+      <div id="zoneWrap"></div>
+      <div class="legend">
+        ИИ оценивает левый фланг, центр и правый фланг вашей половины и бьёт в <b>самую слабую линию</b> — туда, где меньше защитников и больше «дыр». На ваш удар отвечает <b>контратакой</b>, а если атака буксует — <b>перегруппировывается</b>.
+      </div>
+    </div>
+    <div>
+      <h3>Статус</h3>
+      <div id="status">—</div>
+    </div>
+    <div>
+      <h3>Счёт</h3>
+      <div id="scoreLine">
+        <span>Вы: <span class="you" id="scYou">0</span></span>
+        <span>ИИ: <span class="ai" id="scAI">0</span></span>
+      </div>
+    </div>
+    <div>
+      <h3>Розыгрыши</h3>
+      <div id="movesList">—</div>
+    </div>
+    <button id="newGame">Новая игра</button>
+  </div>
+</div>
+
+<div id="overlay">
+  <h2>ВОЛЕЙБОЛ: КОНТРАТАКА</h2>
+  <div class="desc">
+    Пошаговый волейбол по <b>шахматному принципу</b>. У вас и у ИИ по 3 игрока на половине корта. Перед подачей — <b>расстановка</b>: передвиньте игроков на соседние клетки (2 шага), чтобы закрыть слабые линии. Затем <b>до 3 касаний</b>: передача и пас на своей половине, третий удар — <b>спайк</b> через сетку на сторону противника. Если мяч приземлился в «дыру» (рядом никого из защитников) — <b>очко</b>.
+    <br><br>ИИ ищет <b>самую слабую линию</b> (левый фланг, центр или правый фланг), наступает туда, отвечает <b>контратакой</b> на ваши удары и <b>перегруппировывается</b>, если атака буксует.
+  </div>
+  <div class="sideBtns">
+    <button onclick="startGame()">Начать игру</button>
+  </div>
+  <div class="hint">Клик по игроку — выбор, клик по клетке — ход. Зелёная клетка на половине противника — открытая «дыра»: очко гарантировано.</div>
+</div>
+
+<script>
+const CELL = 72, PAD = 34, GRID = 6, CS = GRID * CELL + 2 * PAD;
+const RANGE = 3.2, MOVE_RANGE = 2.0;
+const MATE = 100000, INF = 101000;
+const ZONE_COLS = [[0,1],[2,3],[4,5]];
+const ZONE_NAME = ['Левый фланг','Центр','Правый фланг'];
+const ZONE_SHORT = ['ЛФ','Центр','ПФ'];
+
+let players = [];
+let ball = null;
+let scores = { H: 0, AI: 0 };
+let touchCount = 1;
+let hSteps = 2;
+let phase = 'idle';
+let gameOver = false;
+let selPlayer = null;
+let moveTargets = [];
+let legalTargets = [];
+let aiThinking = false;
+let aiState = { targetZone: null, lastScore: null, stagnation: 0, regroup: false, regroupPly: 0, underAttack: false, planText: '' };
+let ballAnim = null;
+let lastSpike = null;
+let banner = null;
+let rallyNum = 0;
+let log = [];
+let searchDeadline = 0, searchNodes = 0;
+let aiTurnId = 0;
+let repositionDone = false;
+
+function opp(t) { return t === 'H' ? 'AI' : 'H'; }
+function ownPlayers(t) { return players.filter(p => p.team === t); }
+function halfRows(t) { return t === 'H' ? [0,1,2] : [3,4,5]; }
+function inHalf(cell, t) { return t === 'H' ? cell.r <= 2 : cell.r >= 3; }
+function isFrontRow(r, t) { return t === 'H' ? r === 2 : r === 3; }
+function zoneOfCol(c) { return c < 2 ? 0 : (c < 4 ? 1 : 2); }
+function cheb(a, b) { return Math.max(Math.abs(a.c - b.c), Math.abs(a.r - b.r)); }
+function dist(a, b) { return Math.hypot(a.c - b.c, a.r - b.r); }
+function playerAt(c, r) { return players.find(p => p.c === c && p.r === r); }
+function occupied(c, r) { return playerAt(c, r) !== undefined; }
+function covered(cell, team) { return ownPlayers(team).some(p => cheb(cell, p) <= 1); }
+function serverOf(t) { return players.find(p => p.team === t && p.id === 2); }
+
+function formation() {
+  return [
+    { team: 'H',  id: 1, c: 1, r: 1 },
+    { team: 'H',  id: 2, c: 3, r: 2 },
+    { team: 'H',  id: 3, c: 5, r: 1 },
+    { team: 'AI', id: 1, c: 1, r: 4 },
+    { team: 'AI', id: 2, c: 3, r: 3 },
+    { team: 'AI', id: 3, c: 5, r: 4 }
+  ];
+}
+
+function snapState() { return { ball: { ...ball }, players: players.map(p => ({ ...p })), touchCount }; }
+function undoState(s) { ball = s.ball; players = s.players; touchCount = s.touchCount; }
+
+function zoneScore(att, z) {
+  const def = opp(att);
+  let uncovered = 0, frontUnc = 0, defenders = 0;
+  for (const r of halfRows(def)) {
+    for (const c of ZONE_COLS[z]) {
+      if (!covered({ c, r }, def)) { uncovered++; if (isFrontRow(r, def)) frontUnc++; }
+    }
+  }
+  for (const p of ownPlayers(def)) if (zoneOfCol(p.c) === z) defenders++;
+  return uncovered * 32 + frontUnc * 8 - defenders * 22;
+}
+
+function evalPos() {
+  const me = ball.side, en = opp(me);
+  let s = 0;
+  for (const r of halfRows(en)) {
+    for (let c = 0; c < 6; c++) {
+      if (!covered({ c, r }, en)) s += 50; else s -= 16;
+    }
+  }
+  s += (me === 'H' ? ball.r : 5 - ball.r) * 3;
+  let mc = 0;
+  for (const r of halfRows(me)) for (let c = 0; c < 6; c++) if (covered({ c, r }, me)) mc++;
+  s += mc * 2;
+  if (me === 'AI' && aiState.targetZone !== null) {
+    for (const r of halfRows('H')) {
+      for (const c of ZONE_COLS[aiState.targetZone]) {
+        if (!covered({ c, r }, 'H')) s += 20; else s -= 8;
+      }
+    }
+  }
+  return s;
+}
+
+function genTouches(side, tn) {
+  const out = [];
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 6; c++) {
+      if (c === ball.c && r === ball.r) continue;
+      const cell = { c, r };
+      if (dist(cell, ball) > RANGE) continue;
+      if (inHalf(cell, side)) {
+        if (tn < 3 && covered(cell, side)) out.push({ type: 'pass', cell });
+      } else {
+        out.push({ type: 'spike', cell });
+      }
+    }
+  }
+  return out;
+}
+
+function moveH(m) {
+  if (m.type === 'spike') {
+    const g = covered(m.cell, opp(ball.side)) ? 5 : 100;
+    const z = aiState.targetZone !== null && zoneOfCol(m.cell.c) === aiState.targetZone ? 12 : 0;
+    return g + z;
+  }
+  const netR = ball.side === 'H' ? 2 : 3;
+  return 15 - Math.abs(m.cell.r - netR);
+}
+
+function resolveSpike(att, cell) {
+  const def = opp(att);
+  let best = null, dmin = 99;
+  for (const p of ownPlayers(def)) {
+    const d = cheb(cell, p);
+    if (d < dmin) { dmin = d; best = p; }
+  }
+  if (dmin >= 2) return { point: true };
+  if (dmin === 1 && Math.random() < 0.2) return { point: true };
+  return { clean: true, defender: best };
+}
+
+function afterReception(def) {
+  ball.side = def.team;
+  ball.c = def.c;
+  ball.r = def.r;
+  touchCount = 1;
+  const nr = def.r + (def.team === 'H' ? 1 : -1);
+  if (nr >= 0 && nr <= 5 && inHalf({ c: def.c, r: nr }, def.team) && !occupied(def.c, nr)) {
+    ball.c = def.c; ball.r = nr;
+  }
+}
+
+function applyMoveModel(m) {
+  const snap = snapState();
+  if (m.type === 'pass') {
+    ball.c = m.cell.c; ball.r = m.cell.r; touchCount++;
+    return { snap, point: false };
+  }
+  const res = resolveSpike(ball.side, m.cell);
+  if (res.point) { ball.c = m.cell.c; ball.r = m.cell.r; return { snap, point: true }; }
+  afterReception(res.defender);
+  return { snap, point: false };
+}
+
+function negamax(depth, alpha, beta, ply) {
+  searchNodes++;
+  if ((searchNodes & 255) === 0 && Date.now() > searchDeadline) throw 'timeout';
+  const side = ball.side;
+  const moves = genTouches(side, touchCount);
+  if (!moves.length) return -(MATE - ply);
+  if (depth <= 0) return evalPos();
+  moves.sort((a, b) => moveH(b) - moveH(a));
+  for (const m of moves) {
+    const snap = snapState();
+    const r = applyMoveModel(m);
+    let sc;
+    if (r.point) { sc = MATE - ply; undoState(snap); }
+    else { try { sc = -negamax(depth - 1, -beta, -alpha, ply + 1); } finally { undoState(snap); } }
+    if (sc >= beta) return beta;
+    if (sc > alpha) alpha = sc;
+  }
+  return alpha;
+}
+
+function findBestAI() {
+  const moves = genTouches(ball.side, touchCount);
+  if (!moves.length) return null;
+  moves.sort((a, b) => moveH(b) - moveH(a));
+  searchDeadline = Date.now() + 500;
+  searchNodes = 0;
+  let best = moves[0], bestScore = -INF;
+  try {
+    for (let d = 1; d <= 3; d++) {
+      if (Date.now() > searchDeadline) break;
+      let localBest = null, localScore = -INF;
+      for (const m of moves) {
+        const snap = snapState();
+        const r = applyMoveModel(m);
+        let sc;
+        if (r.point) { sc = MATE; undoState(snap); }
+        else { try { sc = -negamax(d - 1, -INF, -localScore + 1, 1); } finally { undoState(snap); } }
+        if (sc > localScore) { localScore = sc; localBest = m; }
+        if (Date.now() > searchDeadline) break;
+      }
+      if (localBest) { best = localBest; bestScore = localScore; }
+      if (Date.now() > searchDeadline) break;
+    }
+  } catch (e) { if (e !== 'timeout') throw e; }
+  return best;
+}
+
+function repositionCells(p) {
+  const out = [];
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 6; c++) {
+      const cell = { c, r };
+      if (inHalf(cell, p.team) && !occupied(c, r) && dist(cell, p) <= MOVE_RANGE) out.push(cell);
+    }
+  }
+  return out;
+}
+
+function aiReposition(steps) {
+  for (let s = 0; s < steps; s++) {
+    let best = null, bestScore = -1;
+    for (const p of ownPlayers('AI')) {
+      for (const cell of repositionCells(p)) {
+        const old = { c: p.c, r: p.r };
+        p.c = cell.c; p.r = cell.r;
+        let cov = 0;
+        for (const r of halfRows('AI')) for (let c = 0; c < 6; c++) if (covered({ c, r }, 'AI')) cov++;
+        if (cov > bestScore) { bestScore = cov; best = { p, cell, old }; }
+        p.c = old.c; p.r = old.r;
+      }
+    }
+    if (!best) break;
+    best.p.c = best.cell.c; best.p.r = best.cell.r;
+  }
+}
+
+function chooseAIPlan() {
+  const scores = [0, 1, 2].map(z => ({ z, w: zoneScore('AI', z) }));
+  let best = 0;
+  for (const s of scores) if (s.w > scores[best].w) best = s.z;
+  if (aiState.targetZone === null && !aiState.regroup) {
+    aiState.targetZone = best;
+    aiState.lastScore = scores[best].w;
+    aiState.stagnation = 0;
+    return 'Цель: ' + ZONE_NAME[best] + ' (слабая линия)';
+  }
+  const cur = aiState.targetZone !== null ? zoneScore('AI', aiState.targetZone) : scores[best].w;
+  if (cur <= aiState.lastScore) aiState.stagnation++; else aiState.stagnation = 0;
+  aiState.lastScore = cur;
+  if (aiState.regroup) {
+    aiState.regroupPly++;
+    if (aiState.regroupPly >= 2) {
+      aiState.targetZone = best;
+      aiState.regroup = false;
+      aiState.stagnation = 0;
+      aiState.lastScore = cur;
+      return 'Перегруппировка завершена — цель: ' + ZONE_NAME[best];
+    }
+    return 'Перегруппировка сил...';
+  }
+  if (aiState.stagnation >= 3) {
+    aiState.regroup = true;
+    aiState.regroupPly = 0;
+    aiState.targetZone = null;
+    return 'Атака буксует — перегруппировка';
+  }
+  if (aiState.underAttack) return 'КОНТРАТАКА — ответный удар в ' + ZONE_NAME[aiState.targetZone];
+  return 'Атака: ' + ZONE_NAME[aiState.targetZone] + ' (слабая линия)';
+}
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = CS;
+canvas.height = CS;
+
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  scores = { H: 0, AI: 0 };
+  gameOver = false;
+  rallyNum = 0;
+  log = [];
+  aiTurnId++;
+  aiState = { targetZone: null, lastScore: null, stagnation: 0, regroup: false, regroupPly: 0, underAttack: false, planText: '' };
+  updateScore();
+  updateMoves();
+  rallyStart('H');
+}
+
+function rallyStart(server) {
+  players = formation();
+  ball = { c: null, r: null, side: server };
+  touchCount = 1;
+  hSteps = 2;
+  repositionDone = false;
+  selPlayer = null;
+  moveTargets = [];
+  legalTargets = [];
+  lastSpike = null;
+  banner = null;
+  ballAnim = null;
+  phase = 'move';
+  aiThinking = false;
+  document.getElementById('doneBtn').style.display = 'inline-block';
+  document.getElementById('stepsBox').style.display = 'block';
+  document.getElementById('stepsVal').textContent = hSteps;
+  setStatus('Ваша расстановка — передвиньте игроков (2 шага) или сразу в бой', 'you');
+  updateHUD();
+}
+
+function aiSetupReposition() {
+  if (repositionDone) return;
+  repositionDone = true;
+  aiReposition(2);
+}
+
+function beginAttack() {
+  document.getElementById('doneBtn').style.display = 'none';
+  document.getElementById('stepsBox').style.display = 'none';
+  if (ball.side === 'H') aiSetupReposition();
+  const sv = serverOf(ball.side);
+  ball.c = sv.c; ball.r = sv.r;
+  phase = 'touch';
+  selPlayer = null;
+  legalTargets = [];
+  setStatus(ball.side === 'H' ? 'Ваш ход — атакуйте (до 3 касаний)' : 'Подача ИИ...', ball.side === 'H' ? 'you' : 'ai');
+  updateHUD();
+  if (ball.side === 'AI') scheduleAI();
+}
+
+function scheduleAI() {
+  phase = 'ai';
+  aiThinking = true;
+  aiTurnId++;
+  const id = aiTurnId;
+  setStatus('ИИ думает...', 'ai');
+  updateHUD();
+  setTimeout(function () { if (id === aiTurnId && !gameOver) aiTurn(id); }, 400);
+}
+
+function aiTurn(id) {
+  if (gameOver || id !== aiTurnId) return;
+  if (ball.c === null) {
+    const sv = serverOf('AI');
+    ball.c = sv.c; ball.r = sv.r;
+  }
+  aiSetupReposition();
+  aiState.planText = chooseAIPlan();
+  aiState.underAttack = false;
+  updateHUD();
+  aiSequence(id);
+}
+
+function aiSequence(id) {
+  if (gameOver || id !== aiTurnId) return;
+  if (ball.side !== 'AI') return;
+  const m = findBestAI();
+  if (!m) { endRally('H'); return; }
+  if (m.type === 'pass') {
+    phase = 'anim';
+    flyBall({ c: ball.c, r: ball.r }, m.cell, false, function () {
+      if (gameOver) return;
+      ball.c = m.cell.c; ball.r = m.cell.r;
+      touchCount++;
+      phase = 'ai';
+      updateHUD();
+      setTimeout(function () { if (id === aiTurnId) aiSequence(id); }, 180);
+    });
+  } else {
+    phase = 'anim';
+    flyBall({ c: ball.c, r: ball.r }, m.cell, true, function () {
+      if (gameOver) return;
+      const res = resolveSpike('AI', m.cell);
+      lastSpike = { cell: m.cell, point: !!res.point, t0: performance.now() };
+      if (res.point) { aiState.stagnation = 0; endRally('AI'); return; }
+      afterReception(res.defender);
+      aiThinking = false;
+      phase = 'touch';
+      setStatus('Ваш ход — приём и атака', 'you');
+      updateHUD();
+    });
+  }
+}
+
+function doHumanPass(cell) {
+  phase = 'anim';
+  flyBall({ c: ball.c, r: ball.r }, cell, false, function () {
+    if (gameOver) return;
+    ball.c = cell.c; ball.r = cell.r;
+    touchCount++;
+    phase = 'touch';
+    selPlayer = null;
+    updateHUD();
+  });
+}
+
+function doHumanSpike(cell) {
+  phase = 'anim';
+  flyBall({ c: ball.c, r: ball.r }, cell, true, function () {
+    if (gameOver) return;
+    const res = resolveSpike('H', cell);
+    lastSpike = { cell: cell, point: !!res.point, t0: performance.now() };
+    if (res.point) { endRally('H'); return; }
+    afterReception(res.defender);
+    aiState.underAttack = true;
+    aiThinking = false;
+    scheduleAI();
+  });
+}
+
+function endRally(winner) {
+  scores[winner]++;
+  phase = 'point';
+  rallyNum++;
+  const wName = winner === 'H' ? 'Вы' : 'ИИ';
+  log.push({ cls: 'pt', text: 'Розыгрыш ' + rallyNum + ': очко — ' + wName });
+  updateScore();
+  updateMoves();
+  banner = { text: 'ОЧКО! ' + wName + ' +1', color: winner === 'H' ? '#00ff88' : '#ffb84d', t0: performance.now() };
+  updateHUD();
+  if (scores[winner] >= 15) {
+    setTimeout(function () { finishGame(winner); }, 1300);
+    return;
+  }
+  setTimeout(function () { rallyStart(winner); }, 1300);
+}
+
+function finishGame(winner) {
+  gameOver = true;
+  const msg = winner === 'H' ? 'Вы победили! ' + scores.H + ':' + scores.AI : 'Победил ИИ. ' + scores.H + ':' + scores.AI;
+  setStatus(msg, 'done');
+  const ov = document.getElementById('overlay');
+  ov.querySelector('h2').textContent = msg;
+  ov.querySelector('.desc').style.display = 'none';
+  ov.querySelector('.sideBtns').innerHTML = '<button onclick="startGame()">Реванш</button>';
+  ov.style.display = 'flex';
+}
+
+function flyBall(from, to, spike, cb) {
+  ballAnim = { from: { c: from.c, r: from.r }, to: { c: to.c, r: to.r }, spike: !!spike, t0: performance.now(), dur: 380, cb: cb };
+}
+
+function setStatus(text, cls) {
+  const el = document.getElementById('status');
+  el.textContent = text;
+  el.className = cls;
+}
+
+function updateScore() {
+  document.getElementById('scYou').textContent = scores.H;
+  document.getElementById('scAI').textContent = scores.AI;
+}
+
+function updateMoves() {
+  const el = document.getElementById('movesList');
+  if (!log.length) { el.innerHTML = '—'; return; }
+  let html = '';
+  for (const e of log) html += '<div class="' + e.cls + '">' + e.text + '</div>';
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateHUD() {
+  updatePlan();
+  updateZones();
+  updateScore();
+  updateMoves();
+}
+
+function updatePlan() {
+  const box = document.getElementById('planBox');
+  let html;
+  if (gameOver) {
+    html = '<span class="tag">Игра окончена</span>';
+  } else if (phase === 'move') {
+    html = '<span class="tag">Расстановка</span><br>ИИ выбирает слабую линию: ' + (aiState.planText || '...');
+  } else if (phase === 'ai' || aiThinking) {
+    html = '<span class="tag">ИИ:</span> ' + (aiState.planText || 'Анализ...');
+  } else if (phase === 'touch' && ball.side === 'H') {
+    html = '<span class="tag">Ваш ход</span><br>ИИ следит за линиями: ' + (aiState.planText || '');
+  } else {
+    html = '<span class="tag">Розыгрыш</span><br>' + (aiState.planText || '');
+  }
+  box.innerHTML = html;
+}
+
+function updateZones() {
+  const wrap = document.getElementById('zoneWrap');
+  const scores = [0, 1, 2].map(z => zoneScore('AI', z));
+  const max = Math.max.apply(null, scores.concat([1]));
+  let html = '';
+  for (let z = 0; z < 3; z++) {
+    const pct = Math.max(3, Math.min(100, (scores[z] / max) * 100));
+    const active = aiState.targetZone === z && !gameOver;
+    html += '<div class="zrow' + (active ? ' active' : '') + '">' +
+      '<div class="zname">' + ZONE_SHORT[z] + '</div>' +
+      '<div class="zbar"><div class="zfill z' + z + '" style="width:' + pct.toFixed(0) + '%"></div></div>' +
+      (active ? '<div class="zmark">►</div>' : '') +
+      '</div>';
+  }
+  wrap.innerHTML = html;
+}
+
+function cx(c) { return PAD + c * CELL + CELL / 2; }
+function cy(r) { return PAD + (GRID - 1 - r) * CELL + CELL / 2; }
+
+function toCell(mx, my) {
+  const c = Math.floor((mx - PAD) / CELL), r = GRID - 1 - Math.floor((my - PAD) / CELL);
+  if (c < 0 || c > 5 || r < 0 || r > 5) return null;
+  return { c, r };
+}
+
+function drawPlayer(p) {
+  const x = cx(p.c), y = cy(p.r);
+  const isH = p.team === 'H';
+  const rad = 21;
+  const grad = ctx.createRadialGradient(x - 7, y - 8, 4, x, y, rad);
+  if (isH) { grad.addColorStop(0, '#8affc8'); grad.addColorStop(1, '#0aa96a'); }
+  else { grad.addColorStop(0, '#ffd08a'); grad.addColorStop(1, '#e07b00'); }
+  ctx.beginPath();
+  ctx.arc(x, y, rad, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = isH ? '#004d2e' : '#5c3100';
+  ctx.stroke();
+  if (selPlayer && selPlayer.team === p.team && selPlayer.id === p.id) {
+    ctx.beginPath();
+    ctx.arc(x, y, rad + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+  ctx.font = '700 17px "Segoe UI",Arial,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = isH ? '#003d21' : '#3a2000';
+  ctx.fillText(p.id, x, y + 1);
+}
+
+function drawBall(x, y) {
+  ctx.beginPath();
+  ctx.arc(x, y + 10, 8, 0, Math.PI);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fill();
+  const grad = ctx.createRadialGradient(x - 4, y - 5, 2, x, y, 12);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(1, '#ffd94d');
+  ctx.beginPath();
+  ctx.arc(x, y, 12, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+function frame(t) {
+  try {
+    ctx.clearRect(0, 0, CS, CS);
+    const bg = ctx.createLinearGradient(0, 0, 0, CS);
+    bg.addColorStop(0, '#101a38');
+    bg.addColorStop(1, '#0a1028');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, CS, CS);
+
+    const zoneTint = ['rgba(255,150,40,0.06)', 'rgba(40,255,160,0.06)', 'rgba(40,150,255,0.06)'];
+    for (let z = 0; z < 3; z++) {
+      ctx.fillStyle = zoneTint[z];
+      for (const c of ZONE_COLS[z]) ctx.fillRect(cx(c) - CELL / 2, PAD, CELL, GRID * CELL);
+    }
+
+    ctx.strokeStyle = 'rgba(90,110,160,0.22)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= GRID; i++) {
+      ctx.beginPath(); ctx.moveTo(PAD + i * CELL, PAD); ctx.lineTo(PAD + i * CELL, PAD + GRID * CELL); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(PAD, PAD + i * CELL); ctx.lineTo(PAD + GRID * CELL, PAD + i * CELL); ctx.stroke();
+    }
+
+    const netY = PAD + 3 * CELL;
+    ctx.fillStyle = '#2a3f6b';
+    ctx.fillRect(PAD - 4, netY - 3, GRID * CELL + 8, 6);
+    ctx.fillStyle = '#3a5a9a';
+    for (let x = PAD; x <= PAD + GRID * CELL; x += 14) ctx.fillRect(x, netY - 3, 7, 6);
+    ctx.fillRect(PAD - 10, netY - 8, 6, 16);
+    ctx.fillRect(PAD + GRID * CELL + 4, netY - 8, 6, 16);
+
+    if (lastSpike && performance.now() - lastSpike.t0 < 900) {
+      const a = Math.max(0, 1 - (performance.now() - lastSpike.t0) / 900);
+      ctx.beginPath();
+      ctx.arc(cx(lastSpike.cell.c), cy(lastSpike.cell.r), CELL / 2 - 6, 0, Math.PI * 2);
+      ctx.strokeStyle = lastSpike.point ? 'rgba(255,80,90,' + a + ')' : 'rgba(120,180,255,' + a + ')';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
+
+    if (phase === 'move' && selPlayer) {
+      for (const cell of moveTargets) {
+        ctx.beginPath();
+        ctx.moveTo(cx(cell.c), cy(cell.r) - 9);
+        ctx.lineTo(cx(cell.c) + 9, cy(cell.r));
+        ctx.lineTo(cx(cell.c), cy(cell.r) + 9);
+        ctx.lineTo(cx(cell.c) - 9, cy(cell.r));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0,255,255,0.6)';
+        ctx.fill();
+      }
+    }
+
+    if (phase === 'touch' && ball.side === 'H' && !ballAnim) {
+      legalTargets = genTouches('H', touchCount);
+      for (const p of ownPlayers('H')) {
+        if (cheb({ c: ball.c, r: ball.r }, p) <= 1) {
+          ctx.beginPath();
+          ctx.arc(cx(p.c), cy(p.r), 27, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(0,255,136,0.5)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+      for (const m of legalTargets) {
+        const x = cx(m.cell.c), y = cy(m.cell.r);
+        if (m.type === 'pass') {
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,255,255,0.55)';
+          ctx.fill();
+        } else {
+          const open = !covered(m.cell, 'AI');
+          if (open) {
+            ctx.beginPath();
+            ctx.arc(x, y, CELL / 2 - 8, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0,255,136,0.9)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.font = '700 18px "Segoe UI",Arial,sans-serif';
+            ctx.fillStyle = '#00ff88';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✓', x, y + 1);
+          } else {
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,90,90,0.75)';
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    for (const p of players) drawPlayer(p);
+
+    let bx = null, by = null;
+    if (ballAnim) {
+      const k = Math.min(1, (t - ballAnim.t0) / ballAnim.dur);
+      const e = k * k * (3 - 2 * k);
+      bx = cx(ballAnim.from.c) + (cx(ballAnim.to.c) - cx(ballAnim.from.c)) * e;
+      by = cy(ballAnim.from.r) + (cy(ballAnim.to.r) - cy(ballAnim.from.r)) * e;
+      const arcH = ballAnim.spike ? 34 : 18;
+      by -= Math.sin(k * Math.PI) * arcH;
+      drawBall(bx, by);
+      if (k >= 1) {
+        const cb = ballAnim.cb;
+        ballAnim = null;
+        if (cb) cb();
+      }
+    } else if (ball && ball.c !== null) {
+      bx = cx(ball.c); by = cy(ball.r);
+      drawBall(bx, by);
+    }
+
+    if (banner && performance.now() - banner.t0 < 1100) {
+      const a = Math.max(0, 1 - (performance.now() - banner.t0) / 1100);
+      ctx.font = '700 26px "Segoe UI",Arial,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = banner.color;
+      ctx.globalAlpha = a;
+      ctx.fillText(banner.text, CS / 2, PAD - 6);
+      ctx.globalAlpha = 1;
+    }
+  } catch (e) {
+    /* keep the loop alive */
+  } finally {
+    requestAnimationFrame(frame);
+  }
+}
+
+function handleMoveClick(cell) {
+  if (phase !== 'move' || hSteps <= 0) return;
+  if (selPlayer && moveTargets.some(t => t.c === cell.c && t.r === cell.r)) {
+    selPlayer.c = cell.c;
+    selPlayer.r = cell.r;
+    hSteps--;
+    selPlayer = null;
+    moveTargets = [];
+    document.getElementById('stepsVal').textContent = hSteps;
+    if (hSteps <= 0) { beginAttack(); }
+    else { updateHUD(); }
+    return;
+  }
+  const p = playerAt(cell.c, cell.r);
+  if (p && p.team === 'H') {
+    selPlayer = p;
+    moveTargets = repositionCells(p);
+  } else {
+    selPlayer = null;
+    moveTargets = [];
+  }
+}
+
+function handleTouchClick(cell) {
+  if (phase !== 'touch' || ball.side !== 'H' || ballAnim) return;
+  legalTargets = genTouches('H', touchCount);
+  const mv = legalTargets.find(m => m.type === 'pass' && m.cell.c === cell.c && m.cell.r === cell.r);
+  if (mv) { doHumanPass(cell); return; }
+  const sp = legalTargets.find(m => m.type === 'spike' && m.cell.c === cell.c && m.cell.r === cell.r);
+  if (sp) { doHumanSpike(cell); return; }
+  const p = playerAt(cell.c, cell.r);
+  if (p && p.team === 'H' && cheb({ c: ball.c, r: ball.r }, p) <= 1) {
+    const pm = legalTargets.find(m => m.type === 'pass' && m.cell.c === p.c && m.cell.r === p.r);
+    if (pm) { doHumanPass({ c: p.c, r: p.r }); }
+  }
+}
+
+canvas.addEventListener('click', function (e) {
+  if (gameOver || phase === 'ai' || phase === 'anim' || phase === 'point') return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (CS / rect.width);
+  const my = (e.clientY - rect.top) * (CS / rect.height);
+  const cell = toCell(mx, my);
+  if (!cell) return;
+  if (phase === 'move') handleMoveClick(cell);
+  else if (phase === 'touch') handleTouchClick(cell);
+});
+
+document.getElementById('doneBtn').addEventListener('click', function () {
+  if (phase === 'move') beginAttack();
+});
+
+document.getElementById('newGame').addEventListener('click', function () {
+  scores = { H: 0, AI: 0 };
+  rallyNum = 0;
+  log = [];
+  gameOver = false;
+  aiTurnId++;
+  aiState = { targetZone: null, lastScore: null, stagnation: 0, regroup: false, regroupPly: 0, underAttack: false, planText: '' };
+  updateScore();
+  updateMoves();
+  rallyStart('H');
+});
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

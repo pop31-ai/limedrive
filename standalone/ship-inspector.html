@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ship Inspector — 3D Парусник</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e1a; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #fff; }
+#canvas3d { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+
+/* HUD */
+.hud { position: fixed; z-index: 10; pointer-events: none; }
+.hud * { pointer-events: auto; }
+
+/* Верхняя панель */
+.top-bar {
+  top: 0; left: 0; right: 0; height: 56px;
+  background: linear-gradient(180deg, rgba(0,20,40,0.95), rgba(0,20,40,0.0));
+  display: flex; align-items: center; padding: 0 24px; gap: 20px;
+}
+.top-bar h1 { font-size: 18px; color: #00d4ff; letter-spacing: 2px; text-transform: uppercase; }
+.progress-wrap {
+  flex: 1; max-width: 400px; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; width: 0%; background: linear-gradient(90deg, #00d4ff, #00ff88);
+  border-radius: 4px; transition: width 0.5s ease;
+}
+.progress-text { font-size: 13px; color: #88aacc; min-width: 60px; text-align: right; }
+.round-badge {
+  background: rgba(0,212,255,0.15); border: 1px solid #00d4ff;
+  padding: 4px 14px; border-radius: 20px; font-size: 12px; color: #00d4ff;
+}
+
+/* Голограмма-гида */
+.guide-panel {
+  position: fixed; bottom: 20px; left: 20px; z-index: 10;
+  width: 320px; background: rgba(0,15,30,0.85);
+  border: 1px solid rgba(0,212,255,0.3); border-radius: 12px;
+  padding: 16px; backdrop-filter: blur(10px);
+  transition: all 0.5s ease;
+}
+.guide-panel.hidden { transform: translateY(120%); opacity: 0; pointer-events: none; }
+.guide-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: radial-gradient(circle, #00d4ff, #003366);
+  border: 2px solid #00d4ff; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; animation: guidePulse 2s ease-in-out infinite;
+}
+@keyframes guidePulse {
+  0%,100% { box-shadow: 0 0 10px rgba(0,212,255,0.3); }
+  50% { box-shadow: 0 0 25px rgba(0,212,255,0.6); }
+}
+.guide-name { font-size: 11px; color: #00d4ff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.guide-text { font-size: 14px; color: #b0d0e8; line-height: 1.5; }
+.guide-hint {
+  margin-top: 10px; padding: 8px 12px; background: rgba(0,212,255,0.1);
+  border-left: 3px solid #00d4ff; border-radius: 0 6px 6px 0;
+  font-size: 12px; color: #66ccdd;
+}
+
+/* Викторина */
+.quiz-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: rgba(0,5,15,0.85); display: flex; align-items: center;
+  justify-content: center; backdrop-filter: blur(5px);
+  transition: opacity 0.4s; opacity: 0; pointer-events: none;
+}
+.quiz-overlay.active { opacity: 1; pointer-events: auto; }
+.quiz-card {
+  background: rgba(0,20,40,0.95); border: 1px solid rgba(0,212,255,0.4);
+  border-radius: 16px; padding: 32px; max-width: 520px; width: 90%;
+  text-align: center;
+}
+.quiz-card h2 { color: #00d4ff; font-size: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.quiz-question { font-size: 18px; color: #e0f0ff; margin: 16px 0 24px; line-height: 1.5; }
+.quiz-options { display: flex; flex-direction: column; gap: 10px; }
+.quiz-option {
+  padding: 14px 20px; background: rgba(0,40,80,0.4);
+  border: 1px solid rgba(0,212,255,0.2); border-radius: 10px;
+  font-size: 15px; color: #b0d0e8; cursor: pointer; transition: all 0.2s;
+  text-align: left;
+}
+.quiz-option:hover { background: rgba(0,60,120,0.5); border-color: #00d4ff; color: #fff; }
+.quiz-option.correct { background: rgba(0,200,100,0.3); border-color: #00ff88; color: #00ff88; }
+.quiz-option.wrong { background: rgba(200,50,50,0.3); border-color: #ff4444; color: #ff6666; }
+.quiz-score { font-size: 14px; color: #88aacc; margin-top: 16px; }
+.quiz-next {
+  margin-top: 20px; padding: 12px 32px; background: linear-gradient(135deg, #00d4ff, #0088aa);
+  border: none; border-radius: 8px; font-size: 14px; color: #fff;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+  transition: transform 0.2s;
+}
+.quiz-next:hover { transform: scale(1.05); }
+
+/* Стрелка-указатель */
+.arrow-indicator {
+  position: fixed; z-index: 15; pointer-events: none;
+  transition: all 0.3s ease;
+}
+.arrow-indicator svg { filter: drop-shadow(0 0 8px rgba(0,212,255,0.8)); }
+.arrow-label {
+  position: absolute; white-space: nowrap; font-size: 12px;
+  color: #00d4ff; text-shadow: 0 0 10px rgba(0,212,255,0.5);
+  top: -20px; left: 50%; transform: translateX(-50%);
+}
+
+/* Уведомления */
+.notification {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
+  z-index: 25; padding: 12px 28px; border-radius: 10px;
+  font-size: 14px; opacity: 0; transition: all 0.4s ease;
+  pointer-events: none;
+}
+.notification.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.notification.success {
+  background: rgba(0,200,100,0.2); border: 1px solid #00ff88; color: #00ff88;
+}
+.notification.info {
+  background: rgba(0,150,255,0.2); border: 1px solid #00aaff; color: #00aaff;
+}
+
+/* Список деталей */
+.parts-panel {
+  position: fixed; top: 60px; right: 16px; z-index: 10;
+  width: 240px; max-height: calc(100vh - 80px); overflow-y: auto;
+  background: rgba(0,15,30,0.8); border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 10px; padding: 12px;
+}
+.part-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px; margin-bottom: 4px; border-radius: 6px;
+  transition: background 0.2s; cursor: pointer;
+}
+.part-item:hover { background: rgba(0,212,255,0.1); }
+.part-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid #335; background: transparent;
+  transition: all 0.3s;
+}
+.part-item.found .part-dot { background: #00ff88; border-color: #00ff88; }
+.part-item.current .part-dot { background: #00d4ff; border-color: #00d4ff; animation: dotPulse 1s infinite; }
+@keyframes dotPulse { 0%,100% { box-shadow: 0 0 4px #00d4ff; } 50% { box-shadow: 0 0 12px #00d4ff; } }
+.part-name { font-size: 13px; color: #88aacc; }
+.part-item.found .part-name { color: #00ff88; }
+.part-item.current .part-name { color: #00d4ff; }
+
+/* Стартовый экран */
+.start-screen {
+  position: fixed; inset: 0; z-index: 50;
+  background: radial-gradient(ellipse at center, #0a1628 0%, #050a12 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: opacity 0.8s;
+}
+.start-screen.hidden { opacity: 0; pointer-events: none; }
+.start-screen h1 {
+  font-size: 36px; color: #00d4ff; letter-spacing: 4px;
+  text-transform: uppercase; margin-bottom: 8px;
+  text-shadow: 0 0 30px rgba(0,212,255,0.4);
+}
+.start-screen .subtitle { font-size: 14px; color: #5588aa; margin-bottom: 40px; letter-spacing: 2px; }
+.start-screen .ship-icon { font-size: 80px; margin-bottom: 30px; animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+.start-btn {
+  padding: 16px 48px; background: linear-gradient(135deg, #00d4ff, #0066aa);
+  border: none; border-radius: 12px; font-size: 16px; color: #fff;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.start-btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(0,212,255,0.4); }
+.start-desc { margin-top: 20px; font-size: 13px; color: #446688; max-width: 400px; text-align: center; line-height: 1.6; }
+
+/* Финальный экран */
+.final-screen {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(5,10,18,0.95);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.8s;
+}
+.final-screen.active { opacity: 1; pointer-events: auto; }
+.final-screen h1 { font-size: 32px; color: #00ff88; margin-bottom: 10px; }
+.final-stats { font-size: 15px; color: #88aacc; margin: 6px 0; }
+.final-score {
+  font-size: 64px; color: #00d4ff; margin: 20px 0;
+  text-shadow: 0 0 40px rgba(0,212,255,0.5);
+}
+.restart-btn {
+  margin-top: 30px; padding: 14px 40px; background: linear-gradient(135deg, #00d4ff, #0066aa);
+  border: none; border-radius: 10px; font-size: 15px; color: #fff;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+}
+
+/* Кнопки управления */
+.view-buttons {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10;
+  display: flex; gap: 8px; flex-wrap: wrap; max-width: 300px; justify-content: flex-end;
+}
+.view-btn {
+  padding: 8px 14px; background: rgba(0,20,40,0.8);
+  border: 1px solid rgba(0,212,255,0.3); border-radius: 8px;
+  font-size: 12px; color: #88aacc; cursor: pointer; transition: all 0.2s;
+}
+.view-btn:hover { border-color: #00d4ff; color: #00d4ff; }
+.view-btn.active { background: rgba(0,212,255,0.2); border-color: #00d4ff; color: #00d4ff; }
+
+/* Экран загрузки */
+.loading-bar {
+  width: 200px; height: 3px; background: rgba(255,255,255,0.1);
+  border-radius: 2px; overflow: hidden; margin-top: 20px;
+}
+.loading-fill {
+  height: 100%; width: 30%; background: #00d4ff;
+  border-radius: 2px; animation: loadSlide 1.5s ease-in-out infinite;
+}
+@keyframes loadSlide { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+</style>
+</head>
+<body>
+
+<canvas id="canvas3d"></canvas>
+
+<!-- Стартовый экран -->
+<div class="start-screen" id="startScreen">
+  <div class="ship-icon">⛵</div>
+  <h1>Ship Inspector</h1>
+  <div class="subtitle">3D Инспекция парусного корабля</div>
+  <button class="start-btn" onclick="startGame()">Начать инспекцию</button>
+  <div class="start-desc">
+    Осмотрите парусник со всех сторон. Найдите 10 ключевых деталей корпуса и такелажа.
+    Ответьте на вопросы викторины, чтобы доказать свою компетентность.
+  </div>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+</div>
+
+<!-- Финальный экран -->
+<div class="final-screen" id="finalScreen">
+  <h1>Инспекция завершена</h1>
+  <div class="final-stats" id="finalParts"></div>
+  <div class="final-score" id="finalScore"></div>
+  <div class="final-stats" id="finalRank"></div>
+  <button class="restart-btn" onclick="location.reload()">Новая инспекция</button>
+</div>
+
+<!-- Верхняя панель -->
+<div class="hud top-bar" id="topBar" style="display:none;">
+  <h1>Ship Inspector</h1>
+  <div class="round-badge" id="roundBadge">Раунд 1/4</div>
+  <div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text" id="progressText">0/10</div>
+</div>
+
+<!-- Список деталей -->
+<div class="parts-panel" id="partsPanel" style="display:none;"></div>
+
+<!-- Голограмма-гид -->
+<div class="guide-panel hidden" id="guidePanel">
+  <div class="guide-avatar">👤</div>
+  <div class="guide-name">Капитан Хорн</div>
+  <div class="guide-text" id="guideText">Добро пожаловать на борт!</div>
+  <div class="guide-hint" id="guideHint" style="display:none;"></div>
+</div>
+
+<!-- Викторина -->
+<div class="quiz-overlay" id="quizOverlay">
+  <div class="quiz-card">
+    <h2 id="quizTitle">Викторина</h2>
+    <div class="quiz-question" id="quizQuestion"></div>
+    <div class="quiz-options" id="quizOptions"></div>
+    <div class="quiz-score" id="quizScore"></div>
+    <button class="quiz-next" id="quizNext" style="display:none;" onclick="nextQuizQuestion()">Далее</button>
+  </div>
+</div>
+
+<!-- Стрелка-указатель -->
+<div class="arrow-indicator" id="arrowIndicator" style="display:none;">
+  <svg width="40" height="40" viewBox="0 0 40 40">
+    <polygon points="20,0 35,35 20,25 5,35" fill="#00d4ff" opacity="0.9"/>
+  </svg>
+  <div class="arrow-label" id="arrowLabel"></div>
+</div>
+
+<!-- Уведомления -->
+<div class="notification" id="notification"></div>
+
+<!-- Управление видом -->
+<div class="view-buttons" id="viewButtons" style="display:none;">
+  <button class="view-btn active" onclick="setView('auto')">Авто</button>
+  <button class="view-btn" onclick="setView('front')">Нос</button>
+  <button class="view-btn" onclick="setView('back')">Корма</button>
+  <button class="view-btn" onclick="setView('left')">Левый борт</button>
+  <button class="view-btn" onclick="setView('right')">Правый борт</button>
+  <button class="view-btn" onclick="setView('top')">Сверху</button>
+  <button class="view-btn" onclick="setView('deck')">Палуба</button>
+  <button class="view-btn" onclick="toggleExplode()">Взрыв-схема</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============ ДАННЫЕ ИГРЫ ============
+const SHIP_PARTS = [
+  {
+    id: 'keel', name: 'Киль', section: 'Корпус',
+    desc: 'Главная продольная балка корабля, основа конструкции корпуса.',
+    position: [0, -1.8, 0], color: 0x8B4513,
+    geometry: 'keel',
+    quiz: {
+      question: 'Какую функцию выполняет киль парусного корабля?',
+      options: [
+        'Основа корпуса — главная несущая балка',
+        'Управление направлением движения',
+        'Крепление парусов к мачте',
+        'Хранение пресной воды'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'hull', name: 'Корпус (обшивка)', section: 'Корпус',
+    desc: 'Дощатая обшивка, защищающая от воды и обеспечивающая водонепроницаемость.',
+    position: [0, -0.5, 0], color: 0x654321,
+    geometry: 'hull',
+    quiz: {
+      question: 'Из чего традиционно делали обшивку корпуса?',
+      options: [
+        'Дубовые или сосновые доски',
+        'Железные листы',
+        'Пеньковые канаты',
+        'Парусина'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'bowsprit', name: 'Бушприт', section: 'Нос',
+    desc: 'Выступающая вперёд балка носовой части для крепления кливерных парусов.',
+    position: [0, 0.5, 5.5], color: 0x8B6914,
+    geometry: 'bowsprit',
+    quiz: {
+      question: 'Для чего служит бушприт?',
+      options: [
+        'Для установки额外ных парусов в носовой части',
+        'Для якорного устройства',
+        'Для размещения пушек',
+        'Для кормления команды'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'mainmast', name: 'Мачта главная', section: 'Мачты',
+    desc: 'Центральная мачта, несущая основной парус — грот.',
+    position: [0, 3, -0.5], color: 0x9B7B3A,
+    geometry: 'mast',
+    quiz: {
+      question: 'Какой парус несёт главная мачта?',
+      options: [
+        'Грот (основной парус)',
+        'Фок (передний парус)',
+        'Бизань (задний парус)',
+        'Кливер (носковой парус)'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'foremast', name: 'Мачта фок-мачта', section: 'Мачты',
+    desc: 'Передняя мачта, несущая фок-парус и марсель.',
+    position: [0, 2.5, 1.8], color: 0x9B7B3A,
+    geometry: 'mast_small',
+    quiz: {
+      question: 'Где расположена фок-мачта?',
+      options: [
+        'Впереди грот-мачты (ближе к носу)',
+        'Сзади грот-мачты (ближе к корме)',
+        'На носу корабля',
+        'На корме корабля'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'mainsail', name: 'Грот-парус', section: 'Паруса',
+    desc: 'Основной двигатель корабля — самый большой четырёхугольный парус.',
+    position: [0, 2.5, -0.5], color: 0xF5F0E0,
+    geometry: 'sail_main',
+    quiz: {
+      question: 'Почему грот-парус — самый важный?',
+      options: [
+        'Он самый большой и даёт основную тягу',
+        'Он самый лёгкий',
+        'Он красного цвета',
+        'Он используется только на стоянке'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'rudder', name: 'Руль', section: 'Управление',
+    desc: 'Плоская пластина в корме для управления направлением движения.',
+    position: [0, -1.5, -3.8], color: 0x6B3A1F,
+    geometry: 'rudder',
+    quiz: {
+      question: 'Как работает руль?',
+      options: [
+        'Поворачивает поток воды, меняя курс корабля',
+        'Останавливает корабль',
+        'Поднимает паруса',
+        'Замедляет ветер'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'helm', name: 'Штурвал', section: 'Управление',
+    desc: 'Колесо управления рулём, расположенное на кормовой палубе.',
+    position: [0, 0.2, -2.5], color: 0x4A2810,
+    geometry: 'helm',
+    quiz: {
+      question: 'Сколько спиц у традиционного штурвала?',
+      options: [
+        'Обычно 6-8 спиц',
+        'Всегда 4 спицы',
+        'Только 2 спицы',
+        '12 спиц'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'anchor', name: 'Якорь', section: 'Снаряжение',
+    desc: 'Тяжёлое устройство для удержания корабля на месте на якорной стоянке.',
+    position: [1.2, -0.8, 3.5], color: 0x444444,
+    geometry: 'anchor',
+    quiz: {
+      question: 'Сколько лап у классического якоря?',
+      options: [
+        'Две лапы (двурогий якорь)',
+        'Одна лапа',
+        'Четыре лапы',
+        'Шесть лап'
+      ],
+      correct: 0
+    }
+  },
+  {
+    id: 'cannon', name: 'Пушка', section: 'Вооружение',
+    desc: 'Артиллерийское орудие на палубе для обороны корабля.',
+    position: [-1.3, 0, 0.5], color: 0x333333,
+    geometry: 'cannon',
+    quiz: {
+      question: 'Где обычно располагались пушки на корабле?',
+      options: [
+        'Вдоль бортов на палубе (батарейная палуба)',
+        'Только на носу',
+        'Под водой',
+        'На верхушке мачты'
+      ],
+      correct: 0
+    }
+  }
+];
+
+const GUIDE_SCRIPTS = {
+  welcome: 'Добро пожаловать, инспектор! Я — капитан Хорн. Покажу вам корабль. Начните с осмотра корпуса.',
+  keel: 'Киль — это основа всего судна. Без киля корабль не может держаться на воде. Он проходит по всей длине днища.',
+  hull: 'Обшивка корпуса делает корабль водонепроницаемым. Доски подгоняются друг к другу и конопатятся паклей.',
+  bowsprit: 'Бушприт — носовая балка. На нём крепятся кливеры — дополнительные паруса, помогающие управлять.',
+  mainmast: 'Грот-мачта — самая высокая на корабле. Она несёт главный парус и определяет силуэт судна.',
+  foremast: 'Фок-мачта расположена впереди. Она несёт фор-мара и дополнительные паруса для баланса.',
+  mainsail: 'Грот-парус — главный «мотор» корабля. Его площадь определяет скорость хода.',
+  rudder: 'Руль situated в корме под водой. Он направляет поток воды и позволяет менять курс.',
+  helm: 'Штурвал соединён с рулём системой тросов и блоков. Поворот штурвала = поворот руля.',
+  anchor: 'Якорь удерживает корабль на месте. Тяжёлый чугунный якорь опускается на цепи или канате.',
+  cannon: 'Пушки — основное вооружение. Заряжаются с дула, стреляют ядрами или картечью.',
+  quiz_intro: 'Теперь проверим ваши знания! Ответьте на вопросы о частях корабля.',
+  round3: 'Отлично! Теперь осмотрите корабль сверху. Обратите внимание на такелаж — систему канатов и блоков.',
+  round4: 'Финальная проверка! Соберите все знания воедино.',
+  done: 'Инспекция завершена! Вы отлично разбираетесь в кораблях, инспектор!'
+};
+
+// ============ THREE.JS СЦЕНА ============
+let scene, camera, renderer, shipGroup;
+let raycaster, mouse;
+let partMeshes = [];
+let currentPartIndex = 0;
+let foundParts = new Set();
+let currentRound = 1;
+let quizScore = 0;
+let quizIndex = 0;
+let exploded = false;
+let autoRotate = true;
+let targetCameraPos = null;
+let targetLookAt = new THREE.Vector3(0, 0, 0);
+let clock;
+let arrowVisible = false;
+let highlightMesh = null;
+
+function initScene() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0e1a, 0.015);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(8, 4, 10);
+
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+
+  clock = new THREE.Clock();
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  // Освещение
+  const ambientLight = new THREE.AmbientLight(0x334466, 0.4);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+  dirLight.position.set(10, 15, 8);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(2048, 2048);
+  dirLight.shadow.camera.near = 0.5;
+  dirLight.shadow.camera.far = 50;
+  dirLight.shadow.camera.left = -15;
+  dirLight.shadow.camera.right = 15;
+  dirLight.shadow.camera.top = 15;
+  dirLight.shadow.camera.bottom = -15;
+  scene.add(dirLight);
+
+  const fillLight = new THREE.DirectionalLight(0x88aacc, 0.3);
+  fillLight.position.set(-5, 3, -5);
+  scene.add(fillLight);
+
+  const rimLight = new THREE.DirectionalLight(0x00d4ff, 0.15);
+  rimLight.position.set(0, 5, -10);
+  scene.add(rimLight);
+
+  // Вода
+  const waterGeom = new THREE.PlaneGeometry(200, 200, 64, 64);
+  const waterMat = new THREE.MeshPhongMaterial({
+    color: 0x0a2a4a, specular: 0x224466, shininess: 100,
+    transparent: true, opacity: 0.85, side: THREE.DoubleSide
+  });
+  const water = new THREE.Mesh(waterGeom, waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = -1.8;
+  water.receiveShadow = true;
+  water.name = 'water';
+  scene.add(water);
+
+  // Горизонт
+  const skyGeom = new THREE.SphereGeometry(100, 32, 32);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: {},
+    vertexShader: `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPos.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      varying vec3 vWorldPosition;
+      void main() {
+        float h = normalize(vWorldPosition).y;
+        vec3 skyTop = vec3(0.05, 0.08, 0.2);
+        vec3 skyBot = vec3(0.1, 0.15, 0.25);
+        vec3 col = mix(skyBot, skyTop, max(h, 0.0));
+        gl_FragColor = vec4(col, 1.0);
+      }`
+  });
+  scene.add(new THREE.Mesh(skyGeom, skyMat));
+
+  // Корабль
+  shipGroup = new THREE.Group();
+  scene.add(shipGroup);
+
+  buildShip();
+  buildPartsList();
+  updateProgress();
+}
+
+function buildShip() {
+  // Киль
+  const keelShape = new THREE.Shape();
+  const keelGeom = createKeelGeometry();
+  const keelMat = new THREE.MeshPhongMaterial({ color: 0x5C3317, flatShading: false });
+  const keel = new THREE.Mesh(keelGeom, keelMat);
+  keel.castShadow = true;
+  keel.name = 'keel';
+  shipGroup.add(keel);
+
+  // Корпус (обшивка)
+  const hullGeom = createHullGeometry();
+  const hullMat = new THREE.MeshPhongMaterial({ color: 0x6B3A1F, flatShading: false, specular: 0x111111 });
+  const hull = new THREE.Mesh(hullGeom, hullMat);
+  hull.castShadow = true;
+  hull.name = 'hull';
+  shipGroup.add(hull);
+
+  // Палуба
+  const deckGeom = createDeckGeometry();
+  const deckMat = new THREE.MeshPhongMaterial({ color: 0x8B6914, flatShading: false });
+  const deck = new THREE.Mesh(deckGeom, deckMat);
+  deck.castShadow = true;
+  deck.receiveShadow = true;
+  deck.name = 'deck';
+  shipGroup.add(deck);
+
+  // Борта (бортовая доска)
+  const bulwarkMat = new THREE.MeshPhongMaterial({ color: 0x7B4B2A });
+  const bulwarkGeom = createBulwarkGeometry();
+  const bulwarkL = new THREE.Mesh(bulwarkGeom, bulwarkMat);
+  bulwarkL.position.set(0.9, 0.2, 0);
+  bulwarkL.castShadow = true;
+  shipGroup.add(bulwarkL);
+  const bulwarkR = new THREE.Mesh(bulwarkGeom, bulwarkMat);
+  bulwarkR.position.set(-0.9, 0.2, 0);
+  bulwarkR.scale.x = -1;
+  bulwarkR.castShadow = true;
+  shipGroup.add(bulwarkR);
+
+  // Бушприт
+  const bsGeom = new THREE.CylinderGeometry(0.08, 0.06, 4, 8);
+  bsGeom.rotateX(Math.PI / 2 - 0.3);
+  const bsMat = new THREE.MeshPhongMaterial({ color: 0x9B7B3A });
+  const bowsprit = new THREE.Mesh(bsGeom, bsMat);
+  bowsprit.position.set(0, 0.6, 5.2);
+  bowsprit.castShadow = true;
+  bowsprit.name = 'bowsprit';
+  shipGroup.add(bowsprit);
+
+  // Главная мачта
+  const mastGeom = new THREE.CylinderGeometry(0.1, 0.12, 7, 8);
+  const mastMat = new THREE.MeshPhongMaterial({ color: 0x9B7B3A });
+  const mainmast = new THREE.Mesh(mastGeom, mastMat);
+  mainmast.position.set(0, 3.5, -0.5);
+  mainmast.castShadow = true;
+  mainmast.name = 'mainmast';
+  shipGroup.add(mainmast);
+
+  // Рея главной мачты
+  const yardGeom = new THREE.CylinderGeometry(0.05, 0.05, 3, 6);
+  yardGeom.rotateZ(Math.PI / 2);
+  const yard1 = new THREE.Mesh(yardGeom, mastMat);
+  yard1.position.set(0, 5.5, -0.5);
+  yard1.castShadow = true;
+  shipGroup.add(yard1);
+  const yard2 = yard1.clone();
+  yard2.position.y = 4.0;
+  shipGroup.add(yard2);
+  const yard3 = yard1.clone();
+  yard3.position.y = 2.5;
+  shipGroup.add(yard3);
+
+  // Фок-мачта
+  const fMastGeom = new THREE.CylinderGeometry(0.08, 0.1, 5.5, 8);
+  const foremast = new THREE.Mesh(fMastGeom, mastMat);
+  foremast.position.set(0, 2.75, 1.8);
+  foremast.castShadow = true;
+  foremast.name = 'foremast';
+  shipGroup.add(foremast);
+
+  // Рея фок-мачты
+  const fy1 = new THREE.Mesh(yardGeom.clone(), mastMat);
+  fy1.scale.set(0.8, 1, 1);
+  fy1.position.set(0, 4.2, 1.8);
+  shipGroup.add(fy1);
+  const fy2 = fy1.clone();
+  fy2.position.y = 3.0;
+  shipGroup.add(fy2);
+
+  // Грот-парус (главный)
+  const sailGeom = createSailGeometry(2.5, 3.5);
+  const sailMat = new THREE.MeshPhongMaterial({
+    color: 0xF5F0E0, side: THREE.DoubleSide, transparent: true, opacity: 0.92,
+    specular: 0x222222
+  });
+  const mainsail = new THREE.Mesh(sailGeom, sailMat);
+  mainsail.position.set(0, 3.8, -0.5);
+  mainsail.castShadow = true;
+  mainsail.name = 'mainsail';
+  shipGroup.add(mainsail);
+
+  // Фок-парус
+  const foresailGeom = createSailGeometry(1.8, 2.5);
+  const foresail = new THREE.Mesh(foresailGeom, sailMat);
+  foresail.position.set(0, 3.2, 1.8);
+  foresail.castShadow = true;
+  shipGroup.add(foresail);
+
+  // Бизань-парус
+  const mizzenGeom = createSailGeometry(1.5, 2.0);
+  const mizzen = new THREE.Mesh(mizzenGeom, sailMat);
+  mizzen.position.set(0, 2.5, -2.5);
+  mizzen.castShadow = true;
+  shipGroup.add(mizzen);
+
+  // Кливерные паруса (на бушприте)
+  const clubGeom = createSailGeometry(1.2, 1.5);
+  const clubSail = new THREE.Mesh(clubGeom, sailMat.clone());
+  clubSail.material.color.setHex(0xEDE8D8);
+  clubSail.position.set(0, 1.2, 4.2);
+  clubSail.castShadow = true;
+  shipGroup.add(clubSail);
+
+  // Руль
+  const rudderGeom = createRudderGeometry();
+  const rudderMat = new THREE.MeshPhongMaterial({ color: 0x5C3317 });
+  const rudder = new THREE.Mesh(rudderGeom, rudderMat);
+  rudder.position.set(0, -1.3, -3.8);
+  rudder.castShadow = true;
+  rudder.name = 'rudder';
+  shipGroup.add(rudder);
+
+  // Штурвал
+  const helmGroup = createHelm();
+  helmGroup.position.set(0, 0.3, -2.5);
+  helmGroup.name = 'helm';
+  shipGroup.add(helmGroup);
+
+  // Якорь
+  const anchorGroup = createAnchor();
+  anchorGroup.position.set(1.2, -0.8, 3.5);
+  anchorGroup.name = 'anchor';
+  shipGroup.add(anchorGroup);
+
+  // Пушки
+  const cannonGroup = createCannon();
+  cannonGroup.position.set(-1.2, 0.1, 0.5);
+  cannonGroup.name = 'cannon';
+  shipGroup.add(cannonGroup);
+
+  const cannonGroup2 = cannonGroup.clone();
+  cannonGroup2.position.set(1.2, 0.1, 0.5);
+  cannonGroup2.scale.x = -1;
+  shipGroup.add(cannonGroup2);
+
+  // Такелаж (канаты)
+  createRigging();
+
+  // Флажки на мачтах
+  const flagGeom = new THREE.PlaneGeometry(0.6, 0.35);
+  const flagMat = new THREE.MeshPhongMaterial({ color: 0xcc2222, side: THREE.DoubleSide });
+  const flag = new THREE.Mesh(flagGeom, flagMat);
+  flag.position.set(0.35, 7.1, -0.5);
+  flag.name = 'flag';
+  shipGroup.add(flag);
+
+  // Разметка деталей для взаимодействия
+  SHIP_PARTS.forEach(part => {
+    const obj = shipGroup.getObjectByName(part.id);
+    if (obj) {
+      partMeshes.push({ obj, data: part });
+    }
+  });
+}
+
+function createKeelGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(0, -0.15);
+  shape.lineTo(6, -0.15);
+  shape.lineTo(6, 0);
+  shape.lineTo(0, 0);
+  const extrudeSettings = { depth: 0.12, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 };
+  const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  geom.rotateY(Math.PI / 2);
+  geom.translate(0, -1.8, 0);
+  return geom;
+}
+
+function createHullGeometry() {
+  const points = [];
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;
+    const z = (t - 0.5) * 8;
+    let w;
+    if (t < 0.15) w = 0.3 + t * 6;
+    else if (t < 0.5) w = 1.2;
+    else if (t < 0.85) w = 1.2 - (t - 0.5) * 2;
+    else w = 0.5 - (t - 0.85) * 3.3;
+    w = Math.max(w, 0.15);
+    points.push(new THREE.Vector2(w, z));
+  }
+  const geom = new THREE.LatheGeometry(points, 16, 0, Math.PI);
+  geom.rotateX(Math.PI / 2);
+  geom.scale(1, 1, 0.5);
+  return geom;
+}
+
+function createDeckGeometry() {
+  const geom = new THREE.BoxGeometry(1.6, 0.08, 7.5);
+  const pos = geom.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const z = pos.getZ(i);
+    const absZ = Math.abs(z);
+    const shrink = absZ > 2.5 ? (3.75 - absZ) / 1.25 : 1;
+    pos.setX(i, pos.getX(i) * Math.max(shrink, 0.1));
+    pos.setZ(i, z * 0.98);
+  }
+  pos.needsUpdate = true;
+  geom.computeVertexNormals();
+  return geom;
+}
+
+function createBulwarkGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(0, 0.3);
+  shape.lineTo(0.06, 0.35);
+  shape.lineTo(0.06, 0);
+  const path = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0, 3.5),
+    new THREE.Vector3(0, 0, 1.5),
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0, -1.5),
+    new THREE.Vector3(0, 0, -3.5)
+  ]);
+  const geom = new THREE.TubeGeometry(path, 20, 0.18, 4, false);
+  return geom;
+}
+
+function createSailGeometry(w, h) {
+  const geom = new THREE.PlaneGeometry(w, h, 12, 12);
+  const pos = geom.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const bulge = Math.sin((x / w + 0.5) * Math.PI) * Math.sin((y / h + 0.5) * Math.PI);
+    pos.setZ(i, bulge * 0.3);
+  }
+  pos.needsUpdate = true;
+  geom.computeVertexNormals();
+  return geom;
+}
+
+function createRudderGeometry() {
+  const geom = new THREE.BoxGeometry(0.08, 1.0, 0.6);
+  return geom;
+}
+
+function createHelm() {
+  const group = new THREE.Group();
+  const ringGeom = new THREE.TorusGeometry(0.3, 0.03, 8, 24);
+  const woodMat = new THREE.MeshPhongMaterial({ color: 0x4A2810 });
+  const ring = new THREE.Mesh(ringGeom, woodMat);
+  ring.rotation.x = Math.PI / 2;
+  group.add(ring);
+  for (let i = 0; i < 8; i++) {
+    const spokeGeom = new THREE.CylinderGeometry(0.015, 0.015, 0.3, 4);
+    const spoke = new THREE.Mesh(spokeGeom, woodMat);
+    const angle = (i / 8) * Math.PI * 2;
+    spoke.position.set(Math.cos(angle) * 0.15, 0.15, Math.sin(angle) * 0.15);
+    spoke.lookAt(new THREE.Vector3(Math.cos(angle) * 0.3, 0, Math.sin(angle) * 0.3));
+    group.add(spoke);
+  }
+  const postGeom = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 6);
+  const post = new THREE.Mesh(postGeom, woodMat);
+  post.position.y = -0.15;
+  group.add(post);
+  return group;
+}
+
+function createAnchor() {
+  const group = new THREE.Group();
+  const ironMat = new THREE.MeshPhongMaterial({ color: 0x444444, specular: 0x888888 });
+  const shankGeom = new THREE.CylinderGeometry(0.03, 0.03, 0.8, 6);
+  const shank = new THREE.Mesh(shankGeom, ironMat);
+  group.add(shank);
+  const ringGeom = new THREE.TorusGeometry(0.08, 0.015, 8, 16);
+  const ring = new THREE.Mesh(ringGeom, ironMat);
+  ring.position.y = 0.4;
+  group.add(ring);
+  for (let side = -1; side <= 1; side += 2) {
+    const armGeom = new THREE.CylinderGeometry(0.025, 0.015, 0.35, 6);
+    armGeom.rotateZ(side * 0.8);
+    const arm = new THREE.Mesh(armGeom, ironMat);
+    arm.position.set(side * 0.12, -0.3, 0);
+    group.add(arm);
+    const flukeGeom = new THREE.ConeGeometry(0.04, 0.12, 4);
+    const fluke = new THREE.Mesh(flukeGeom, ironMat);
+    fluke.position.set(side * 0.25, -0.45, 0);
+    fluke.rotation.z = -side * 0.5;
+    group.add(fluke);
+  }
+  group.rotation.z = Math.PI * 0.05;
+  return group;
+}
+
+function createCannon() {
+  const group = new THREE.Group();
+  const ironMat = new THREE.MeshPhongMaterial({ color: 0x333333, specular: 0x666666 });
+  const barrelGeom = new THREE.CylinderGeometry(0.06, 0.08, 0.7, 8);
+  barrelGeom.rotateX(Math.PI / 2);
+  const barrel = new THREE.Mesh(barrelGeom, ironMat);
+  barrel.position.z = 0.3;
+  barrel.castShadow = true;
+  group.add(barrel);
+  const mountGeom = new THREE.BoxGeometry(0.2, 0.08, 0.4);
+  const woodMat = new THREE.MeshPhongMaterial({ color: 0x5C3317 });
+  const mount = new THREE.Mesh(mountGeom, woodMat);
+  mount.position.y = -0.1;
+  group.add(mount);
+  const wheelGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.04, 12);
+  wheelGeom.rotateZ(Math.PI / 2);
+  const wheelL = new THREE.Mesh(wheelGeom, woodMat);
+  wheelL.position.set(-0.12, -0.16, 0);
+  group.add(wheelL);
+  const wheelR = wheelL.clone();
+  wheelR.position.x = 0.12;
+  group.add(wheelR);
+  return group;
+}
+
+function createRigging() {
+  const ropeMat = new THREE.LineBasicMaterial({ color: 0x8B7355, linewidth: 1 });
+  const rigPoints = [
+    [[0, 7, -0.5], [0.8, 0.3, 3]],
+    [[0, 7, -0.5], [-0.8, 0.3, 3]],
+    [[0, 7, -0.5], [0.8, 0.3, -2]],
+    [[0, 7, -0.5], [-0.8, 0.3, -2]],
+    [[0, 5.5, 1.8], [0.8, 0.3, 3]],
+    [[0, 5.5, 1.8], [-0.8, 0.3, 3]],
+    [[0, 0.6, 5.5], [0, 5.5, 1.8]],
+    [[0, 0.6, 5.5], [0, 5.5, -0.5]]
+  ];
+  rigPoints.forEach(([start, end]) => {
+    const geom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(...start), new THREE.Vector3(...end)
+    ]);
+    scene.add(new THREE.Line(geom, ropeMat));
+  });
+}
+
+// ============ ЛОГИКА ИГРЫ ============
+let gameState = 'start'; // start, exploring, quiz, final
+
+function startGame() {
+  gameState = 'exploring';
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('topBar').style.display = 'flex';
+  document.getElementById('partsPanel').style.display = 'block';
+  document.getElementById('viewButtons').style.display = 'flex';
+  showGuide('welcome');
+  highlightCurrentPart();
+  animate();
+}
+
+function buildPartsList() {
+  const panel = document.getElementById('partsPanel');
+  panel.innerHTML = '<div style="font-size:11px;color:#00d4ff;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Комплектующие</div>';
+  SHIP_PARTS.forEach((part, i) => {
+    const div = document.createElement('div');
+    div.className = 'part-item' + (i === 0 ? ' current' : '');
+    div.id = 'part-item-' + part.id;
+    div.innerHTML = `<div class="part-dot"></div><div class="part-name">${part.name}</div>`;
+    div.onclick = () => focusOnPart(part.id);
+    panel.appendChild(div);
+  });
+}
+
+function updateProgress() {
+  const pct = (foundParts.size / SHIP_PARTS.length) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = foundParts.size + '/' + SHIP_PARTS.length;
+  document.getElementById('roundBadge').textContent = 'Раунд ' + currentRound + '/4';
+}
+
+function showGuide(key) {
+  const panel = document.getElementById('guidePanel');
+  panel.classList.remove('hidden');
+  document.getElementById('guideText').textContent = GUIDE_SCRIPTS[key] || key;
+  const hintEl = document.getElementById('guideHint');
+  if (currentRound <= 2 && !foundParts.has(SHIP_PARTS[currentPartIndex]?.id)) {
+    hintEl.style.display = 'block';
+    const part = SHIP_PARTS[currentPartIndex];
+    if (part) {
+      const dir = getPartDirection(part);
+      hintEl.textContent = 'Подсказка: посмотрите ' + dir;
+    }
+  } else {
+    hintEl.style.display = 'none';
+  }
+}
+
+function getPartDirection(part) {
+  const pos = part.position;
+  if (pos[2] > 2) return 'в сторону носа →';
+  if (pos[2] < -2) return 'в сторону кормы ←';
+  if (pos[0] > 0.5) return 'на правый борт';
+  if (pos[0] < -0.5) return 'на левый борт';
+  if (pos[1] > 2) return 'наверх (мачты)';
+  return 'на центр корпуса';
+}
+
+function highlightCurrentPart() {
+  if (currentPartIndex >= SHIP_PARTS.length) return;
+  const part = SHIP_PARTS[currentPartIndex];
+  const item = document.getElementById('part-item-' + part.id);
+  document.querySelectorAll('.part-item').forEach(el => el.classList.remove('current'));
+  if (item) {
+    item.classList.add('current');
+    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  showGuide(part.id);
+  updateArrow(part);
+}
+
+function updateArrow(part) {
+  if (!part || gameState !== 'exploring') {
+    document.getElementById('arrowIndicator').style.display = 'none';
+    arrowVisible = false;
+    return;
+  }
+  arrowVisible = true;
+  const el = document.getElementById('arrowIndicator');
+  el.style.display = 'block';
+  document.getElementById('arrowLabel').textContent = part.name;
+  // Arrow position updated in render loop
+}
+
+function checkClick(event) {
+  if (gameState !== 'exploring') return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(shipGroup.children, true);
+
+  for (const hit of intersects) {
+    let obj = hit.object;
+    while (obj.parent && obj.parent !== shipGroup) obj = obj.parent;
+    const name = obj.name;
+    const partIdx = SHIP_PARTS.findIndex(p => p.id === name);
+    if (partIdx >= 0 && !foundParts.has(name)) {
+      foundPart(name, partIdx);
+      return;
+    }
+  }
+}
+
+function foundPart(partId, partIdx) {
+  foundParts.add(partId);
+  const part = SHIP_PARTS[partIdx];
+  showNotification('Найдено: ' + part.name + ' — ' + part.desc, 'success');
+
+  const item = document.getElementById('part-item-' + partId);
+  if (item) item.classList.add('found');
+
+  // Визуальная отметка на модели
+  const obj = shipGroup.getObjectByName(partId);
+  if (obj) {
+    const origColor = obj.material?.color?.clone();
+    if (obj.material) {
+      obj.material.emissive = new THREE.Color(0x00ff88);
+      obj.material.emissiveIntensity = 0.5;
+      setTimeout(() => {
+        if (obj.material) {
+          obj.material.emissiveIntensity = 0;
+        }
+      }, 2000);
+    }
+  }
+
+  updateProgress();
+
+  if (foundParts.size === SHIP_PARTS.length) {
+    currentRound = 3;
+    updateProgress();
+    setTimeout(() => {
+      showGuide('quiz_intro');
+      currentRound = 3;
+      updateProgress();
+      setTimeout(startQuiz, 2000);
+    }, 2500);
+  } else {
+    // Следующая деталь
+    currentPartIndex = SHIP_PARTS.findIndex(p => !foundParts.has(p.id));
+    if (currentPartIndex >= 0) {
+      setTimeout(() => highlightCurrentPart(), 1500);
+    }
+  }
+}
+
+// ============ ВИКТОРИНА ============
+function startQuiz() {
+  gameState = 'quiz';
+  currentRound = 3;
+  updateProgress();
+  document.getElementById('arrowIndicator').style.display = 'none';
+  quizIndex = 0;
+  quizScore = 0;
+  showQuizQuestion();
+}
+
+function showQuizQuestion() {
+  if (quizIndex >= SHIP_PARTS.length) {
+    finishQuiz();
+    return;
+  }
+  const part = SHIP_PARTS[quizIndex];
+  const overlay = document.getElementById('quizOverlay');
+  overlay.classList.add('active');
+  document.getElementById('quizTitle').textContent = 'Викторина — Вопрос ' + (quizIndex + 1) + '/' + SHIP_PARTS.length;
+  document.getElementById('quizQuestion').textContent = part.quiz.question;
+  document.getElementById('quizScore').textContent = 'Правильных ответов: ' + quizScore + '/' + quizIndex;
+  document.getElementById('quizNext').style.display = 'none';
+
+  const optionsEl = document.getElementById('quizOptions');
+  optionsEl.innerHTML = '';
+  part.quiz.options.forEach((opt, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'quiz-option';
+    btn.textContent = String.fromCharCode(65 + i) + ') ' + opt;
+    btn.onclick = () => answerQuiz(i, part.quiz.correct);
+    optionsEl.appendChild(btn);
+  });
+}
+
+function answerQuiz(selected, correct) {
+  const options = document.querySelectorAll('.quiz-option');
+  options.forEach((opt, i) => {
+    opt.onclick = null;
+    if (i === correct) opt.classList.add('correct');
+    if (i === selected && selected !== correct) opt.classList.add('wrong');
+  });
+  if (selected === correct) quizScore++;
+  document.getElementById('quizScore').textContent = 'Правильных ответов: ' + quizScore + '/' + (quizIndex + 1);
+  document.getElementById('quizNext').style.display = 'inline-block';
+}
+
+function nextQuizQuestion() {
+  quizIndex++;
+  showQuizQuestion();
+}
+
+function finishQuiz() {
+  document.getElementById('quizOverlay').classList.remove('active');
+  currentRound = 4;
+  updateProgress();
+
+  const pct = Math.round((quizScore / SHIP_PARTS.length) * 100);
+  let rank;
+  if (pct >= 90) rank = 'Адмирал флота';
+  else if (pct >= 70) rank = 'Капитан';
+  else if (pct >= 50) rank = 'Матрос';
+  else rank = 'Юнга';
+
+  document.getElementById('finalParts').textContent = 'Деталей найдено: ' + foundParts.size + '/' + SHIP_PARTS.length;
+  document.getElementById('finalScore').textContent = quizScore + '/' + SHIP_PARTS.length;
+  document.getElementById('finalRank').textContent = 'Звание: ' + rank + ' (' + pct + '%)';
+
+  setTimeout(() => {
+    document.getElementById('finalScreen').classList.add('active');
+  }, 1000);
+}
+
+// ============ УПРАВЛЕНИЕ ВИДОМ ============
+function setView(view) {
+  autoRotate = false;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  switch(view) {
+    case 'auto': autoRotate = true; break;
+    case 'front': targetCameraPos = new THREE.Vector3(0, 2, 12); break;
+    case 'back': targetCameraPos = new THREE.Vector3(0, 2, -12); break;
+    case 'left': targetCameraPos = new THREE.Vector3(-12, 2, 0); break;
+    case 'right': targetCameraPos = new THREE.Vector3(12, 2, 0); break;
+    case 'top': targetCameraPos = new THREE.Vector3(0, 14, 0.1); break;
+    case 'deck': targetCameraPos = new THREE.Vector3(2, 1.5, -1); break;
+  }
+}
+
+function focusOnPart(partId) {
+  const part = SHIP_PARTS.find(p => p.id === partId);
+  if (!part) return;
+  autoRotate = false;
+  const p = part.position;
+  const dir = new THREE.Vector3(p[0], p[1] + 2, p[2]).normalize();
+  targetCameraPos = new THREE.Vector3(
+    p[0] + dir.x * 5,
+    Math.max(p[1] + 2, 2),
+    p[2] + dir.z * 5
+  );
+  targetLookAt = new THREE.Vector3(p[0], p[1], p[2]);
+
+  // Highlight glow
+  const obj = shipGroup.getObjectByName(partId);
+  if (obj && obj.material) {
+    obj.material.emissive = new THREE.Color(0x00d4ff);
+    obj.material.emissiveIntensity = 0.4;
+    setTimeout(() => { if (obj.material) obj.material.emissiveIntensity = 0; }, 3000);
+  }
+
+  if (gameState === 'exploring') {
+    const idx = SHIP_PARTS.findIndex(p2 => p2.id === partId);
+    if (idx >= 0) {
+      currentPartIndex = idx;
+      highlightCurrentPart();
+    }
+  }
+}
+
+function toggleExplode() {
+  exploded = !exploded;
+  const factor = exploded ? 1.5 : 1;
+  SHIP_PARTS.forEach(part => {
+    const obj = shipGroup.getObjectByName(part.id);
+    if (obj) {
+      const tp = part.position;
+      if (exploded) {
+        obj.userData.savedPos = obj.position.clone();
+        obj.position.x = tp[0] * factor;
+        obj.position.y = tp[1] * factor;
+        obj.position.z = tp[2] * factor;
+      } else if (obj.userData.savedPos) {
+        obj.position.copy(obj.userData.savedPos);
+      }
+    }
+  });
+}
+
+// ============ УВЕДОМЛЕНИЯ ============
+function showNotification(text, type) {
+  const el = document.getElementById('notification');
+  el.textContent = text;
+  el.className = 'notification ' + type + ' show';
+  setTimeout(() => { el.className = 'notification'; }, 4000);
+}
+
+// ============ РЕНДЕР ============
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  // Камера
+  if (autoRotate) {
+    const radius = 10;
+    camera.position.x = Math.sin(t * 0.15) * radius;
+    camera.position.z = Math.cos(t * 0.15) * radius;
+    camera.position.y = 3 + Math.sin(t * 0.1) * 1;
+    camera.lookAt(0, 0, 0);
+  } else if (targetCameraPos) {
+    camera.position.lerp(targetCameraPos, 0.03);
+    camera.lookAt(targetLookAt);
+    if (camera.position.distanceTo(targetCameraPos) < 0.1) targetCameraPos = null;
+  }
+
+  // Анимация воды
+  const water = scene.getObjectByName('water');
+  if (water) {
+    const pos = water.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      pos.setZ(i, Math.sin(x * 0.3 + t) * 0.15 + Math.cos(y * 0.2 + t * 0.7) * 0.1);
+    }
+    pos.needsUpdate = true;
+  }
+
+  // Покачивание корабля
+  shipGroup.rotation.z = Math.sin(t * 0.5) * 0.02;
+  shipGroup.position.y = Math.sin(t * 0.3) * 0.1;
+
+  // Флажок
+  const flag = shipGroup.getObjectByName('flag');
+  if (flag) {
+    flag.rotation.y = Math.sin(t * 3) * 0.15;
+  }
+
+  // Стрелка-указатель позиция
+  if (arrowVisible && currentPartIndex < SHIP_PARTS.length) {
+    const part = SHIP_PARTS[currentPartIndex];
+    const worldPos = new THREE.Vector3(...part.position);
+    shipGroup.localToWorld(worldPos);
+    worldPos.project(camera);
+    const x = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-worldPos.y * 0.5 + 0.5) * window.innerHeight;
+    const el = document.getElementById('arrowIndicator');
+    el.style.left = x + 'px';
+    el.style.top = (y - 50) + 'px';
+    // Пульсация
+    el.style.opacity = 0.5 + Math.sin(t * 4) * 0.5;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ============ СОБЫТИЯ ============
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+document.getElementById('canvas3d').addEventListener('click', checkClick);
+
+// Вращение мышью (правая кнопка или зажатая)
+let isDragging = false;
+let prevMouse = { x: 0, y: 0 };
+let cameraTheta = 0;
+let cameraPhi = 0.5;
+let cameraRadius = 10;
+
+document.addEventListener('mousedown', (e) => {
+  if (e.button === 0 && gameState === 'exploring') {
+    // Левая кнопка — уже обрабатывается через click
+  }
+  if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
+    isDragging = true;
+    prevMouse = { x: e.clientX, y: e.clientY };
+    autoRotate = false;
+    targetCameraPos = null;
+  }
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  cameraTheta -= dx * 0.005;
+  cameraPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, cameraPhi - dy * 0.005));
+  prevMouse = { x: e.clientX, y: e.clientY };
+
+  camera.position.x = Math.sin(cameraTheta) * Math.cos(cameraPhi) * cameraRadius;
+  camera.position.y = Math.sin(cameraPhi) * cameraRadius;
+  camera.position.z = Math.cos(cameraTheta) * Math.cos(cameraPhi) * cameraRadius;
+  camera.lookAt(0, 0, 0);
+});
+
+document.addEventListener('mouseup', () => { isDragging = false; });
+
+document.addEventListener('wheel', (e) => {
+  cameraRadius = Math.max(5, Math.min(25, cameraRadius + e.deltaY * 0.01));
+});
+
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Клавиатура
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' && currentPartIndex < SHIP_PARTS.length - 1) {
+    currentPartIndex++;
+    highlightCurrentPart();
+  } else if (e.key === 'ArrowLeft' && currentPartIndex > 0) {
+    currentPartIndex--;
+    highlightCurrentPart();
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    if (currentPartIndex < SHIP_PARTS.length) {
+      focusOnPart(SHIP_PARTS[currentPartIndex].id);
+    }
+  } else if (e.key === 'r' || e.key === 'R') {
+    autoRotate = !autoRotate;
+  }
+});
+
+// ============ СТАРТ ============
+initScene();
+animate();
+</script>
+</body>
+</html>

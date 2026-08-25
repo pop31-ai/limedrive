@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>A320neo — Интерактивная модель</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080810;color:#bbb;font-family:'Courier New',monospace;overflow:hidden;height:100vh}
+#game{display:flex;flex-direction:column;height:100vh}
+#topBar{display:flex;justify-content:space-between;align-items:center;padding:5px 14px;background:#0e0e1a;border-bottom:1px solid #222;font-size:11px}
+#topBar .title{color:#4af;font-weight:bold}
+#topBar .info{color:#888}
+#mainArea{display:flex;flex:1;overflow:hidden}
+#canvasWrap{flex:1;display:flex;align-items:center;justify-content:center;background:#060610;position:relative}
+canvas{image-rendering:pixelated}
+#sidePanel{width:280px;background:#0b0b16;border-left:1px solid #222;display:flex;flex-direction:column}
+#locLabel{text-align:center;padding:7px;background:#12122a;font-size:12px;color:#4af;border-bottom:1px solid #222;font-weight:bold}
+#sceneDesc{padding:8px;font-size:10px;line-height:1.6;flex:1;overflow-y:auto;color:#999;border-bottom:1px solid #1a1a2a;white-space:pre-line}
+#dialogHistory{max-height:160px;overflow-y:auto;padding:6px;font-size:10px;line-height:1.5;border-bottom:1px solid #1a1a2a}
+.dl{margin-bottom:3px}
+.dl .s{font-weight:bold}
+.dl .s.p{color:#4af}
+.dl .s.c{color:#4f4}
+.dl .s.x{color:#fa4}
+#choices{display:flex;flex-direction:column;max-height:220px;overflow-y:auto}
+.cb{background:#14142a;border:1px solid #222;color:#bbb;padding:7px 10px;text-align:left;cursor:pointer;font-family:inherit;font-size:10px;transition:all .12s}
+.cb:hover{background:#222248;color:#fff;border-color:#55f}
+#bottomBar{padding:5px 14px;background:#0e0e1a;border-top:1px solid #222;font-size:9px;color:#555;display:flex;justify-content:space-between}
+#labelToggle{position:absolute;top:8px;right:8px;z-index:10}
+#labelToggle button{background:#1a1a3a;border:1px solid #444;color:#aaa;padding:4px 10px;cursor:pointer;font-family:inherit;font-size:10px;border-radius:3px}
+#labelToggle button:hover{background:#2a2a5a;color:#fff}
+#labelToggle button.active{background:#2a4a2a;border-color:#4a4;color:#4f4}
+</style>
+</head>
+<body>
+<div id="game">
+<div id="topBar">
+<div class="title">✈ A320neo — Интерактивная модель</div>
+<div class="info">Рейс SU-1492 | 156/180 пасс. | Экипаж: 6</div>
+</div>
+<div id="mainArea">
+<div id="canvasWrap">
+<canvas id="cvs" width="860" height="580"></canvas>
+<div id="labelToggle"><button id="lblBtn" class="active">Подписи: ВКЛ</button></div>
+</div>
+<div id="sidePanel">
+<div id="locLabel"></div>
+<div id="sceneDesc"></div>
+<div id="dialogHistory"></div>
+<div id="choices"></div>
+</div>
+</div>
+<div id="bottomBar">
+<span>[A/D] движение | [E] говорить | [L] подписи | [C] схема</span>
+<span id="counter"></span>
+</div>
+</div>
+<script>
+const cvs=document.getElementById('cvs');
+const ctx=cvs.getContext('2d');
+const W=860,H=580;
+let af=0,labelsOn=true,loc='cockpit',view='walk';
+let dlLog=[];
+
+const P=[
+{id:0,name:'Старушка Зинаида',seat:'3A',mood:'спокойная',av:'old'},
+{id:1,name:'Бизнесмен Олег',seat:'5C',mood:'раздражён',av:'biz'},
+{id:2,name:'Мама с малышом',seat:'7F',mood:'уставшая',av:'mom'},
+{id:3,name:'Турист Дима',seat:'10A',mood:'восторг',av:'cap'},
+{id:4,name:'Стюардесса Наташа',seat:'проход',mood:'профи',av:'stf'},
+{id:5,name:'Пожилой мужчина',seat:'12C',mood:'сонный',av:'slp'},
+{id:6,name:'Девушка в наушниках',seat:'14A',mood:'релакс',av:'hrp'},
+{id:7,name:'Стюардесса Лена',seat:'проход',mood:'улыбка',av:'stf2'},
+{id:8,name:'Нервный пассажир',seat:'18F',mood:'тревога',av:'nrv'},
+{id:9,name:'Близнецы Катя и Дима',seat:'20AB',mood:'игры',av:'tw'},
+{id:10,name:'Капитан Волков',seat:'кабина',mood:'спокойствие',av:'cpt'},
+{id:11,name:'Копилот Егоров',seat:'кабина',mood:'сосредоточен',av:'co'},
+{id:12,name:'Бортинженер Петров',seat:'кабина',mood:'мониторинг',av:'eng'},
+{id:13,name:'Пассажир с кошкой',seat:'15A',mood:'мяу',av:'cat'},
+{id:14,name:'Спортсмен Артём',seat:'22D',mood:'растяжка',av:'spr'},
+{id:15,name:'Студентка Аня',seat:'8C',mood:'учёба',av:'stu'},
+{id:16,name:'Пилот (авто)',seat:'кабина',mood:'автопилот',av:'ap'},
+{id:17,name:'Бортрадист',seat:'проход',mood:'обслуживание',av:'rdo'}
+];
+
+const L={
+cockpit:{name:'Кабина пилотов',desc:'Glass cockpit A320neo.\nДва ЖК-дисплея PFD/ND, центральный ECAM.\nПанель FCU управления автопилотом.\nБоковые стики, рычаги тяги.',nl:{left:'door1',right:null}},
+door1:{name:'Передняя дверь / Галерея',desc:'Люк кабины пилотов.\nКофемашина, мини-буфет.\nСтартовая точка салона.',nl:{left:'cockpit',right:'row1'}},
+row1:{name:'Ряды 1-4: Бизнес-класс',desc:'Широкие кожаные кресла 2-2.\nБольше пространства, quieter zone.',nl:{left:'door1',right:'row5'},ps:[1]},
+row5:{name:'Ряды 5-10: Эконом (начало)',desc:'Кресла 3-3 в ряд.\nОсновной салон эконом-класса.\nЗапах кофе и пластика.',nl:{left:'row1',right:'row11'},ps:[0,2,3,15]},
+row11:{name:'Ряды 11-15: Середина',desc:'Зона аварийных выходов.\nТуалеты слева и справа.\nСтюарды работают тут.',nl:{left:'row5',right:'row16'},ps:[4,6,7,13]},
+row16:{name:'Ряды 16-22: Задняя часть',desc:'Конец салона.\nШумнее, сильнее вибрация.\nБлиже к хвосту.',nl:{left:'row11',right:'tail'},ps:[5,8,9,14]},
+tail:{name:'Хвост / Аварийный выход №3',desc:'Дверь аварийного выхода.\nНадувная горка Slide.\nЗона стюарда.',nl:{left:'row16',right:null}}
+};
+
+const DL=[
+// === COCKPIT (30) ===
+{z:'cockpit',x:200,y:210,t:'PFD — Primary Flight Display',c:'#0ff'},
+{z:'cockpit',x:200,y:350,t:'Искусственный горизонт',c:'#ff0'},
+{z:'cockpit',x:115,y:280,t:'Лента скорости (250kt)',c:'#0f0'},
+{z:'cockpit',x:290,y:280,t:'Лента высоты (FL350)',c:'#0f0'},
+{z:'cockpit',x:200,y:480,t:'Курс HDG 274°',c:'#ff0'},
+{z:'cockpit',x:630,y:210,t:'ND — Navigation Display',c:'#0ff'},
+{z:'cockpit',x:630,y:350,t:'Компас / Маршрут',c:'#ff0'},
+{z:'cockpit',x:580,y:475,t:'GS 487 км/ч',c:'#0f0'},
+{z:'cockpit',x:680,y:475,t:'Дистанция 40 NM',c:'#0f0'},
+{z:'cockpit',x:430,y:230,t:'ECAM — Engine Warning',c:'#0f0'},
+{z:'cockpit',x:430,y:330,t:'Параметры двигателей N1/EGT',c:'#0f0'},
+{z:'cockpit',x:430,y:400,t:'Остаток топлива 12.4T',c:'#ff0'},
+{z:'cockpit',x:350,y:455,t:'FCU — Панель автопилота',c:'#aaa'},
+{z:'cockpit',x:165,y:450,t:'SPD 250kt',c:'#0f0'},
+{z:'cockpit',x:255,y:450,t:'HDG 274°',c:'#0f0'},
+{z:'cockpit',x:345,y:450,t:'ALT FL350',c:'#0f0'},
+{z:'cockpit',x:435,y:450,t:'VS +500',c:'#0f0'},
+{z:'cockpit',x:520,y:450,t:'AP1 — Автопилот',c:'#0f0'},
+{z:'cockpit',x:560,y:450,t:'AP2',c:'#06f'},
+{z:'cockpit',x:600,y:450,t:'FD — Flight Director',c:'#06f'},
+{z:'cockpit',x:125,y:505,t:'Боковой стик L (капитан)',c:'#fa4'},
+{z:'cockpit',x:735,y:505,t:'Боковой стик R (копилот)',c:'#fa4'},
+{z:'cockpit',x:430,y:510,t:'Рычаги тяги (Throttle ×2)',c:'#888'},
+{z:'cockpit',x:200,y:550,t:'Педали руления',c:'#666'},
+{z:'cockpit',x:250,y:80,t:'Лобовое стекло (капитан)',c:'#5588cc'},
+{z:'cockpit',x:550,y:80,t:'Лобовое стекло (копилот)',c:'#5588cc'},
+{z:'cockpit',x:430,y:55,t:'Стеклоочиститель',c:'#888'},
+{z:'cockpit',x:350,y:150,t:'Потолочная панель (Glare Shield)',c:'#444'},
+{z:'cockpit',x:680,y:150,t:'Зеркало заднего вида',c:'#888'},
+{z:'cockpit',x:430,y:370,t:'Мониторинг топлива / гидравлика',c:'#ff0'},
+// === CABIN row5 (20) ===
+{z:'row5',x:430,y:105,t:'Потолочные багажники (Luggage Bins)',c:'#888'},
+{z:'row5',x:60,y:200,t:'Окно левое (Window)',c:'#5588cc'},
+{z:'row5',x:800,y:200,t:'Окно правое',c:'#5588cc'},
+{z:'row5',x:170,y:340,t:'Кресло 3A',c:'#446'},
+{z:'row5',x:210,y:340,t:'Кресло 3B',c:'#446'},
+{z:'row5',x:250,y:340,t:'Кресло 3C',c:'#446'},
+{z:'row5',x:490,y:340,t:'Кресло 3D',c:'#446'},
+{z:'row5',x:530,y:340,t:'Кресло 3E',c:'#446'},
+{z:'row5',x:570,y:340,t:'Кресло 3F',c:'#446'},
+{z:'row5',x:430,y:310,t:'Проход (Aisle)',c:'#aaa'},
+{z:'row5',x:140,y:290,t:'Подлокотник',c:'#555'},
+{z:'row5',x:170,y:260,t:'Откидной столик (Tray Table)',c:'#555'},
+{z:'row5',x:80,y:160,t:'Кислородная маска (Drop-down)',c:'#f44'},
+{z:'row5',x:430,y:90,t:'Чтение свет (Reading Light)',c:'#ff0'},
+{z:'row5',x:430,y:115,t:'Решётка вентиляции (Air Vent)',c:'#888'},
+{z:'row5',x:220,y:130,t:'Табло "Ремни" (Seatbelt Sign)',c:'#0f0'},
+{z:'row5',x:640,y:130,t:'Табло "Не курить"',c:'#0f0'},
+{z:'row5',x:360,y:490,t:'Пассажир (Вы)',c:'#4af'},
+{z:'row5',x:230,y:430,t:'Карман кресла (Seat Pocket)',c:'#555'},
+{z:'row5',x:620,y:430,t:'Журнал / инструкция безопасности',c:'#666'},
+// === CABIN row11 (10) ===
+{z:'row11',x:200,y:140,t:'Туалет Left (Lavatory)',c:'#a8f'},
+{z:'row11',x:650,y:140,t:'Туалет Right',c:'#a8f'},
+{z:'row11',x:430,y:180,t:'Знак "Занято / Свободно"',c:'#f44'},
+{z:'row11',x:150,y:280,t:'Зеркало в проходе',c:'#888'},
+{z:'row11',x:700,y:280,t:'Пожарный датчик (Smoke Detector)',c:'#f44'},
+{z:'row11',x:430,y:120,t:'Кнопка вызова стюарда (Call Button)',c:'#ff0'},
+{z:'row11',x:300,y:160,t:'Блокиратор ремней (Seatbelt Lock)',c:'#aaa'},
+{z:'row11',x:560,y:160,t:'Кресло стюарда (Jump Seat)',c:'#444'},
+{z:'row11',x:430,y:250,t:'План аварийной эвакуации',c:'#0f0'},
+{z:'row11',x:430,y:350,t:'Пол (Antistatic Carpet)',c:'#333'},
+// === CABIN row16 (10) ===
+{z:'row16',x:180,y:130,t:'Аварийный светильник',c:'#ff0'},
+{z:'row16',x:680,y:130,t:'Аварийный светильник',c:'#ff0'},
+{z:'row16',x:430,y:160,t:'Знак "Пристегните ремни"',c:'#ff0'},
+{z:'row16',x:120,y:300,t:'Розетка USB (Power Outlet)',c:'#0f0'},
+{z:'row16',x:740,y:300,t:'Розетка USB',c:'#0f0'},
+{z:'row16',x:300,y:180,t:'Камера наблюдения (CCTV)',c:'#888'},
+{z:'row16',x:560,y:180,t:'Датчик дыма',c:'#f80'},
+{z:'row16',x:430,y:400,t:'Шторка между классами (Curtain)',c:'#444'},
+{z:'row16',x:430,y:280,t:'Противоударная стенка (Bulkhead)',c:'#555'},
+{z:'row16',x:430,y:480,t:'Ковровое покрытие',c:'#333'},
+// === CABIN door1 (5) ===
+{z:'door1',x:200,y:200,t:'Люк кабины пилотов',c:'#888'},
+{z:'door1',x:500,y:200,t:'Кофемашина (Coffee Maker)',c:'#a85'},
+{z:'door1',x:430,y:350,t:'Тележка с напитками (Galley Cart)',c:'#aaa'},
+{z:'door1',x:300,y:400,t:'Буфет / Хранилище',c:'#666'},
+{z:'door1',x:600,y:400,t:'Передняя аварийная дверь L1',c:'#f44'},
+// === TAIL (15) ===
+{z:'tail',x:430,y:75,t:'Аварийный выход №3 (Emergency Exit)',c:'#f44'},
+{z:'tail',x:430,y:165,t:'Дверной замок (Door Lock)',c:'#ff0'},
+{z:'tail',x:430,y:245,t:'Ручка открывания (Door Handle)',c:'#ff0'},
+{z:'tail',x:430,y:335,t:'Надувная горка (Evacuation Slide)',c:'#0f0'},
+{z:'tail',x:430,y:365,t:'Статус: SLIDE ARMED',c:'#0f0'},
+{z:'tail',x:430,y:425,t:'Рамка EXIT (Exit Frame)',c:'#0f0'},
+{z:'tail',x:430,y:465,t:'Инструкция ISO (pictogram)',c:'#aaa'},
+{z:'tail',x:310,y:200,t:'Стенка фюзеляжа (Fuselage Wall)',c:'#555'},
+{z:'tail',x:550,y:200,t:'Обшивка (Skin Panel)',c:'#555'},
+{z:'tail',x:430,y:505,t:'Уплотнитель двери (Seal)',c:'#888'},
+{z:'tail',x:340,y:135,t:'Камера наблюдения',c:'#888'},
+{z:'tail',x:520,y:135,t:'Датчик давления (Pressure)',c:'#0ff'},
+{z:'tail',x:355,y:310,t:'Поручень (Handrail)',c:'#aaa'},
+{z:'tail',x:505,y:310,t:'Поручень (Handrail)',c:'#aaa'},
+{z:'tail',x:430,y:540,t:'Противоскользящий пол',c:'#666'},
+// === FUSELAGE схема (20) ===
+{z:'fuselage',x:430,y:22,t:'Сечение фюзеляжа A320neo',c:'#4af'},
+{z:'fuselage',x:430,y:562,t:'∅ 3.95м | Длина 37.57м | Размах 35.8м',c:'#888'},
+{z:'fuselage',x:250,y:125,t:'Левый борт (Port Side)',c:'#555'},
+{z:'fuselage',x:610,y:125,t:'Правый борт (Starboard)',c:'#555'},
+{z:'fuselage',x:235,y:220,t:'Окно левое',c:'#5588cc'},
+{z:'fuselage',x:625,y:220,t:'Окно правое',c:'#5588cc'},
+{z:'fuselage',x:295,y:305,t:'Кресло 3A (окно)',c:'#335'},
+{z:'fuselage',x:335,y:305,t:'Кресло 3B (середина)',c:'#335'},
+{z:'fuselage',x:375,y:305,t:'Кресло 3C (проход)',c:'#335'},
+{z:'fuselage',x:490,y:305,t:'Кресло 3D (проход)',c:'#335'},
+{z:'fuselage',x:530,y:305,t:'Кресло 3E (середина)',c:'#335'},
+{z:'fuselage',x:570,y:305,t:'Кресло 3F (окно)',c:'#335'},
+{z:'fuselage',x:430,y:340,t:'Проход (Aisle)',c:'#aaa'},
+{z:'fuselage',x:430,y:370,t:'Пол салона (Floor Panel)',c:'#333'},
+{z:'fuselage',x:285,y:155,t:'Багажник верхний (Overhead Bin)',c:'#444'},
+{z:'fuselage',x:575,y:155,t:'Багажник верхний',c:'#444'},
+{z:'fuselage',x:430,y:430,t:'Силовой пояс (Stringer)',c:'#555'},
+{z:'fuselage',x:260,y:450,t:'Нижний багажник (Cargo Hold)',c:'#333'},
+{z:'fuselage',x:600,y:450,t:'Нижний багажник',c:'#333'},
+{z:'fuselage',x:360,y:395,t:'Игрок (Вы)',c:'#4af'}
+];
+
+// === Утилиты отрисовки ===
+function setFill(c){ctx.fillStyle=c}
+function setStroke(c){ctx.strokeStyle=c}
+function setLineW(w){ctx.lineWidth=w}
+function setFont(sz){ctx.font=sz+'px Courier New'}
+function setTextAlign(a){ctx.textAlign=a}
+function fillText(t,px,py){ctx.fillText(t,px,py)}
+function strokeLine(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function fillRect(px,py,w,h){ctx.fillRect(px,py,w,h)}
+function strokeRect(px,py,w,h){ctx.strokeRect(px,py,w,h)}
+function arcPath(cx,cy,r){ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2)}
+function ellipsePath(cx,cy,rx,ry){ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2)}
+
+function drawLabel(lx,ly,text,color){
+  if(!labelsOn)return;
+  let dir=lx>W/2?1:-1;
+  let endX=lx+dir*25;
+  let endY=ly-18;
+  setStroke(color+'88');
+  setLineW(0.5);
+  strokeLine(lx,ly,endX,endY);
+  setFont(8);
+  let tw=ctx.measureText(text).width;
+  let bx=endX+(dir>0?2:-tw-2);
+  let by=endY-10;
+  fillRect(bx-3,by-2,tw+6,14);
+  setFill(color);
+  setTextAlign(dir>0?'left':'right');
+  fillText(text,bx+(dir>0?0:tw),by+9);
+  setTextAlign('left');
+}
+
+function drawLabelsFor(zone){
+  if(!labelsOn)return;
+  DL.filter(d=>d.z===zone).forEach(d=>drawLabel(d.x,d.y,d.t,d.c));
+}
+
+// === КАБИНА ПИЛОТОВ ===
+function drawCockpit(){
+  let g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#181838');g.addColorStop(0.35,'#2a2a5a');g.addColorStop(0.52,'#6a5a3a');g.addColorStop(1,'#0a0a18');
+  setFill(g);fillRect(0,0,W,H);
+
+  // Каркас лобовых стёкол
+  setStroke('#555');setLineW(5);
+  ctx.beginPath();
+  ctx.moveTo(120,55);ctx.lineTo(370,35);ctx.lineTo(490,35);ctx.lineTo(W-120,55);
+  ctx.lineTo(W-70,190);ctx.lineTo(W-70,H-160);ctx.lineTo(70,H-160);ctx.lineTo(70,190);
+  ctx.closePath();ctx.stroke();
+  setStroke('#444');setLineW(4);
+  strokeLine(370,35,350,H-160);strokeLine(490,35,510,H-160);
+
+  // Вид через стёкла — небо и земля
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(122,57,246,H-220);ctx.rect(372,37,116,H-198);ctx.rect(512,57,W-184,H-220);
+  ctx.clip();
+  let hg=ctx.createLinearGradient(0,180,0,420);
+  hg.addColorStop(0,'#2255aa');hg.addColorStop(0.45,'#4488cc');
+  hg.addColorStop(0.5,'#88aa55');hg.addColorStop(0.55,'#668844');hg.addColorStop(1,'#2a3a1a');
+  setFill(hg);fillRect(120,35,W-240,H-195);
+  setFill('rgba(200,210,230,0.25)');
+  for(let i=0;i<6;i++){
+    let cx2=170+i*120+Math.sin(af*0.008+i)*15;
+    let cy2=230+Math.sin(i*2)*25;
+    ellipsePath(cx2,cy2,55,12);ctx.fill();
+  }
+  ctx.restore();
+
+  // --- PFD (Primary Flight Display) ---
+  setFill('#000');fillRect(95,200,210,280);
+  setStroke('#0aa');setLineW(1);strokeRect(95,200,210,280);
+  let pcx=200,pcy=340;
+  ctx.save();ctx.beginPath();ctx.rect(96,201,208,278);ctx.clip();
+  setFill('#1a3a7a');fillRect(96,pcy-80,208,80);
+  setFill('#5a3a1a');fillRect(96,pcy,208,100);
+  setStroke('#fff');setLineW(2);strokeLine(96,pcy,304,pcy);
+  setLineW(1);setFont(7);setFill('#fff');setTextAlign('right');
+  for(let p=-20;p<=20;p+=10){
+    if(!p)continue;
+    let py2=pcy-p*2;let lw=p%20===0?28:14;
+    strokeLine(pcx-lw,py2,pcx+lw,py2);
+    fillText(p+'°',302,py2+3);
+  }
+  setStroke('#ff0');setLineW(2);
+  strokeLine(pcx-28,pcy,pcx-6,pcy);strokeLine(pcx+6,pcy,pcx+28,pcy);
+  strokeLine(pcx-6,pcy,pcx-6,pcy+8);strokeLine(pcx+6,pcy,pcx+6,pcy+8);
+  ctx.restore();
+  // Speed tape
+  setFill('#111');fillRect(96,201,35,278);
+  setFill('#0f0');setFont(8);setTextAlign('right');
+  for(let s=230;s<=270;s+=5){
+    let sy=pcy-(s-250)*2;
+    if(sy>205&&sy<475){fillText(s,128,sy+3);setStroke('#0f0');setLineW(1);strokeLine(96,sy,106,sy);}
+  }
+  setFill('#ff0');fillRect(96,pcy-2,37,4);
+  setTextAlign('left');
+  // Alt tape
+  setFill('#111');fillRect(269,201,35,278);
+  setFill('#0f0');setFont(8);
+  for(let a=34800;a<=35200;a+=100){
+    let ay=pcy-(a-35000)/5;
+    if(ay>205&&ay<475){fillText(a+'',272,ay+3);}
+  }
+  setFill('#000');fillRect(135,460,130,18);
+  setFill('#ff0');setFont(9);setTextAlign('center');
+  fillText('HDG 274°',200,474);setTextAlign('left');
+
+  // --- ND (Navigation Display) ---
+  setFill('#000');fillRect(525,200,210,280);
+  setStroke('#0aa');setLineW(1);strokeRect(525,200,210,280);
+  let ncx=630,ncy=350;
+  setStroke('#0f0');setLineW(1);ellipsePath(ncx,ncy,85,85);ctx.stroke();
+  setFont(7);setFill('#0f0');setTextAlign('center');
+  for(let i=0;i<360;i+=30){
+    let r=(i-90)*Math.PI/180;
+    strokeLine(ncx+75*Math.cos(r),ncy+75*Math.sin(r),ncx+88*Math.cos(r),ncy+88*Math.sin(r));
+    fillText(i+'',ncx+96*Math.cos(r),ncy+96*Math.sin(r)+3);
+  }
+  setFill('#fff');
+  ctx.beginPath();ctx.moveTo(ncx,ncy-14);ctx.lineTo(ncx-5,ncy+7);ctx.lineTo(ncx,ncy+4);ctx.lineTo(ncx+5,ncy+7);ctx.closePath();ctx.fill();
+  setStroke('#ff0');setLineW(2);ctx.setLineDash([4,3]);strokeLine(ncx,ncy-85,ncx,ncy-35);ctx.setLineDash([]);
+  setFill('#ff0');setFont(8);fillText('WPT',ncx+8,ncy-55);
+  setFill('#0f0');setFont(9);setTextAlign('left');fillText('GS 487',535,475);setTextAlign('right');fillText('40 NM',725,475);
+  setTextAlign('left');
+
+  // --- ECAM ---
+  setFill('#000');fillRect(345,220,170,220);
+  setStroke('#0f0');setLineW(1);strokeRect(345,220,170,220);
+  setFill('#0f0');setFont(9);
+  fillText('N1    89.2% 88.7%',351,242);
+  fillText('EGT   624°  618°',351,256);
+  fillText('N2    94.1% 93.8%',351,270);
+  fillText('FF    2.4T  2.3T',351,284);
+  fillText('OIL   67°   65°',351,298);
+  fillText('HYD   3000  3000',351,312);
+  fillText('        PSI   PSI',351,326);
+  setFill('#ff0');fillText('FUEL 12.4 / 12.6 T',351,390);
+  setFill('#0f0');setFont(8);fillText('ALL SYSTEMS NORMAL',351,420);
+  setFill('#fff');setFont(8);setTextAlign('center');fillText('ENGINE / WARN',430,432);setTextAlign('left');
+
+  // --- FCU ---
+  setFill('#15152a');fillRect(110,H-150,W-220,55);
+  setStroke('#333');setLineW(1);strokeRect(110,H-150,W-220,55);
+  const fcu=['SPD','HDG','ALT','VS','AP1','AP2','FD'];
+  fcu.forEach((l,i)=>{
+    let bx=135+i*85;
+    setFill(i>=4?(i===4?'#084':'#048'):'#1a1a2a');
+    fillRect(bx,H-140,55,26);
+    setStroke('#555');strokeRect(bx,H-140,55,26);
+    setFill('#fff');setFont(9);setTextAlign('center');fillText(l,bx+27,H-123);
+  });
+  setTextAlign('left');
+  setFill('#0f0');setFont(10);
+  ctx.textAlign='center';
+  fillText('250kt',177,H-105);fillText('274°',262,H-105);
+  fillText('FL350',347,H-105);fillText('+500',432,H-105);
+  ctx.textAlign='left';
+
+  // Боковые стики
+  setFill('#1a1a1a');fillRect(80,H-80,90,60);fillRect(W-170,H-80,90,60);
+  setFill('#0f0');setFont(9);setTextAlign('center');
+  fillText('STICK L',125,H-55);fillText('STICK R',W-125,H-55);
+  setTextAlign('left');
+
+  // Рычаги тяги
+  setFill('#1a1a1a');fillRect(W/2-70,H-80,140,60);
+  for(let i=0;i<2;i++){
+    let tx2=W/2-35+i*45;
+    setFill('#444');fillRect(tx2,H-72,22,48);
+    setFill('#888');fillRect(tx2+3,H-68,16,10);
+  }
+  setFill('#0f0');setFont(8);setTextAlign('center');
+  fillText('THR L',W/2-35,H-10);fillText('THR R',W/2+10,H-10);
+  setTextAlign('left');
+
+  drawLabelsFor('cockpit');
+}
+
+// === САЛОН ===
+function drawCabin(loc2){
+  let g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0b0b1a');g.addColorStop(1,'#050510');
+  setFill(g);fillRect(0,0,W,H);
+  let vx=430,vy=100;
+
+  // Потолок перспективный
+  setFill('#18182a');
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W,0);ctx.lineTo(W-50,vy);ctx.lineTo(50,vy);ctx.closePath();ctx.fill();
+  // Пол
+  setFill('#141220');
+  ctx.beginPath();ctx.moveTo(0,H);ctx.lineTo(W,H);ctx.lineTo(W-50,vy+210);ctx.lineTo(50,vy+210);ctx.closePath();ctx.fill();
+  // Левая стена
+  setFill('#12121e');
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(50,vy);ctx.lineTo(50,vy+210);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+  // Правая стена
+  ctx.beginPath();ctx.moveTo(W,0);ctx.lineTo(W-50,vy);ctx.lineTo(W-50,vy+210);ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+
+  // Багажники
+  for(let i=0;i<6;i++){
+    let t=i/6,ly=vy+t*190;
+    setFill('#1a1a28');
+    fillRect(55+t*(vx-80),ly,(vx-120)*t*0.22,14);
+    fillRect(W-55-t*(vx-80)-(vx-120)*t*0.22,ly,(vx-120)*t*0.22,14);
+  }
+
+  // Окна
+  for(let side=0;side<2;side++){
+    for(let i=0;i<8;i++){
+      let t2=i/8,wy=vy+25+t2*185;
+      let wx=side===0?28+t2*(vx-65):W-28-t2*(vx-65);
+      setFill(`rgba(80,130,220,${0.12+Math.sin(af*0.012+i)*0.04})`);
+      ellipsePath(wx,wy,3+t2*8,8+t2*14);ctx.fill();
+    }
+  }
+
+  // Кресла (перспектива)
+  for(let row=0;row<5;row++){
+    let t=row/5,ry=vy+55+t*170,rw=18+t*55;
+    let rx1=vx-rw*3.5,rx2=vx+rw*0.5;
+    for(let s=0;s<3;s++){
+      setFill('#28284a');fillRect(rx1+s*rw*0.88,ry,rw*0.65,18+t*10);
+      setStroke('#444');setLineW(0.5);strokeRect(rx1+s*rw*0.88,ry,rw*0.65,18+t*10);
+    }
+    for(let s=0;s<3;s++){
+      setFill('#28284a');fillRect(rx2+s*rw*0.88,ry,rw*0.65,18+t*10);
+      setStroke('#444');strokeRect(rx2+s*rw*0.88,ry,rw*0.65,18+t*10);
+    }
+  }
+
+  // Пассажиры (головы)
+  let ld=L[loc2];
+  if(ld&&ld.ps){
+    ld.ps.forEach((pi,idx)=>{
+      let p=P[pi];if(!p)return;
+      let row=idx%5,side=idx%2,t=row/5;
+      let py=vy+50+t*170,px=side===0?vx-45-row*12:vx+45+row*12;
+      setFill('#da8');arcPath(px,py-7,4+t*3);ctx.fill();
+      setFill('#fa4');setFont(Math.round(7+t*2)+'');
+      setTextAlign('center');fillText(p.name.split(' ')[0],px,py-14-t*3);
+      setTextAlign('left');
+    });
+  }
+
+  // Игрок в проходе
+  let py2=vy+145;
+  setStroke('#4af');setLineW(2);
+  arcPath(vx,py2-38,8);ctx.stroke();
+  strokeLine(vx,py2-30,vx,py2);
+  strokeLine(vx-13,py2-22,vx+13,py2-22);
+  strokeLine(vx,py2,vx-9,py2+14);strokeLine(vx,py2,vx+9,py2+14);
+  setFill('#4af');setFont(10);setTextAlign('center');
+  fillText('▶ Вы',vx,py2+28);setTextAlign('left');
+
+  drawLabelsFor(loc2);
+}
+
+// === ХВОСТ ===
+function drawTail(){
+  setFill('#0b0b1a');fillRect(0,0,W,H);
+  // Дверь аварийного выхода
+  setStroke('#f44');setLineW(3);strokeRect(W/2-65,H/2-105,130,210);
+  setFill('#1a1a2a');fillRect(W/2-63,H/2-103,126,206);
+  // Заголовок
+  setFill('#f44');setFont(13);setTextAlign('center');fillText('ВЫХОД',W/2,H/2-112);
+  setFont(10);fillText('EMERGENCY EXIT',W/2,H/2+130);
+  // Ручка
+  setStroke('#ff0');setLineW(3);arcPath(W/2,H/2,16);ctx.stroke();
+  setFill('#ff0');setFont(8);fillText('РУЧКА',W/2,H/2+3);
+  // Замки
+  setStroke('#777');setLineW(2);
+  strokeLine(W/2-65,H/2-55,W/2-45,H/2-55);
+  strokeLine(W/2+65,H/2-55,W/2+45,H/2-55);
+  strokeLine(W/2-65,H/2+55,W/2-45,H/2+55);
+  strokeLine(W/2+65,H/2+55,W/2+45,H/2+55);
+  // Горка
+  setFill('#0f0');setFont(9);fillText('SLIDE ARMED',W/2,H/2+150);
+  // EXIT табло
+  setFill('#0f0');fillRect(W/2-42,H/2-132,84,20);
+  setFill('#000');setFont('bold 10');fillText('EXIT →',W/2,H/2-118);
+  // Инструкция
+  setFill('#888');setFont(8);
+  fillText('1. Выдернуть ручку',W/2,H/2+170);
+  fillText('2. Вытолкнуть дверь наружу',W/2,H/2+182);
+  fillText('3. Тянуть за кольцо горки',W/2,H/2+194);
+  fillText('4. Катиться по горке вниз',W/2,H/2+206);
+  setTextAlign('left');
+
+  drawLabelsFor('tail');
+}
+
+// === СЕЧЕНИЕ ФЮЗЕЛЯЖА ===
+function drawFuselage(){
+  setFill('#080812');fillRect(0,0,W,H);
+  let fcx=430,fcy=300;
+  setStroke('#555');setLineW(2);ellipsePath(fcx,fcy,195,220);ctx.stroke();
+  setStroke('#333');setLineW(1);ellipsePath(fcx,fcy,185,210);ctx.stroke();
+  // Пол
+  setStroke('#666');setLineW(3);strokeLine(fcx-180,fcy+35,fcx+180,fcy+35);
+  // Багажники
+  setStroke('#444');setLineW(1);
+  strokeRect(fcx-175,fcy-155,55,40);strokeRect(fcx+120,fcy-155,55,40);
+  // Левые кресла 3
+  for(let i=0;i<3;i++){
+    let sx=fcx-130+i*42;
+    setFill('#335');fillRect(sx,fcy-15,35,40);
+    setFill('#3a3a6a');fillRect(sx,fcy-30,35,15);
+    setStroke('#446');setLineW(0.5);strokeRect(sx,fcy-15,35,40);
+  }
+  // Правые кресла 3
+  for(let i=0;i<3;i++){
+    let sx=fcx+50+i*42;
+    setFill('#335');fillRect(sx,fcy-15,35,40);
+    setFill('#3a3a6a');fillRect(sx,fcy-30,35,15);
+    setStroke('#446');setLineW(0.5);strokeRect(sx,fcy-15,35,40);
+  }
+  // Проход
+  setFill('#1a1a1a');fillRect(fcx-15,fcy-15,30,55);
+  // Игрок
+  setStroke('#4af');setLineW(2);
+  arcPath(fcx,fcy-50,7);ctx.stroke();
+  strokeLine(fcx,fcy-43,fcx,fcy-15);
+  strokeLine(fcx-11,fcy-35,fcx+11,fcy-35);
+  strokeLine(fcx,fcy-15,fcx-7,fcy+5);strokeLine(fcx,fcy-15,fcx+7,fcy+5);
+  // Окна
+  for(let i=0;i<5;i++){
+    let wy=fcy-130+i*50;
+    setFill(`rgba(80,130,220,${0.18+Math.sin(af*0.015+i)*0.06})`);
+    ellipsePath(fcx-198,wy,5,11);ctx.fill();
+    ellipsePath(fcx+198,wy,5,11);ctx.fill();
+  }
+  // Нижний багажник
+  setStroke('#333');setLineW(1);
+  strokeLine(fcx-150,fcy+35,fcx-150,fcy+200);
+  strokeLine(fcx+150,fcy+35,fcx+150,fcy+200);
+  strokeLine(fcx-150,fcy+200,fcx+150,fcy+200);
+
+  drawLabelsFor('fuselage');
+}
+
+// === RENDER LOOP ===
+function render(){
+  af++;
+  ctx.clearRect(0,0,W,H);
+  if(view==='fuselage')drawFuselage();
+  else if(loc==='cockpit')drawCockpit();
+  else if(loc==='tail')drawTail();
+  else drawCabin(loc);
+  requestAnimationFrame(render);
+}
+
+// === UI ===
+function updUI(){
+  let l=L[loc];
+  document.getElementById('locLabel').textContent='— '+l.name+' —';
+  let desc=l.desc;
+  if(l.ps){
+    desc+='\n\nПоблизости:\n'+l.ps.map(i=>'• '+P[i].name+' ('+P[i].seat+', '+P[i].mood+')').join('\n');
+  }
+  document.getElementById('sceneDesc').textContent=desc;
+
+  let zoneCount=DL.filter(d=>d.z===loc||(view==='fuselage'&&d.z==='fuselage')).length;
+  document.getElementById('counter').textContent='Подписей на экране: '+zoneCount+' / Всего: '+DL.length;
+
+  let ch=document.getElementById('choices');ch.innerHTML='';
+  function addBtn(text,fn){
+    let b=document.createElement('button');b.className='cb';b.textContent=text;b.onclick=fn;ch.appendChild(b);
+  }
+
+  if(view==='fuselage'){
+    addBtn('← Назад к месту',()=>{view='walk';updUI();});
+    return;
+  }
+
+  if(loc==='cockpit'){
+    addBtn('🔍 Осмотреть приборы',()=>msg('p','Все показатели в норме. Давление, температура, расход — ОК.'));
+    addBtn('📊 Проверить ECAM',()=>msg('c','ECAM: Все системы зелёные. Engine 1/2 — nominal.'));
+    addBtn('📻 Настроить радио',()=>{msg('p','*переключает частоту*');setTimeout(()=>msg('c','Радиосвязь: частота 121.5 МГц установлена.'),600);});
+    addBtn('🚪 Покинуть кабину →',()=>go('door1'));
+    addBtn('📐 Схема фюзеляжа [C]',()=>{view='fuselage';updUI();});
+  } else if(loc==='door1'){
+    addBtn('← Кабина пилотов',()=>go('cockpit'));
+    addBtn('Салон经济 →',()=>go('row1'));
+    addBtn('☕ Кофе из буфета',()=>msg('p','*наливаете кофе в бумажный стакан* Вкусно!'));
+    addBtn('📐 Схема фюзеляжа [C]',()=>{view='fuselage';updUI();});
+  } else if(loc==='tail'){
+    addBtn('← Назад в салон',()=>go('row16'));
+    addBtn('🚪 Осмотреть аварийный выход',()=>msg('p','Дверь закрыта. Табличка: "НЕ ОТКРЫВАТЬ В ПОЛЁТЕ". Красная ручка в верхнем положении.'));
+    addBtn('📐 Схема фюзеляжа [C]',()=>{view='fuselage';updUI();});
+  } else {
+    if(l.nl.left)addBtn('← '+L[l.nl.left].name,()=>go(l.nl.left));
+    if(l.nl.right)addBtn(L[l.nl.right].name+' →',()=>go(l.nl.right));
+    if(l.ps){
+      l.ps.forEach(pi=>{
+        let p=P[pi];
+        addBtn('💬 '+p.name+' ('+p.seat+')',()=>talkTo(pi));
+      });
+    }
+    if(loc==='row11'){
+      addBtn('🚻 Сходить в туалет',()=>{msg('p','*заходите в туалет*');setTimeout(()=>msg('c','Лена: Извините, туалет закрыт на посадку. Откроем через 10 минут.'),800);});
+      addBtn('🛒 Попросить напитки',()=>{msg('p','Наташа, можно воды?');setTimeout(()=>msg('c','Наташа: Конечно, вот ваша вода. Приятного полёта!'),600);});
+    }
+    addBtn('📐 Схема фюзеляжа [C]',()=>{view='fuselage';updUI();});
+  }
+}
+
+function go(l2){
+  loc=l2;view='walk';
+  let ld=L[l2];
+  if(ld.ps&&ld.ps.length){
+    let pp=P[ld.ps[Math.floor(Math.random()*ld.ps.length)]];
+    let isCrew=['stf','stf2','cpt','co','eng','ap','rdo'].includes(pp.av);
+    setTimeout(()=>msg(isCrew?'c':'x',pp.name+': "'+ambience(pp)+'"'),400);
+  }
+  updUI();
+}
+
+function ambience(p){
+  const generic=['Проходите, не стойте в проходе.','Осторожно, у меня колени...','Извините, пройдите.',
+  '*вяло машет рукой*','А вы не стюард?','Ну и теснота...','Сколько ещё лететь?','Ладно, проходите.',
+  'Вы не из нашего рейса?','Ой, извините, ноги протянула...'];
+  let n=p.name;
+  if(n.includes('Старушка'))return 'Молодой человек! Послушайте!';
+  if(n.includes('Бизнесмен'))return 'Скажите, когда прилетим? Я опаздываю.';
+  if(n.includes('Мама'))return 'Извините за малыша, он устал...';
+  if(n.includes('Турист'))return 'Дружище, смотри как красиво за окном!';
+  if(n.includes('Наташа'))return 'Проход свободен, пройдите, пожалуйста.';
+  if(n.includes('Лена'))return 'Напитки? Кофе, чай, сок?';
+  if(n.includes('Нервный'))return 'Вы тоже чувствуете эту тряску?!';
+  if(n.includes('Близнецы'))return 'Мы летим! Мам, смотри в окно!';
+  if(n.includes('кошк'))return '*мяу* *мурлычет*';
+  if(n.includes('Спортсмен'))return 'Извините, разминаю ноги, свело...';
+  if(n.includes('Студент'))return 'Извините, на учёбу опаздываю...';
+  if(n.includes('Пожилой'))return '*тихо храпит*';
+  if(n.includes('Девушка'))return '*снимает наушники* Хм? Извините...';
+  return generic[Math.floor(Math.random()*generic.length)];
+}
+
+function talkTo(pi){
+  let p=P[pi],av=p.av;
+  const G={
+    old:{g:['Молодой человек!','Послушайте!','Эй, подождите!'],r:['Спасибо, добрый человек.','Ну как молодёжь...','А вы не из нашего рейса?']},
+    biz:{g:['Извините!','Скажите!','Эй!'],r:['Хм, ладно.','Надеюсь, быстрее прилетим.','*вздыхает и смотрит в телефон*']},
+    mom:{g:['Малыш, не кричи...','Извините за малыша.','Пройдите, пройдите.'],r:['Спасибо за понимание.','Уже спокойнее, спасибо.','*укачивает ребёнка*']},
+    cap:{g:['Глянь! Вон там!','Красота же!','Дружище!'],r:['Ну да, красиво, согласен!','Лучший полёт в жизни!','Давай сфоткаем!']},
+    stf:{g:['Проход свободен.','Пройдите, пожалуйста.','Осторожно с тележкой!'],r:['Хорошо, спасибо.','Приятного полёта!']},
+    stf2:{g:['Напитки? Кофе, чай?','Чем могу помочь?','Нужна помощь?'],r:['Приятного аппетита!','Кофе будет через минуту.']},
+    slp:{g:['*храпит*...','*мечтательно улыбается во сне*'],r:['*поворачивается и храпит дальше*']},
+    hrp:{g:['Хм?..','*снимает наушники* А?'],r:['*кивает и ставит наушники обратно*','Ладно...']},
+    nrv:{g:['Вы тоже чувствуете?!','Трясёт же!','Это нормально?!'],r:['Спасибо... Мне чуть лучше.','Ладно, постараюсь не думать.','*крестится*']},
+    tw:{g:['А-а-а!','Мы летим!','Мам, смотри!'],r:['Круто, да?!','Мы сейчас в небе!']},
+    cat:{g:['*мяу*','*мурлычет*'],r:['*мурлычет громче*','*машет хвостом*']},
+    spr:{g:['Извините, разминаюсь...','Ноги свело...'],r:['Ладно, сяду.','Спасибо!']},
+    stu:{g:['Извините, на учёбу...','Я тут сижу...'],r:['Ничего, проходите.','Удачи на экзамене!']},
+    cpt:{g:['Как обстановка?','Всё под контролем.'],r:['Отлично, продолжаем.','Скоро снижаемся.']},
+    co:{g:['Все системы ОК.','Давление норма.'],r:['Хорошо, работаем.']},
+    eng:{g:['Моторы в порядке.','Давление масла — норма.'],r:['Продолжаем мониторинг.']},
+    ap:{g:['Автопилот включён.','Курс стабилен.'],r:['Всё под контролем.']},
+    rdo:{g:['Напитки? Чай, кофе?','Чем помочь?'],r:['Приятного аппетита!']},
+  };
+  let d=G[av]||G.old;
+  msg('x',p.name+': "'+d.g[Math.floor(Math.random()*d.g.length)]+'"');
+
+  let ch=document.getElementById('choices');ch.innerHTML='';
+  function addBtn(text,fn){
+    let b=document.createElement('button');b.className='cb';b.textContent=text;b.onclick=fn;ch.appendChild(b);
+  }
+  addBtn('👋 «Извините, проходите»',()=>{
+    msg('p','Вы: «Извините, проходите, мне надо пройти»');
+    setTimeout(()=>msg('x',p.name+': "'+d.r[Math.floor(Math.random()*d.r.length)]+'"'),600);
+    setTimeout(updUI,800);
+  });
+  addBtn('💬 «Сколько ещё лететь?»',()=>{
+    msg('p','Вы: «Сколько ещё лететь до Сочи?»');
+    setTimeout(()=>msg('x',p.name+': "Ещё примерно час, может полтора..."'),600);
+    setTimeout(updUI,800);
+  });
+  addBtn('😎 «Всё норм, не переживай»',()=>{
+    msg('p','Вы: «Всё нормально, мы скоро приземлимся»');
+    setTimeout(()=>msg('x',p.name+': "'+d.r[Math.floor(Math.random()*d.r.length)]+'"'),600);
+    setTimeout(updUI,800);
+  });
+  addBtn('🤫 «Тише, люди спят»',()=>{
+    msg('p','Вы: «Тише, пожалуйста, дети спят»');
+    setTimeout(()=>msg('x',p.name+': "А, ладно, извините..."'),600);
+    setTimeout(updUI,800);
+  });
+  addBtn('🚶 «Мне пора, всего хорошего»',()=>{
+    msg('p','Вы: «Всего хорошего, приятного полёта!»');
+    setTimeout(()=>msg('x',p.name+': "И вам того же! Хорошего отдыха!"'),600);
+    setTimeout(updUI,800);
+  });
+}
+
+function msg(t,txt){
+  dlLog.push({t,txt});
+  let h=document.getElementById('dialogHistory');
+  let d=document.createElement('div');d.className='dl';
+  let cls=t==='p'?'p':t==='c'?'c':'x';
+  let prefix=t==='p'?'[Вы]':t==='c'?'[Экипаж]':'';
+  d.innerHTML='<span class="s '+cls+'">'+prefix+'</span> '+txt;
+  h.appendChild(d);h.parentElement.scrollTop=h.parentElement.scrollHeight;
+  if(h.children.length>50)h.removeChild(h.firstChild);
+}
+
+// === КЛАВИАТУРА ===
+document.addEventListener('keydown',e=>{
+  let l=L[loc];
+  if(e.key==='a'||e.key==='ArrowLeft'){if(view==='walk'&&l.nl.left)go(l.nl.left);}
+  if(e.key==='d'||e.key==='ArrowRight'){if(view==='walk'&&l.nl.right)go(l.nl.right);}
+  if(e.key==='c'||e.key==='C'){view=view==='fuselage'?'walk':'fuselage';updUI();}
+  if(e.key==='l'||e.key==='L')toggleLabels();
+  if(e.key==='e'&&view==='walk'&&loc!=='cockpit'&&l.ps&&l.ps.length){
+    talkTo(l.ps[Math.floor(Math.random()*l.ps.length)]);
+  }
+});
+
+function toggleLabels(){
+  labelsOn=!labelsOn;
+  let b=document.getElementById('lblBtn');
+  b.textContent='Подписи: '+(labelsOn?'ВКЛ':'ВЫКЛ');
+  b.className=labelsOn?'active':'';
+}
+document.getElementById('lblBtn').onclick=toggleLabels;
+
+// === СТАРТ ===
+updUI();
+msg('c','Капитан Волков: «Добро пожаловать на борт рейса SU-1492. Курс — Сочи. Высота 35 000 футов. Автопилот включён. Приятного полёта!»');
+msg('c','Копилот Егоров: «Все системы проверены. Давление в норме. Ожидаемое время прибытия — 2 часа 15 минут.»');
+render();
+</script>
+</body>
+</html>

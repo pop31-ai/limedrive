@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ГЕРМЕС — Зал приёма</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#05070f; font-family:'Segoe UI', sans-serif; color:#cfd8e3; }
+  #c { display:block; width:100%; height:100%; cursor:crosshair; }
+
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:5; }
+  #credits { position:absolute; top:14px; left:18px; font-size:16px; letter-spacing:1px; color:#ffd76a; text-shadow:0 0 8px rgba(255,215,106,.5); }
+  #credits small { color:#8aa0b8; }
+  #evname { position:absolute; top:14px; right:18px; font-size:14px; color:#9fd8ff; text-align:right; text-shadow:0 0 6px rgba(90,180,255,.4); }
+  #hint { position:absolute; bottom:14px; left:18px; font-size:12px; color:#5f7186; }
+
+  #banner { position:absolute; top:22%; left:0; right:0; text-align:center; opacity:0; transition:opacity .4s; }
+  #banner .tag { font-size:13px; letter-spacing:4px; color:#ff6b6b; text-shadow:0 0 12px rgba(255,80,80,.8); }
+  #banner .title { font-size:30px; margin-top:6px; color:#fff; letter-spacing:2px; text-shadow:0 0 18px rgba(120,200,255,.7); }
+
+  #panel { position:absolute; left:50%; bottom:26px; transform:translateX(-50%); width:min(760px,92vw);
+    background:rgba(8,14,26,.92); border:1px solid rgba(90,180,255,.35); border-radius:10px; padding:16px 20px 12px;
+    box-shadow:0 0 40px rgba(60,140,255,.15), inset 0 0 30px rgba(60,140,255,.05);
+    pointer-events:auto; opacity:0; transition:opacity .3s; }
+  #panel.on { opacity:1; }
+  #pname { font-size:14px; color:#9fd8ff; margin-bottom:8px; letter-spacing:1px; }
+  #pname .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#6fe08a; margin-right:8px; box-shadow:0 0 8px #6fe08a; }
+  #ptext { font-size:16px; line-height:1.5; min-height:50px; color:#e6eef7; }
+  #pchoices { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+  .cho { background:rgba(30,60,100,.25); border:1px solid rgba(90,180,255,.3); color:#cfe6ff; border-radius:6px;
+    padding:10px 14px; font-size:14px; text-align:left; cursor:pointer; transition:background .15s; pointer-events:auto; }
+  .cho:hover { background:rgba(60,130,220,.35); border-color:#7fc4ff; }
+  .cho .key { float:right; color:#5f91c4; }
+
+  #toast { position:absolute; bottom:110px; right:18px; font-size:14px; color:#ffd76a; opacity:0; transition:opacity .4s; text-shadow:0 0 8px rgba(255,215,106,.6); }
+
+  #intro { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; background:rgba(3,5,12,.94); cursor:pointer; }
+  #intro .box { text-align:center; max-width:560px; padding:30px; }
+  #intro h1 { font-size:34px; letter-spacing:6px; color:#fff; text-shadow:0 0 24px rgba(120,200,255,.8); }
+  #intro .sub { margin-top:16px; font-size:16px; color:#9fb6cc; line-height:1.6; }
+  #intro .ctl { margin-top:26px; font-size:13px; color:#5f7c99; line-height:1.9; }
+  #intro .go { display:inline-block; margin-top:30px; padding:12px 34px; border:1px solid rgba(120,200,255,.6); border-radius:8px;
+    color:#cfeaff; letter-spacing:3px; font-size:14px; box-shadow:0 0 20px rgba(80,160,255,.25); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="credits">КРЕДИТЫ: <span id="credval">1000</span> <small>|||</small> <span id="credspend" style="font-size:12px"></span></div>
+  <div id="evname"></div>
+  <div id="banner"><div class="tag">⚠ ВХОДЯЩИЙ СИГНАЛ</div><div class="title" id="bannertitle"></div></div>
+  <div id="hint">Мышь / стрелки — осмотр · E — пропустить текст · 1-3 — выбор</div>
+</div>
+<div id="panel">
+  <div id="pname"><span class="dot"></span><span id="pspeaker"></span></div>
+  <div id="ptext"></div>
+  <div id="pchoices"></div>
+</div>
+<div id="toast"></div>
+<div id="intro">
+  <div class="box">
+    <h1>ГЕРМЕС</h1>
+    <div class="sub">Вы — диспетчер приёмного зала огромного корабля-станции «Гермес».</div>
+    <div class="sub">Вам не нужно никуда лететь: <b>корабли прилетают к вам</b>.<br>Принимайте сигналы, встречайте экипажи, решайте их странные дела.</div>
+    <div class="ctl">Управление: осмотр — мышь или стрелки · пропустить текст — E · выбор — клик / 1·2·3</div>
+    <div class="go">НАЖМИТЕ, ЧТОБЫ ОТКРЫТЬ ШЛЮЗ</div>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+let W=0,H=0,s=0;
+const FOV=1.1;
+function resize(){ W=canvas.width=innerWidth; H=canvas.height=innerHeight; s=(H*0.5)/Math.tan(FOV/2); }
+addEventListener('resize',resize); resize();
+
+const BG=[5,7,15];
+
+const cam={x:0,y:4.7,z:12,yaw:0,pitch:-0.05};
+
+const stars=[];
+for(let i=0;i<650;i++){
+  let dx=Math.random()*2-1,dy=Math.random()*2-1,dz=Math.random()*2-1;
+  const l=Math.hypot(dx,dy,dz)||1;
+  stars.push({x:dx/l,y:dy/l,z:dz/l,t:Math.random()*10,c:120+Math.random()*135});
+}
+const dust=[];
+for(let i=0;i<220;i++) dust.push({x:(Math.random()*2-1)*18,y:Math.random()*13,z:-28+Math.random()*48,vx:(Math.random()-.5)*.01,vy:(Math.random()-.5)*.005,vz:(Math.random()-.5)*.01});
+
+function camXform(p){
+  const dx=p[0]-cam.x, dy=p[1]-cam.y, dz=p[2]-cam.z;
+  const cy=Math.cos(-cam.yaw), sy=Math.sin(-cam.yaw);
+  const x=cy*dx-sy*dz, z=sy*dx+cy*dz;
+  const cp=Math.cos(-cam.pitch), sp=Math.sin(-cam.pitch);
+  return [x, cp*dy-sp*z, -(sp*dy+cp*z)];
+}
+function proj(p,out){
+  const d=p[2];
+  if(d<0.15) return false;
+  out.x=W*0.5+p[0]*s/d;
+  out.y=H*0.5-p[1]*s/d;
+  out.d=d;
+  return true;
+}
+
+function qv(a,b,c,d,col){ return {v:[a,b,c,d],col}; }
+function cubePoly(cx,cy,cz,sx,sy,sz,col){
+  return [
+    qv([cx+sx,cy-sy,cz-sz],[cx-sx,cy-sy,cz-sz],[cx-sx,cy+sy,cz-sz],[cx+sx,cy+sy,cz-sz],col),
+    qv([cx-sx,cy-sy,cz+sz],[cx+sx,cy-sy,cz+sz],[cx+sx,cy+sy,cz+sz],[cx-sx,cy+sy,cz+sz],col),
+    qv([cx-sx,cy-sy,cz-sz],[cx-sx,cy-sy,cz+sz],[cx-sx,cy+sy,cz+sz],[cx-sx,cy+sy,cz-sz],col),
+    qv([cx+sx,cy-sy,cz+sz],[cx+sx,cy-sy,cz-sz],[cx+sx,cy+sy,cz-sz],[cx+sx,cy+sy,cz+sz],col),
+    qv([cx+sx,cy+sy,cz-sz],[cx-sx,cy+sy,cz-sz],[cx-sx,cy+sy,cz+sz],[cx+sx,cy+sy,cz+sz],col),
+    qv([cx+sx,cy-sy,cz+sz],[cx-sx,cy-sy,cz+sz],[cx-sx,cy-sy,cz-sz],[cx+sx,cy-sy,cz-sz],col)
+  ];
+}
+function box(cx,cy,cz,sx,sy,sz,col){ return cubePoly(cx,cy,cz,sx,sy,sz,col); }
+
+const LIGHT=[-0.35,0.75,0.55];
+(function(){const l=Math.hypot(LIGHT[0],LIGHT[1],LIGHT[2]);LIGHT[0]/=l;LIGHT[1]/=l;LIGHT[2]/=l;})();
+
+let items=[], glows=[];
+function normalOf(p){
+  const ax=p.v[1][0]-p.v[0][0], ay=p.v[1][1]-p.v[0][1], az=p.v[1][2]-p.v[0][2];
+  const bx=p.v[2][0]-p.v[0][0], by=p.v[2][1]-p.v[0][1], bz=p.v[2][2]-p.v[0][2];
+  return [ay*bz-az*by, az*bx-ax*bz, ax*by-ay*bx];
+}
+function camRot(p){
+  const cy=Math.cos(-cam.yaw), sy=Math.sin(-cam.yaw);
+  const x=cy*p[0]-sy*p[2], z=sy*p[0]+cy*p[2];
+  const cp=Math.cos(-cam.pitch), sp=Math.sin(-cam.pitch);
+  return [x, cp*p[1]-sp*z, -(sp*p[1]+cp*z)];
+}
+function pushPoly(p,opts){
+  opts=opts||{};
+  const cs=[];
+  for(const v of p.v){ const c=camXform(v); const o={x:0,y:0,d:0}; if(!proj(c,o)) return; o.dz=c[2]; cs.push(o); }
+  const n=camRot(normalOf(p));
+  const v0=camXform(p.v[0]);
+  const facing=v0[0]*n[0]+v0[1]*n[1]+v0[2]*n[2];
+  const l=Math.hypot(n[0],n[1],n[2])||1;
+  const ndl=(n[0]*LIGHT[0]+n[1]*LIGHT[1]+n[2]*LIGHT[2])/l;
+  if(opts.noCull===undefined && facing>=0 && !opts.twoSided) return;
+  const f=0.42+0.58*Math.max(0,ndl);
+  const r=p.col[0]*f, g=p.col[1]*f, b=p.col[2]*f;
+  const avg=(cs[0].dz+cs[1].dz+cs[2].dz+cs[3].dz)/4;
+  const dist=avg;
+  const fog=Math.max(0,Math.min(1,(dist-14)/70));
+  const rr=Math.round(r+(BG[0]-r)*fog), gg=Math.round(g+(BG[1]-g)*fog), bb=Math.round(b+(BG[2]-b)*fog);
+  const it={d:avg,pts:cs,fill:'rgb('+rr+','+gg+','+bb+')'};
+  if(opts.alpha){ it.alpha=opts.alpha; glows.push(it); }
+  else items.push(it);
+}
+function pushGlow(x,y,z,r,col,alpha){
+  if(!isFinite(x)||!isFinite(y)||!isFinite(z)||!isFinite(r)||!isFinite(alpha)) return;
+  const c=camXform([x,y,z]); const o={x:0,y:0,d:0};
+  if(!proj(c,o)||!isFinite(o.x)||!isFinite(o.y)||!isFinite(o.d)) return;
+  const rr=r*s/o.d;
+  if(!isFinite(rr)||rr<=0) return;
+  glows.push({d:o.d,x:o.x,y:o.y,r:rr,col:col,alpha:alpha,kind:'glow'});
+}
+
+const room=[];
+(function buildRoom(){
+  const F=[78,88,104], f2=[58,66,80], C=[72,82,96], c2=[52,60,72], accent=[42,56,84];
+  const floor=[40,46,60], ceil=[44,50,66];
+  room.push(qv([-20,0,-30],[-20,0,20],[20,0,20],[20,0,-30],floor));
+  room.push(qv([-20,14,20],[-20,14,-30],[20,14,-30],[20,14,20],ceil));
+  room.push(qv([-20,0,-30],[-20,14,-30],[-20,14,20],[-20,0,20],F));
+  room.push(qv([20,0,-30],[20,0,20],[20,14,20],[20,14,-30],F));
+  room.push(qv([20,0,20],[-20,0,20],[-20,14,20],[20,14,20],F));
+  for(let z=-30;z<20;z+=5){
+    const col=((z/5)|0)%2? f2:floor;
+    room.push(qv([-20,0.03,z],[20,0.03,z],[20,0.03,z+5],[-20,0.03,z+5],col));
+  }
+  room.push(qv([-2.5,0.04,-30],[2.5,0.04,-30],[2.5,0.04,20],[-2.5,0.04,20],[58,64,76]));
+  for(let x=-16;x<=16;x+=8){
+    room.push(qv([x-3,0.05,-30],[x+3,0.05,-30],[x+3,0.05,20],[x-3,0.05,20],[34,40,52]));
+  }
+  for(let i=0;i<4;i++){
+    const x=-20+0.1, y0=2+i*3, z0=-26+i*14;
+    room.push(qv([x,y0,z0+1.6],[x,y0,z0-1.6],[x,y0+2.2,z0-1.6],[x,y0+2.2,z0+1.6],c2));
+  }
+  for(let i=0;i<4;i++){
+    const x=20-0.1, y0=2+i*3, z0=-26+i*14;
+    room.push(qv([x,y0,z0-1.6],[x,y0,z0+1.6],[x,y0+2.2,z0+1.6],[x,y0+2.2,z0-1.6],c2));
+  }
+  const pillar=(x,z)=>{
+    room.push(...box(x,7,z,1.4,7,1.4,accent));
+    room.push(...box(x,7,z,1.7,0.5,1.7,[30,40,60]));
+  };
+  pillar(-20,-29); pillar(20,-29);
+  room.push(...box(0,13.2,-29,18,0.8,1.6,accent));
+  room.push(...box(0,11.8,-27.4,19.6,0.5,0.7,[30,40,60]));
+  room.push(...box(0,0.9,7,3,0.9,1.4,[34,42,54]));
+  room.push(...box(0,1.7,7.6,2.6,0.35,0.3,[26,32,42]));
+  room.push(...box(-13,0.7,-8,2.4,0.7,2.4,[46,52,64]));
+  room.push(...box(13,0.9,2,2.0,0.9,1.8,[46,52,64]));
+  room.push(...box(0,4.4,-16,6.5,0.06,4.5,[24,30,40]));
+  for(const lx of [-7,7]) for(const lz of [-14,2]){
+    room.push(qv([lx-0.7,13.55,lz-1.6],[lx+0.7,13.55,lz-1.6],[lx+0.7,13.55,lz+1.6],[lx-0.7,13.55,lz+1.6],[210,235,255]));
+  }
+})();
+
+const pad={x:0,y:0.06,z:-24};
+function buildTrader(){ const p=[],cb=(cx,cy,cz,sx,sy,sz,c)=>p.push(...box(cx,cy,cz,sx,sy,sz,c));
+  cb(0,0,0,2.4,1.2,4,[190,135,60]); cb(0,0,-4.6,1.1,0.7,1.2,[190,135,60]); cb(0,0,4.4,1.4,0.9,1.3,[150,105,45]);
+  cb(3.4,0,0,1,0.7,2.6,[80,150,200]); cb(-3.4,0,0,1,0.7,2.6,[80,150,200]);
+  cb(0,1.7,1.2,1.3,0.6,1.3,[120,215,255]); cb(0,1.2,-2.4,0.95,0.4,0.95,[235,230,210]);
+  return {polys:p,engine:[0,0.3,4.5],col:[255,190,90]}; }
+function buildDamaged(){ const p=[],cb=(cx,cy,cz,sx,sy,sz,c)=>p.push(...box(cx,cy,cz,sx,sy,sz,c));
+  cb(0,0,0,2.2,1.1,3.6,[115,115,135]); cb(0,0,-3.6,1.0,0.6,1.0,[115,115,135]);
+  cb(3.0,0,0,1,0.7,2.4,[150,90,90]); cb(-2.8,0,0,0.5,0.5,1.0,[95,70,70]);
+  cb(0,1.5,0.8,1.0,0.5,1.0,[85,85,105]); cb(0,0.2,0.6,2.1,0.02,0.4,[40,40,48]);
+  return {polys:p,engine:[0,0.2,3.7],col:[255,120,70]}; }
+function buildSaucer(){ const p=[],cb=(cx,cy,cz,sx,sy,sz,c)=>p.push(...box(cx,cy,cz,sx,sy,sz,c));
+  cb(0,0,0,3.2,0.35,3.2,[90,200,255]); cb(0,0.8,0,1.0,0.7,1.0,[140,225,255]);
+  cb(0,-0.45,0,2.0,0.2,2.0,[60,160,220]); cb(0,0.4,0,3.5,0.07,3.5,[150,235,255]);
+  return {polys:p,engine:[0,0,3.4],col:[140,230,255],ghost:true}; }
+function buildFighter(){ const p=[],cb=(cx,cy,cz,sx,sy,sz,c)=>p.push(...box(cx,cy,cz,sx,sy,sz,c));
+  cb(0,0,0,1.3,0.9,4.0,[170,175,185]); cb(0,0,-4.2,0.8,0.5,1.0,[170,175,185]);
+  cb(2.2,0,-0.5,1.7,0.18,2.6,[205,65,65]); cb(-2.2,0,-0.5,1.7,0.18,2.6,[205,65,65]);
+  cb(0,1.2,0.6,0.9,0.5,1.4,[120,185,225]);
+  return {polys:p,engine:[0,0.2,4.1],col:[140,220,255]}; }
+const SHIPS={trader:buildTrader,damaged:buildDamaged,saucer:buildSaucer,fighter:buildFighter};
+
+function rotateY(p,ang){ const c=Math.cos(ang),sg=Math.sin(ang); return [p[0]*c+p[2]*sg,p[1],-p[0]*sg+p[2]*c]; }
+function pushShip(ship,pos,rollT,bob){
+  const roll=Math.sin(rollT)*0.05;
+  const cr=Math.cos(roll),sr=Math.sin(roll);
+  const out=[];
+  for(const q of ship.polys){
+    const v=q.v.map(p=>{
+      let x=p[0],y=p[1],z=p[2];
+      const y1=cr*y-sr*x, x1=sr*y+cr*x;
+      const w=rotateY([x1,y1,z],Math.PI);
+      return [w[0]+pos.x,w[1]+pos.y+bob,w[2]+pos.z];
+    });
+    pushPoly({v:v,col:q.col},{alpha:ship.ghost?0.55:undefined});
+  }
+  const e=ship.engine;
+  const ez=rotateY([e[0],e[1],e[2]],Math.PI);
+  return {x:pos.x+ez[0], y:pos.y+e[1]+bob, z:pos.z+ez[2]};
+}
+
+const DATA=[
+ {name:"Г'Зарк-торговец",ship:'Скиталец',title:'«Скиталец» · торговый корабль',kind:'trader',start:'start',
+  nodes:{
+   start:{sp:"Г'Зарк",text:"Приветствую, хранитель зала! Г'Зарк к вашим услугам. Я привёз «камни памяти» из туманности Крика — они хранят воспоминания умерших звёзд. Купишь?",
+    choices:[{t:"Взять один — 200 кредитов",to:'buy',credits:-200},{t:"Сначала покажи",to:'look'},{t:"Мне такое не нужно",to:'leave'}]},
+   buy:{sp:"Г'Зарк",text:"Отличный выбор! Камень тёплый... очень тёплый. Говорят, если уснуть рядом — увидишь сны пра-звёзд.",
+    choices:[{t:"Спасибо, ещё увидимся",to:'bye'},{t:"Откуда ты их берёшь?",to:'ask'}]},
+   look:{sp:"Г'Зарк",text:"Вот, смотри. Этот светится голубым — воспоминание о рождении. А этот, красный, — о гибели сверхновой.",
+    choices:[{t:"Впечатляет. Возьму один",to:'buy',credits:-200},{t:"Жутковато... в другой раз",to:'leave'}]},
+   ask:{sp:"Г'Зарк",text:"О, это долгая история! Я нашёл древний город-призрак. Внутри — целые библиотеки света. Но что-то там... до сих пор ищет свой покой. Кхм. Держи бонус за интерес!",
+    credits:100,choices:[{t:"Благодарю",to:'bye'}]},
+   bye:{sp:"Г'Зарк",text:"Светлых орбит! Г'Зарк улетает за новыми историями!",end:true},
+   leave:{sp:"Г'Зарк",text:"Понимаю. Быть может, в следующий раз, когда сверхновая подарит мне что-то интересное...",end:true}}},
+ {name:"Ковчег-7",ship:'Ковчег-7',title:'«Ковчег-7» · сигнал бедствия',kind:'damaged',start:'start',
+  nodes:{
+   start:{sp:"Капитан «Ковчега»",text:"Авария! На борту... э, слушайте, извините. На самом деле всё в порядке. Просто девять месяцев лететь — жутко скучно. Можно припаркуемся и посмотрим кино?",
+    choices:[{t:"Конечно, причаливайте",to:'join'},{t:"Ложный сигнал? Серьёзно?",to:'scold'},{t:"У нас есть правила",to:'rules'}]},
+   join:{sp:"Капитан «Ковчега»",text:"Ура! Команда уже греет попкорн. У вас есть проигрыватель? Мы привезли «Жёлтую подводную лодку» и «Дюну».",
+    choices:[{t:"«Дюна» — то, что надо. Добро пожаловать",to:'dune'},{t:"Попкорн и классика? Вы приняты",to:'pop'}]},
+   dune:{sp:"Капитан «Ковчега»",text:"Отлично! Кстати, у нас излишки припасов. Возьмите — пригодится. Спасибо за приют!",credits:120,end:true},
+   pop:{sp:"Капитан «Ковчега»",text:"Шикарно! Включайте звук погромче, звёзды же не спят. А это вам за гостеприимство.",credits:120,end:true},
+   scold:{sp:"Капитан «Ковчега»",text:"Простите-простите! Знаем, что нельзя тревожить станции по пустякам. Но... девять месяцев, понимаете? Обещаю: в следующий раз — только настоящее бедствие!",end:true},
+   rules:{sp:"Капитан «Ковчега»",text:"Правила? У нас на борту целый устав! Том 3, параграф 7: «скучно — не повод для паники». Шутка! Причаливаем и будем тише воды.",end:true}}},
+ {name:"Безмолвие",ship:'Безмолвие',title:'«Безмолвие» · неизвестный корабль',kind:'saucer',start:'start',
+  nodes:{
+   start:{sp:"???",text:"Ты... слышишь... нас? Мы летели... так долго... и забыли... путь домой.",
+    choices:[{t:"Кто вы?",to:'who'},{t:"Я не понимаю вас",to:'understand'},{t:"Вы привидение?",to:'ghost'}]},
+   who:{sp:"???",text:"Мы — экипаж «Безмолвия». Наш корабль... погиб. Но мы... не смогли уйти. Ты... видишь нас?",
+    choices:[{t:"Вижу. Вы здесь не одни",to:'see'},{t:"Мне немного страшно",to:'fear'}]},
+   understand:{sp:"???",text:"Это... сложно. Мы говорим... мыслями. Извини. Мы уже... улетаем.",end:true},
+   ghost:{sp:"???",text:"...Мы не привидения. Мы просто... остались. Инерция привычки. Дай нам... покой... или компанию?",
+    choices:[{t:"Покой. Или компанию. Выбирайте",to:'see'},{t:"У меня есть чай",to:'tea'}]},
+   see:{sp:"???",text:"Спасибо... мы уходим спокойными. Прими... свет нашего последнего рейса.",credits:300,end:true},
+   tea:{sp:"???",text:"Чай... Мы забыли... вкус тёплого. Спасибо. Оставь себе это — как благодарность.",credits:200,end:true},
+   fear:{sp:"???",text:"Не бойся. Мы... мягкие. Спокойной орбиты.",end:true}}},
+ {name:"Инспектор Вест",ship:'Флотилия',title:'Инспектор Флота · «Флотилия»',kind:'fighter',start:'start',
+  nodes:{
+   start:{sp:"Инспектор Вест",text:"Капитан зала, по протоколу 89-А вы обязаны уплатить «налог на парковку в открытом космосе» — 350 кредитов. Немедленно.",
+    choices:[{t:"Заплатить (−350)",to:'pay',credits:-350},{t:"Нет такого налога",to:'deny'},{t:"Угостить инспектора чаем",to:'tea'}]},
+   pay:{sp:"Инспектор Вест",text:"Принято. Отлично. Кстати... спасибо. Эта бумажная волокита — хуже чёрных дыр. Выпейте кофе за мой счёт.",
+    credits:50,end:true},
+   deny:{sp:"Инспектор Вест",text:"Протокол 89-А существует с 2304 года! Проверьте свою базу... А, вы правы. Это протокол 89-Б. Простите, новый начальник замучил отчётами.",end:true},
+   tea:{sp:"Инспектор Вест",text:"Чай?.. У нас тут налоги, бюрократия, а вы — с чаем. Хм. Вы первый нормальный человек за месяц. Я закрою глаза на всё. Держите премию за терпение.",
+    credits:250,end:true}}}
+];
+
+const program=[{wait:2.5,sit:0},{wait:10,sit:1},{wait:12,sit:2},{wait:10,sit:3},{wait:7,sit:0}];
+let progIdx=0;
+
+let state={phase:'idle',countdown:program[0].wait,ship:null,shipFrom:0,shipTarget:-24,phaseT:0,banner:0,bannerTxt:''};
+
+function addCredits(n){
+  state.credits+=n;
+  document.getElementById('credval').textContent=state.credits;
+  const t=document.getElementById('toast');
+  t.textContent=(n>0?'+':'')+n+' кредитов';
+  t.style.opacity=1;
+  clearTimeout(addCredits._tm);
+  addCredits._tm=setTimeout(()=>t.style.opacity=0,2200);
+}
+state.credits=1000;
+
+function banner(txt,ms){
+  state.bannerTxt=txt;
+  document.getElementById('bannertitle').textContent=txt;
+  const b=document.getElementById('banner');
+  b.style.opacity=1;
+  clearTimeout(banner._tm);
+  banner._tm=setTimeout(()=>b.style.opacity=0,ms);
+  beep(720,0.12,'square',0.05); setTimeout(()=>beep(880,0.15,'square',0.05),160);
+}
+
+let cur=null, dlg=null;
+function startSituation(i){
+  cur=DATA[i];
+  state.phase='approach';
+  state.phaseT=0;
+  state.shipFrom=-190;
+  state.shipTarget=-24;
+  const kind=cur.kind;
+  state.ship=SHIPS[kind]();
+  document.getElementById('evname').innerHTML=cur.ship+'<br><span style="color:#5f7c99;font-size:11px">'+(cur.name||'')+'</span>';
+  banner('«'+cur.ship+'»',2600);
+}
+function openDialogue(){
+  state.phase='dialogue';
+  enterNode('start');
+}
+function enterNode(id){
+  const node=cur.nodes[id];
+  dlg={node:id,shown:0,full:node.text,open:true};
+  if(node.credits) addCredits(node.credits);
+  const panel=document.getElementById('panel');
+  panel.classList.add('on');
+  document.getElementById('pspeaker').textContent=node.sp;
+  document.getElementById('ptext').textContent='';
+  document.getElementById('pchoices').innerHTML='';
+  dlgNode=node;
+}
+let dlgNode=null;
+function updateDialogue(dt){
+  if(!dlg||!dlg.open) return;
+  if(dlg.shown<dlg.full.length){
+    dlg.shown+=dt*42;
+    if(dlg.shown>dlg.full.length) dlg.shown=dlg.full.length;
+    document.getElementById('ptext').textContent=dlg.full.slice(0,Math.floor(dlg.shown));
+    if(dlg.shown>=dlg.full.length) showChoices();
+  }
+}
+function showChoices(){
+  const node=dlgNode;
+  const box=document.getElementById('pchoices');
+  if(node.choices){
+    box.innerHTML='';
+    node.choices.forEach((ch,i)=>{
+      const b=document.createElement('button');
+      b.className='cho';
+      b.innerHTML=ch.t+'<span class="key">'+(i+1)+'</span>';
+      b.onclick=()=>pickChoice(ch);
+      box.appendChild(b);
+    });
+  }else if(node.end){
+    const b=document.createElement('button');
+    b.className='cho';
+    b.innerHTML='Готово<span class="key">E</span>';
+    b.onclick=closeDialogue;
+    box.appendChild(b);
+  }
+}
+function pickChoice(ch){
+  if(ch.credits) addCredits(ch.credits);
+  enterNode(ch.to);
+}
+function skipTyping(){
+  if(!dlg) return;
+  if(dlg.shown<dlg.full.length){ dlg.shown=dlg.full.length; document.getElementById('ptext').textContent=dlg.full; showChoices(); }
+  else if(dlgNode.end) closeDialogue();
+}
+function closeDialogue(){
+  if(!dlg) return;
+  dlg.open=false;
+  document.getElementById('panel').classList.remove('on');
+  state.phase='depart';
+  state.phaseT=0;
+  state.shipFrom=-24;
+  state.shipTarget=-190;
+}
+
+function update(t,dt){
+  if(state.phase==='idle'){
+    state.countdown-=dt;
+    if(state.countdown<=0){ startSituation(progIdx); progIdx=(progIdx+1)%program.length; }
+  }
+  else if(state.phase==='approach'){
+    state.phaseT+=dt;
+    const dur=6.5;
+    let k=state.phaseT/dur; if(k>1)k=1;
+    k=1-Math.pow(1-k,3);
+    const z=state.shipFrom+(state.shipTarget-state.shipFrom)*k;
+    state.shipZ=z;
+    if(k>=1) openDialogue();
+  }
+  else if(state.phase==='depart'){
+    state.phaseT+=dt;
+    const dur=6;
+    let k=state.phaseT/dur; if(k>1)k=1;
+    k=k*k;
+    const z=state.shipFrom+(state.shipTarget-state.shipFrom)*k;
+    state.shipZ=z;
+    if(k>=1){ state.phase='idle'; state.ship=null; state.countdown=program[progIdx].wait+2; document.getElementById('evname').innerHTML=''; }
+  }
+  updateDialogue(dt);
+}
+
+function render(t){
+  ctx.fillStyle='rgb('+BG[0]+','+BG[1]+','+BG[2]+')';
+  ctx.fillRect(0,0,W,H);
+
+  const rp=Math.cos(-cam.pitch), sp=Math.sin(-cam.pitch);
+  const cy=Math.cos(-cam.yaw), sy=Math.sin(-cam.yaw);
+  ctx.fillStyle='#fff';
+  for(const st of stars){
+    let x=st.x,y=st.y,z=st.z;
+    let x1=cy*x-sy*z, z1=sy*x+cy*z;
+    let y1=rp*y-sp*z1, z2=sp*y+rp*z1;
+    if(z2<=0.1) continue;
+    const tw=0.7+0.3*Math.sin(t*1.5+st.t);
+    const px=W*0.5+x1*s/z2, py=H*0.5-y1*s/z2;
+    const r=(z2<1.4)?1.6:1.0;
+    ctx.globalAlpha=tw;
+    ctx.fillRect(px,py,r,r);
+    if(z2<1.3){ ctx.globalAlpha=0.12*tw; ctx.fillRect(px-r*3,py-r*3,r*7,r*7); }
+  }
+  ctx.globalAlpha=1;
+  {
+    const dp=0.25;
+    const lx=cy*(-dp),lz=sy*(-dp);
+    const g=ctx.createRadialGradient(W*0.5-lx*s, H*0.5-lz*s,8,W*0.5-lx*s,H*0.5-lz*s,120);
+    g.addColorStop(0,'rgba(60,120,200,0.16)');
+    g.addColorStop(1,'rgba(60,120,200,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+
+  items.length=0; glows.length=0;
+
+  for(const p of room) pushPoly(p);
+  for(const c of [
+    {x:-7,y:13.5,z:-14},{x:7,y:13.5,z:-14},{x:-7,y:13.5,z:2},{x:7,y:13.5,z:2}
+  ]) pushGlow(c.x,c.y,c.z,1.1,[150,210,255],0.5);
+
+  const pulse=0.5+0.5*Math.sin(t*1.6);
+  pushGlow(pad.x,pad.y+0.1,pad.z,5.5+0.8*pulse,[255,200,90],0.28+0.2*pulse);
+  pushGlow(0,2.6,7.7,0.55+0.15*Math.sin(t*2.2),[80,220,255],0.7+0.3*Math.sin(t*3));
+  pushGlow(-18,6,-2,0.7+0.3*Math.sin(t*2.4),[255,80,80],0.35+0.3*Math.sin(t*2.4));
+  pushGlow(18,6,-2,0.7+0.3*Math.sin(t*2.4+1.2),[255,80,80],0.35+0.3*Math.sin(t*2.4+1.2));
+
+  if(state.ship && state.shipZ!==undefined){
+    const bob=state.phase==='dialogue'?Math.sin(t*1.3)*0.35:0;
+    const z=state.shipZ;
+    const pos=pushShip(state.ship,{x:0,y:4.2,z:z},t,bob);
+    if(pos){
+      const fl=0.6+0.4*Math.sin(t*13)+0.2*Math.random();
+      pushGlow(pos.x,pos.y,pos.z,1.6*fl,state.ship.col,0.8);
+    }
+  }
+
+  for(const d of dust){
+    d.x+=d.vx; d.y+=d.vy; d.z+=d.vz;
+    if(d.x>18||d.x<-18)d.vx*=-1;
+    if(d.y>13||d.y<0)d.vy*=-1;
+    if(d.z>20||d.z<-28)d.vz*=-1;
+    const c=camXform([d.x,d.y,d.z]); const o={x:0,y:0,d:0};
+    if(proj(c,o)&&isFinite(o.x)&&isFinite(o.y)&&isFinite(o.d)&&o.d>0.5){
+      const a=Math.max(0,Math.min(0.35,140/o.d));
+      glows.push({d:o.d,x:o.x,y:o.y,r:Math.max(0.6,30/o.d),col:[160,200,255],alpha:a,kind:'dot'});
+    }
+  }
+
+  items.sort((a,b)=>b.d-a.d);
+  glows.sort((a,b)=>b.d-a.d);
+  for(const it of items){
+    ctx.fillStyle=it.fill;
+    ctx.beginPath();
+    ctx.moveTo(it.pts[0].x,it.pts[0].y);
+    ctx.lineTo(it.pts[1].x,it.pts[1].y);
+    ctx.lineTo(it.pts[2].x,it.pts[2].y);
+    ctx.lineTo(it.pts[3].x,it.pts[3].y);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation='lighter';
+  for(const g of glows){
+    if(!isFinite(g.x)||!isFinite(g.y)||!isFinite(g.r)||g.r<=0) continue;
+    if(g.kind==='dot'){
+      ctx.globalAlpha=g.alpha;
+      ctx.fillStyle='rgb('+g.col[0]+','+g.col[1]+','+g.col[2]+')';
+      ctx.fillRect(g.x-g.r,g.y-g.r,g.r*2,g.r*2);
+    }else{
+      const rad=ctx.createRadialGradient(g.x,g.y,0,g.x,g.y,g.r);
+      rad.addColorStop(0,'rgba('+g.col[0]+','+g.col[1]+','+g.col[2]+','+g.alpha+')');
+      rad.addColorStop(1,'rgba('+g.col[0]+','+g.col[1]+','+g.col[2]+',0)');
+      ctx.globalAlpha=1;
+      ctx.fillStyle=rad;
+      ctx.beginPath(); ctx.arc(g.x,g.y,g.r,0,7); ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1;
+  ctx.globalCompositeOperation='source-over';
+}
+
+let audioCtx=null;
+function ac(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended')audioCtx.resume(); return audioCtx; }
+function beep(f,dur,type,vol){
+  try{
+    const a=ac(), o=a.createOscillator(), g=a.createGain();
+    o.type=type||'sine'; o.frequency.value=f;
+    g.gain.value=vol||0.04;
+    g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(); o.stop(a.currentTime+dur);
+  }catch(e){}
+}
+
+let lastT=performance.now();
+function frame(){
+  const now=performance.now();
+  const dt=Math.min(0.05,(now-lastT)/1000);
+  lastT=now;
+  const t=now/1000;
+  try{ update(t,dt); render(t); }catch(e){ if(window.console) console.error(e); }
+  requestAnimationFrame(frame);
+}
+
+let dragging=false,lastX=0,lastY=0;
+canvas.addEventListener('pointerdown',e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointermove',e=>{
+  if(!dragging) return;
+  cam.yaw+=(e.clientX-lastX)*0.004;
+  cam.pitch+=(e.clientY-lastY)*0.003;
+  cam.pitch=Math.max(-1.2,Math.min(1.2,cam.pitch));
+  lastX=e.clientX; lastY=e.clientY;
+});
+addEventListener('pointerup',()=>dragging=false);
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')cam.yaw+=0.05;
+  if(e.key==='ArrowRight')cam.yaw-=0.05;
+  if(e.key==='ArrowUp'){cam.pitch+=0.04;cam.pitch=Math.min(1.2,cam.pitch);}
+  if(e.key==='ArrowDown'){cam.pitch-=0.04;cam.pitch=Math.max(-1.2,cam.pitch);}
+  if(e.key==='e'||e.key==='E'||e.key===' ') { e.preventDefault(); if(state.phase==='dialogue') skipTyping(); }
+  if(e.key>='1'&&e.key<='3'&&dlg&&dlgNode&&dlgNode.choices){
+    const i=parseInt(e.key)-1;
+    if(dlgNode.choices[i]) pickChoice(dlgNode.choices[i]);
+  }
+});
+
+const intro=document.getElementById('intro');
+intro.addEventListener('click',()=>{ intro.style.display='none'; ac(); requestAnimationFrame(frame); });
+document.addEventListener('keydown',()=>{ if(intro.style.display!=='none'){ intro.style.display='none'; ac(); requestAnimationFrame(frame); } });
+</script>
+</body>
+</html>

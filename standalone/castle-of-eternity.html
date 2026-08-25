@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Замок Вечности</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0f0f1a; color:#e0d5c0; font-family:Georgia,serif; min-height:100vh; }
+
+#start-screen { text-align:center; padding:80px 20px; }
+#start-screen h1 { font-size:2.8em; color:#d4a843; margin-bottom:20px; text-shadow:0 0 30px rgba(212,168,67,0.4); }
+#start-screen p { max-width:600px; margin:0 auto 20px; line-height:1.8; }
+#start-btn {
+  margin-top:30px;
+  padding:18px 50px;
+  font-size:1.4em;
+  font-family:Georgia,serif;
+  background:#8b1a1a;
+  color:#d4a843;
+  border:3px solid #d4a843;
+  border-radius:10px;
+  cursor:pointer;
+  display:inline-block;
+}
+#start-btn:hover { background:#2d1b4e; }
+
+#game { display:none; max-width:900px; margin:0 auto; padding:20px; }
+
+#hud { display:none; position:fixed; top:10px; left:10px; right:10px; z-index:10; display:flex; justify-content:space-between; pointer-events:none; }
+.hud-box { background:rgba(15,15,26,0.95); border:2px solid #d4a843; border-radius:8px; padding:10px 15px; color:#d4a843; font-size:0.9em; pointer-events:auto; }
+
+.scene-img { width:100%; height:320px; border:3px solid #d4a843; border-radius:10px; margin-bottom:20px; overflow:hidden; position:relative; }
+.scene-img canvas { width:100%; height:100%; display:block; }
+.scene-label { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.85); color:#f0d078; text-align:center; padding:10px; font-size:1.1em; }
+
+.story { background:rgba(26,26,46,0.95); border:1px solid rgba(212,168,67,0.3); border-radius:8px; padding:20px 25px; margin-bottom:20px; line-height:1.8; font-size:1.1em; }
+
+.char-box { background:rgba(139,26,26,0.15); border-left:4px solid #d4a843; padding:12px 18px; margin:15px 0; border-radius:0 8px 8px 0; }
+.char-name { color:#d4a843; font-weight:bold; margin-bottom:4px; }
+
+.btns { display:flex; flex-direction:column; gap:10px; margin-top:15px; }
+.btns button {
+  background:linear-gradient(135deg,#1a1a2e,#2d1b4e);
+  border:2px solid #d4a843;
+  color:#f4e4c1;
+  padding:14px 22px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:1.05em;
+  font-family:Georgia,serif;
+  text-align:left;
+}
+.btns button:hover { background:linear-gradient(135deg,#2d1b4e,#8b1a1a); transform:translateX(8px); }
+
+.modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:1000; justify-content:center; align-items:center; }
+.modal.open { display:flex; }
+.modal-inner { background:#1a1a2e; border:3px solid #d4a843; border-radius:12px; padding:30px; max-width:450px; text-align:center; }
+.modal-inner h2 { color:#d4a843; margin-bottom:15px; }
+.modal-input { background:#0a0a1a; border:2px solid #d4a843; color:#f4e4c1; padding:10px; width:100%; font-size:1.1em; border-radius:5px; margin:10px 0; font-family:Georgia,serif; }
+.modal-btn { background:#d4a843; color:#1a1a2e; border:none; padding:10px 25px; font-family:Georgia,serif; font-size:1em; border-radius:5px; cursor:pointer; margin:5px; }
+.modal-btn:hover { background:#f0d078; }
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <div style="font-size:4em;">🏰</div>
+  <h1>Замок Вечности</h1>
+  <p>Путешествие сквозь века — от рыцарских турниров до технологического рая</p>
+  <p style="max-width:500px;font-style:italic;color:#d4a843;">
+    «Здесь нет тайн — есть только хитроумность ходов»
+  </p>
+  <button id="start-btn">⚔ Начать путешествие</button>
+</div>
+
+<div id="game">
+  <div id="hud">
+    <div class="hud-box" id="hud-scene">Сцена 1/50</div>
+    <div class="hud-box" id="hud-inv">⚜ Инвентарь: пусто</div>
+  </div>
+  <div class="scene-img">
+    <canvas id="cv" width="900" height="320"></canvas>
+    <div class="scene-label" id="label"></div>
+  </div>
+  <div class="story" id="story"></div>
+  <div id="charbox"></div>
+  <div class="btns" id="btns"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-inner">
+    <h2 id="m-title">Загадка</h2>
+    <p id="m-desc"></p>
+    <input class="modal-input" id="m-input" placeholder="Ваш ответ...">
+    <div>
+      <button class="modal-btn" id="m-check">Проверить</button>
+      <button class="modal-btn" id="m-skip" style="background:#4a4a5a;color:#ccc;">Пропустить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var inv=[];
+var curScene=1;
+var puzzleOK={};
+
+function startGame(){
+  document.getElementById('start-screen').style.display='none';
+  document.getElementById('game').style.display='block';
+  document.getElementById('hud').style.display='flex';
+  loadScene(1);
+}
+
+function updHud(){
+  document.getElementById('hud-scene').textContent='Сцена '+curScene+'/50';
+  document.getElementById('hud-inv').textContent='⚜ Инвентарь: '+(inv.length?inv.join(', '):'пусто');
+}
+
+function addItem(s){ if(inv.indexOf(s)===-1){inv.push(s);updHud();} }
+
+function loadScene(n){
+  if(!S[n])return;
+  curScene=n;
+  updHud();
+  var s=S[n];
+  drawScene(s.img);
+  document.getElementById('label').textContent='Сцена '+n+': '+s.title;
+  document.getElementById('story').innerHTML=s.text;
+  var ch='';
+  if(s.char){
+    var c=CH[s.char];
+    ch='<div class="char-box"><div class="char-name">'+c.e+' '+c.name+' — '+c.t+'</div><p>'+s.ct+'</p></div>';
+  }
+  document.getElementById('charbox').innerHTML=ch;
+  var bh='';
+  s.choices.forEach(function(c,i){
+    bh+='<button data-i="'+i+'">'+c[0]+'</button>';
+  });
+  document.getElementById('btns').innerHTML=bh;
+  var btns=document.getElementById('btns').querySelectorAll('button');
+  btns.forEach(function(b){
+    b.addEventListener('click',function(){
+      var ci=parseInt(b.getAttribute('data-i'));
+      var nxt=s.choices[ci][1];
+      if(s.act)s.act();
+      if(s.puzzle && !puzzleOK[s.puzzle.q]){
+        openPuzzle(s.puzzle,nxt);
+      } else {
+        loadScene(nxt);
+      }
+    });
+  });
+  window.scrollTo(0,0);
+}
+
+var pNext=0;
+var pCur=null;
+function openPuzzle(p,nxt){
+  pCur=p; pNext=nxt;
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('m-title').textContent=p.q;
+  document.getElementById('m-desc').textContent=p.d;
+  document.getElementById('m-input').value='';
+  document.getElementById('m-input').focus();
+}
+function closePuzzle(){ document.getElementById('modal').classList.remove('open'); loadScene(pNext); }
+document.getElementById('m-skip').addEventListener('click',closePuzzle);
+document.getElementById('m-check').addEventListener('click',function(){
+  var v=document.getElementById('m-input').value.trim().toLowerCase();
+  if(v===pCur.a||v===pCur.ar){
+    puzzleOK[pCur.q]=true;
+    addItem(pCur.reward);
+    alert('Правильно! Получено: '+pCur.reward);
+    closePuzzle();
+  } else {
+    alert('Неправильно! Попробуйте ещё или пропустите.');
+  }
+});
+document.getElementById('m-input').addEventListener('keydown',function(e){
+  if(e.key==='Enter')document.getElementById('m-check').click();
+});
+
+document.getElementById('start-btn').addEventListener('click',function(){ startGame(); });
+
+// ===== CHARACTERS =====
+var CH={
+  al:{name:'Сэр Альдрик',t:'Рыцарь-Хранитель',e:'⚔️'},
+  lc:{name:'Леди Целестина',t:'Таинственная аристократка',e:'👑'},
+  pr:{name:'Принцесса Розалинда',t:'Чемпионка турниров',e:'🛡️'},
+  js:{name:'Шут Бен-Джестер',t:'Хранитель шуток',e:'🃏'},
+  cu:{name:'Куратор Альберт',t:'Хранитель музея',e:'📜'},
+  mn:{name:'Библиотекарь Минерва',t:'Хранитель знаний',e:'📚'},
+  fa:{name:'Алхимик Фауст',t:'Мастер превращений',e:'⚗️'},
+  ck:{name:'Мастер Хронометр',t:'Повелитель времени',e:'⚙️'}
+};
+
+// ===== DRAW FUNCTIONS =====
+function drawScene(t){
+  var cv=document.getElementById('cv'),c=cv.getContext('2d');
+  c.clearRect(0,0,900,320);
+  if(DS[t])DS[t](c);
+}
+
+var DS={};
+
+DS.road=function(c){
+  var g=c.createLinearGradient(0,0,0,180);
+  g.addColorStop(0,'#1a1a3e');g.addColorStop(0.5,'#4a3f6b');g.addColorStop(1,'#d4a843');
+  c.fillStyle=g;c.fillRect(0,0,900,180);
+  c.fillStyle='#f0d078';c.beginPath();c.arc(750,55,30,0,7);c.fill();
+  for(var i=0;i<40;i++){c.fillStyle='rgba(255,255,255,'+((Math.random()*0.7+0.3).toFixed(2))+')';c.beginPath();c.arc(Math.random()*900,Math.random()*130,Math.random()*1.5+0.5,0,7);c.fill();}
+  c.fillStyle='#1a1a2e';c.fillRect(300,180,350,140);
+  [[320,110,20],[400,100,25],[480,90,30],[560,100,25],[620,110,20]].forEach(function(t){c.fillRect(t[0],t[1],12,t[2]);});
+  ['#8b1a1a','#d4a843','#1a4d2e'].forEach(function(cl,i){c.fillStyle=cl;c.beginPath();c.moveTo(330+i*130,90);c.lineTo(360+i*130,100);c.lineTo(330+i*130,110);c.fill();});
+  c.fillStyle='#f0d078';[[340,145],[380,145],[460,135],[500,135],[540,145],[580,145]].forEach(function(p){c.fillRect(p[0],p[1],12,16);});
+  c.fillStyle='#2d5a27';c.fillRect(0,180,900,140);
+  c.fillStyle='#5a4a3a';c.beginPath();c.moveTo(400,320);c.lineTo(500,320);c.lineTo(480,180);c.lineTo(420,180);c.fill();
+};
+
+DS.gates=function(c){
+  c.fillStyle='#5a5a6a';c.fillRect(0,140,200,180);c.fillRect(700,140,200,180);
+  c.fillStyle='#4a4a5a';c.fillRect(140,70,100,210);c.fillRect(660,70,100,210);
+  c.fillStyle='#8b1a1a';c.beginPath();c.moveTo(140,70);c.lineTo(190,30);c.lineTo(240,70);c.fill();
+  c.beginPath();c.moveTo(660,70);c.lineTo(710,30);c.lineTo(760,70);c.fill();
+  c.fillStyle='#2a2a3a';c.beginPath();c.arc(450,200,110,Math.PI,0);c.lineTo(560,320);c.lineTo(340,320);c.fill();
+  c.fillStyle='#3a2a1a';c.fillRect(360,180,70,140);c.fillRect(470,180,70,140);
+  c.fillStyle='#d4a843';c.beginPath();c.arc(420,250,6,0,7);c.fill();c.beginPath();c.arc(480,250,6,0,7);c.fill();
+  torch(c,330,160);torch(c,570,160);
+  c.fillStyle='#4a4a5a';c.fillRect(280,230,25,70);c.fillStyle='#6a6a7a';c.beginPath();c.arc(292,220,12,0,7);c.fill();
+};
+
+DS.castle=function(c){
+  c.fillStyle='#6a6a7a';c.fillRect(0,220,900,100);
+  c.fillStyle='#7a7a8a';c.fillRect(100,60,700,160);
+  for(var i=0;i<5;i++){c.fillStyle='#3a3a4a';c.fillRect(160+i*120,90,50,70);c.fillStyle='#f0d078';c.fillRect(168+i*120,98,34,54);}
+  c.fillStyle='#3a2a1a';c.beginPath();c.arc(450,220,70,Math.PI,0);c.lineTo(520,220);c.lineTo(380,220);c.fill();c.fillRect(380,220,140,50);
+  for(var i=0;i<7;i++){c.fillStyle=['#8b1a1a','#d4a843','#1a4d2e'][i%3];c.beginPath();c.moveTo(140+i*100,60);c.lineTo(170+i*100,70);c.lineTo(140+i*100,80);c.fill();}
+  knight(c,180,240);knight(c,710,240);
+};
+
+DS.hall=function(c){
+  c.fillStyle='#4a3a5a';c.fillRect(0,0,900,320);
+  var f=c.createLinearGradient(0,260,0,320);f.addColorStop(0,'#3a2a1a');f.addColorStop(1,'#2a1a0a');c.fillStyle=f;c.fillRect(0,260,900,60);
+  c.fillStyle='#8b1a1a';c.fillRect(350,260,200,60);c.fillStyle='#a02020';c.fillRect(358,265,184,50);
+  c.fillStyle='#d4a843';c.fillRect(440,0,20,40);c.beginPath();c.arc(450,50,35,0,7);c.fill();
+  c.fillStyle='#f0d078';for(var i=0;i<8;i++){var a=i/8*7;c.beginPath();c.arc(450+Math.cos(a)*30,50+Math.sin(a)*30,5,0,7);c.fill();}
+  for(var i=0;i<3;i++){c.fillStyle='#5a4a3a';c.fillRect(70+i*280,70,90,110);c.fillStyle='#d4b896';c.beginPath();c.arc(115+i*280,120,18,0,7);c.fill();}
+  torch(c,30,130);torch(c,870,130);
+};
+
+DS.gallery=function(c){
+  c.fillStyle='#2d1b4e';c.fillRect(0,0,900,320);
+  c.fillStyle='#1a0a2a';c.fillRect(0,270,900,50);
+  var px=[[40,30,110,150,'#8b4513'],[200,50,90,130,'#1a4d2e'],[350,20,130,170,'#2c3e50'],[540,40,100,140,'#8b1a1a'],[700,30,120,160,'#4a4a5a']];
+  px.forEach(function(p){c.fillStyle='#d4a843';c.fillRect(p[0]-4,p[1]-4,p[2]+8,p[3]+8);c.fillStyle=p[4];c.fillRect(p[0],p[1],p[2],p[3]);c.fillStyle='#87ceeb';c.fillRect(p[0],p[1],p[2],p[3]/2);c.fillStyle='#228b22';c.fillRect(p[0],p[1]+p[3]/2,p[2],p[3]/2);});
+  var sp=c.createRadialGradient(450,180,0,450,180,250);sp.addColorStop(0,'rgba(240,208,120,0.25)');sp.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=sp;c.fillRect(0,0,900,320);
+};
+
+DS.armory=function(c){
+  c.fillStyle='#4a4a5a';c.fillRect(0,0,900,320);
+  c.strokeStyle='#3a3a4a';c.lineWidth=2;for(var y=0;y<320;y+=35)for(var x=0;x<900;x+=70)c.strokeRect(x+(y/35%2)*35,y,70,35);
+  for(var i=0;i<5;i++)armor(c,80+i*180,80);
+  c.fillStyle='#5a3a1a';c.fillRect(40,250,820,8);
+  for(var i=0;i<7;i++){c.fillStyle='#8a8a9a';c.fillRect(70+i*110,40,3,70);c.fillStyle='#d4a843';c.fillRect(62+i*110,105,19,6);}
+  var l=c.createRadialGradient(80,180,0,80,180,130);l.addColorStop(0,'rgba(240,160,48,0.3)');l.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=l;c.fillRect(0,0,900,320);
+};
+
+DS.library=function(c){
+  c.fillStyle='#3a2a1a';c.fillRect(0,0,900,320);
+  for(var i=0;i<5;i++){c.fillStyle='#5a4a3a';c.fillRect(i*180,10,165,280);for(var y=20;y<280;y+=30){for(var x=i*180+4;x<i*180+160;x+=10){c.fillStyle=['#8b1a1a','#1a4d2e','#2d1b4e','#d4a843','#3a3a4a'][Math.floor(Math.random()*5)];c.fillRect(x,y,8,25);}}}
+  c.fillStyle='#5a4a3a';c.fillRect(350,220,200,55);c.fillStyle='#f4e4c1';c.fillRect(400,230,100,35);c.fillStyle='#d4a843';c.fillRect(445,210,10,15);
+  var l=c.createRadialGradient(450,215,0,450,215,120);l.addColorStop(0,'rgba(240,208,120,0.25)');l.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=l;c.fillRect(0,0,900,320);
+};
+
+DS.ballroom=function(c){
+  var cl=c.createLinearGradient(0,0,0,90);cl.addColorStop(0,'#1a0a2a');cl.addColorStop(1,'#2d1b4e');c.fillStyle=cl;c.fillRect(0,0,900,90);
+  c.fillStyle='#3d2b5e';c.fillRect(0,90,900,170);
+  var fl=c.createLinearGradient(0,260,0,320);fl.addColorStop(0,'#8b6914');fl.addColorStop(1,'#6b4914');c.fillStyle=fl;c.fillRect(0,260,900,60);
+  c.fillStyle='#d4a843';c.fillRect(430,0,40,25);c.beginPath();c.moveTo(400,25);c.lineTo(500,25);c.lineTo(480,65);c.lineTo(420,65);c.fill();
+  c.fillStyle='#f0f8ff';for(var i=0;i<10;i++){c.beginPath();c.moveTo(410+i*9,65);c.lineTo(414+i*9,78);c.lineTo(406+i*9,78);c.fill();}
+  for(var i=0;i<3;i++){c.fillStyle='#d4a843';c.fillRect(130+i*260,110,90,130);c.fillStyle='rgba(200,200,220,0.25)';c.fillRect(134+i*260,114,82,122);}
+  c.fillStyle='#8b1a1a';c.beginPath();c.moveTo(0,90);c.quadraticCurveTo(40,110,0,180);c.fill();c.beginPath();c.moveTo(900,90);c.quadraticCurveTo(860,110,900,180);c.fill();
+  var l=c.createRadialGradient(450,50,0,450,50,260);l.addColorStop(0,'rgba(240,208,120,0.15)');l.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=l;c.fillRect(0,0,900,320);
+};
+
+DS.mirror=function(c){
+  c.fillStyle='#1a1a2e';c.fillRect(0,0,900,320);
+  for(var i=0;i<8;i++){c.fillStyle='rgba(200,220,240,0.15)';c.fillRect(40+i*110,40,70,240);c.strokeStyle='#d4a843';c.lineWidth=1.5;c.strokeRect(40+i*110,40,70,240);}
+  c.fillStyle='rgba(255,255,255,0.08)';[70,180,290,400].forEach(function(x){c.fillRect(x,60,25,200);});
+  var l=c.createRadialGradient(450,160,0,450,160,220);l.addColorStop(0,'rgba(150,200,255,0.15)');l.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=l;c.fillRect(0,0,900,320);
+};
+
+DS.throne=function(c){
+  c.fillStyle='#2d1b4e';c.fillRect(0,0,900,320);
+  c.fillStyle='#4a3a5a';c.fillRect(280,220,340,100);
+  c.fillStyle='#d4a843';c.fillRect(380,80,140,170);c.fillStyle='#8b1a1a';c.fillRect(395,100,110,130);
+  c.fillStyle='#d4a843';c.beginPath();c.moveTo(415,105);c.lineTo(450,80);c.lineTo(485,105);c.fill();c.fillRect(415,105,70,18);
+  c.fillStyle='#e91e63';c.beginPath();c.arc(430,100,4,0,7);c.fill();c.fillStyle='#2196f3';c.beginPath();c.arc(450,92,4,0,7);c.fill();c.fillStyle='#4caf50';c.beginPath();c.arc(470,100,4,0,7);c.fill();
+  for(var i=0;i<5;i++){c.fillStyle=i%2?'#d4a843':'#8b1a1a';c.fillRect(40+i*175,0,70,180);}
+  var l=c.createRadialGradient(450,140,0,450,140,180);l.addColorStop(0,'rgba(240,208,120,0.25)');l.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=l;c.fillRect(0,0,900,320);
+};
+
+DS.alchemy=function(c){
+  c.fillStyle='#3a3a4a';c.fillRect(0,0,900,320);
+  c.fillStyle='#5a4a3a';c.fillRect(180,180,540,70);
+  var cl=['#e91e63','#9c27b0','#2196f3','#4caf50','#ff9800'];
+  for(var i=0;i<5;i++){c.fillStyle=cl[i];c.beginPath();c.arc(230+i*100,200,18,0,7);c.fill();c.fillStyle='#8a8a9a';c.fillRect(225+i*100,165,10,35);}
+  c.fillStyle='#2a2a3a';c.fillRect(630,80,140,170);c.fillStyle='#ff6600';c.fillRect(650,180,100,70);
+  var l=c.createRadialGradient(700,220,0,700,220,130);l.addColorStop(0,'rgba(255,102,0,0.3)');l.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=l;c.fillRect(0,0,900,320);
+};
+
+DS.clockwork=function(c){
+  c.fillStyle='#1a1a2e';c.fillRect(0,0,900,320);
+  var gs=[[180,140,50],[320,160,40],[450,110,60],[580,150,45],[720,130,48]];
+  gs.forEach(function(g){c.strokeStyle='#d4a843';c.lineWidth=3;c.beginPath();c.arc(g[0],g[1],g[2],0,7);c.stroke();for(var i=0;i<10;i++){var a=i/10*7;c.beginPath();c.moveTo(g[0]+Math.cos(a)*g[2],g[1]+Math.sin(a)*g[2]);c.lineTo(g[0]+Math.cos(a)*(g[2]+12),g[1]+Math.sin(a)*(g[2]+12));c.stroke();}c.fillStyle='#d4a843';c.beginPath();c.arc(g[0],g[1],8,0,7);c.fill();});
+  c.strokeStyle='#d4a843';c.lineWidth=5;c.beginPath();c.arc(450,160,90,0,7);c.stroke();
+  c.fillStyle='#d4a843';for(var i=0;i<12;i++){var a=i/12*7-1.57;c.beginPath();c.arc(450+Math.cos(a)*75,160+Math.sin(a)*75,4,0,7);c.fill();}
+  c.lineWidth=3;c.beginPath();c.moveTo(450,160);c.lineTo(450,90);c.stroke();c.beginPath();c.moveTo(450,160);c.lineTo(510,160);c.stroke();
+};
+
+DS.tunnel=function(c){
+  c.fillStyle='#0a0a0a';c.fillRect(0,0,900,320);
+  c.fillStyle='#2a2a2a';c.beginPath();c.moveTo(0,0);c.lineTo(260,80);c.lineTo(260,320);c.lineTo(0,320);c.fill();
+  c.beginPath();c.moveTo(900,0);c.lineTo(640,80);c.lineTo(640,320);c.lineTo(900,320);c.fill();
+  c.fillStyle='#1a4d2e';c.fillRect(260,300,380,20);
+  var l=c.createRadialGradient(450,160,0,450,160,180);l.addColorStop(0,'rgba(100,200,100,0.15)');l.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=l;c.fillRect(0,0,900,320);
+};
+
+DS.modern=function(c){
+  var bg=c.createLinearGradient(0,0,900,320);bg.addColorStop(0,'#e0f7fa');bg.addColorStop(0.5,'#b2ebf2');bg.addColorStop(1,'#80deea');c.fillStyle=bg;c.fillRect(0,0,900,320);
+  c.fillStyle='#f5f5f5';c.fillRect(80,220,280,80);c.fillStyle='#e0e0e0';c.fillRect(540,180,240,120);
+  c.fillStyle='#1a1a2e';c.fillRect(120,60,180,100);c.fillStyle='#00b4d8';c.fillRect(124,64,172,92);
+  c.fillStyle='#1a1a2e';c.fillRect(580,40,160,90);c.fillStyle='#90e0ef';c.fillRect(584,44,152,82);
+  c.fillStyle='#228b22';c.beginPath();c.arc(450,270,35,Math.PI,0);c.fill();c.fillStyle='#8b4513';c.fillRect(437,270,26,45);
+};
+
+DS.default=function(c){
+  var g=c.createLinearGradient(0,0,900,320);g.addColorStop(0,'#2d1b4e');g.addColorStop(1,'#1a1a2e');c.fillStyle=g;c.fillRect(0,0,900,320);
+  c.fillStyle='#d4a843';c.font='40px serif';c.textAlign='center';c.fillText('🏰',450,180);
+};
+
+function torch(c,x,y){
+  c.fillStyle='#5a3a1a';c.fillRect(x-2,y,4,25);
+  c.fillStyle='#f0a030';c.beginPath();c.moveTo(x-10,y);c.lineTo(x,y-18);c.lineTo(x+10,y);c.fill();
+  c.fillStyle='#f0d078';c.beginPath();c.arc(x,y-7,5,0,7);c.fill();
+}
+function knight(c,x,y){
+  c.fillStyle='#6a6a7a';c.fillRect(x-10,y,20,45);c.fillRect(x-15,y+8,30,16);
+  c.fillStyle='#7a7a8a';c.beginPath();c.arc(x,y-5,12,0,7);c.fill();c.fillStyle='#2a2a3a';c.fillRect(x-6,y-8,12,5);
+}
+
+// ===== SCENES =====
+var S={};
+
+S[1]={img:'road',title:'Дорожка к замку',
+text:'Туманная дорожка вьётся среди древних дубов, ведя вас к силуэту величественного замка на холме. Луна освещает башни, оттуда доносится тихий звон колоколов. На развилке — деревянный указатель: <b>«Замок Вечности — 3 лиги»</b>.',
+choices:[['Идти по главной дороге',2],['Свернуть через лесную тропу',3]]};
+
+S[2]={img:'road',title:'Главная дорога',
+text:'Широкая дорога из старых камней ведёт к замку. По обочинам — каменные столбы с гербами: красные львы и золотые лилии. Впереди — ворота, охраняемые двумя рыцарями в полных доспехах.',
+choices:[['Подойти к рыцарям',4],['Рассмотреть гербы',5]]};
+
+S[3]={img:'road',title:'Лесная тропа',
+text:'Тропа ведёт через густой лес. Среди деревьев мелькают тени. Вы натыкаетесь на старинную каменную скамью с надписью: <i>«Путник, разгадай загадку и получи ключ»</i>. На скамье — вырезанный узор из переплетённых змей.',
+choices:[['Разгадать головоломку',6],['Вернуться на главную дорогу',2]],
+puzzle:{q:'Загадка змей: сколько змей в узоре?',d:'Посчитайте змей на скамье. Ответ — цифра.',a:'7',ar:'7',reward:'Ключ от восточных ворот'}};
+
+S[4]={img:'gates',title:'У ворот замка',
+text:'Один из рыцарей снимает забрало: <b>«Стой, путник! Назови имя и цель!»</b>',
+char:'al',ct:'«Добро пожаловать к Замку Вечности. Я — сэр Альдрик, рыцарь-хранитель. Внутри тебя ждут испытания ума, а не меча. Готов ли ты?»',
+choices:[['«Я готов!»',7],['«Расскажи о замке»',8],['«Можно просто пройти?»',9]]};
+
+S[5]={img:'castle',title:'Гербы на столбах',
+text:'Вы рассматриваете гербы. Первый — красный лев на золоте, символ королевского дома. Второй — серебряная башня на синем, герб строителей. Третий — переплетённые руки, символ союза семей. Всё это — ключ к чему-то...',
+choices:[['Запомнить порядок',4]]};
+
+S[6]={img:'road',title:'Разгадка',
+text:'Вы считаете змей — их ровно семь! В центре узора открывается ниша, оттуда выкатывается бронзовый ключ с гравировкой «В».',
+choices:[['Вернуться на главную дорогу',2]],
+act:function(){addItem('Ключ от восточных ворот');puzzleOK['Загадка змей: сколько змей в узоре?']=true;}};
+
+S[7]={img:'gates',title:'Врата замка',
+text:'Сэр Альдрик кивает. Тяжёлые дубовые ворота распахиваются. Мост через ров опускается с грохотом цепей. Впереди — мир, где время текло иначе...',
+choices:[['Войти во двор',10]]};
+
+S[8]={img:'gates',title:'История замка',
+text:'Сэр Альдрик оживляется: <b>«Замок Вечности построен семь веков назад королём Альфредом Мудрым. Здесь жили рыцари, учёные, художники. Замок — живой музей. Тот, кто разгадает все загадки, найдёт путь в новую эру — технологический рай!»</b>',
+choices:[['«Принимаю вызов!»',7],['«А если не справлюсь?»',9]]};
+
+S[9]={img:'gates',title:'Предупреждение',
+text:'Сэр Альдрик качает головой: <b>«Каждый, кто входит, должен пройти путь. Запомни: здесь нет тайн — есть только хитроумность ходов. Каждый предмет — подсказка, каждый портрет — ключ.»</b> Он протягивает вам фонарь.',
+choices:[['Войти с фонарём',7]],
+act:function(){addItem('Старинный фонарь');}};
+
+S[10]={img:'castle',title:'Внутренний двор',
+text:'Внутренний двор поражает величием. Башни с развевающимися флагами — красными, золотыми, изумрудными. Фонтан с мраморной статуей воина. Рыцари тренируются на плацу. Дамы в роскошных платьях наблюдают с балконов.',
+choices:[['К фонтану',11],['Наблюдать за тренировкой',12],['Войти в главный вход',13]]};
+
+S[11]={img:'castle',title:'Фонтан воина',
+text:'Статуя воина с мечом, направленным в небо. У основания надпись: <i>«Тот, кто сломит копьё, получит благословение»</i>. Рядом — три копья: деревянное, железное и золотое.',
+choices:[['Деревянное копьё',14],['Железное копьё',14],['Золотое копьё',14],['Пройти мимо',13]]};
+
+S[12]={img:'armory',title:'Тренировка рыцарей',
+text:'Двое рыцарей сходятся в поединке — искры летят при каждом ударе. Тренер-оружейник отмечает каждое движение.',
+char:'pr',ct:'«Впечатляюще, правда? Это сэр Галахад и лорд Мордред. Но настоящий турнир будет завтра. Я — принцесса Розалинда, чемпионка прошлого года. Хочешь участвовать?»',
+choices:[['«Хочу попробовать!»',15],['«Я скорее наблюдатель»',13],['«Расскажи про турнир»',16]]};
+
+S[13]={img:'hall',title:'Главный вход',
+text:'Тяжёлые дубовые двери распахиваются. Грандиозный зал: мраморные колонны, гобелены с битвами и охотами, хрустальная люстра. Пол выложен мозаикой с гербами дворянских семей.',
+choices:[['Изучить гобелены',17],['Подняться по лестнице',18],['В галерею портретов',19]]};
+
+S[14]={img:'castle',title:'Благословение',
+text:'Вы вставляете копьё в статую. Фонтан начинает светиться! Струйка золотой воды падает на вашу руку — прилив энергии и ясности ума.',
+choices:[['Войти в главный вход',13]],
+act:function(){addItem('Благословение фонтана');}};
+
+S[15]={img:'armory',title:'Приглашение на турнир',
+text:'Принцесса Розалинда улыбается: <b>«Отлично! Но сначала — три испытания в замке. Каждое проверит твой ум. Собрав все три символа, получишь право участвовать.»</b> Она протягивает медальон с изображением щита.',
+choices:[['Принять медальон',13]],
+act:function(){addItem('Медальон турнира');}};
+
+S[16]={img:'castle',title:'О турнире',
+text:'<b>«Турнир проводится каждое столетие. Но это не просто схватки — побеждает не сильнейший, а хитрейший. Каждый поединок — загадка. Участники должны не просто сражаться, но и разгадывать загадки во время боя.»</b>',
+choices:[['Войти в замок',13]]};
+
+S[17]={img:'gallery',title:'Гобелены',
+text:'Гобелены рассказывают историю замка. На первом — король Альфред接受подношение от мудрецов. На втором — великий турнир. На третьем — таинственная комната с зеркалами, отражающими будущее. На последнем — врата в светлый мир с летающими machineами и экранами.',
+choices:[['Запомнить врата',18],['Изучить зеркальную комнату',20],['Подняться по лестнице',18]]};
+
+S[18]={img:'hall',title:'Мраморная лестница',
+text:'Лестница вьётся вверх с резными перилами. На площадках — вазы с цветами и подсвечники. Стены расписаны фресками: охоты, балы, турниры. Лёгкий сквозняк — запах старого дерева и пчелиного воска.',
+choices:[['Второй этаж',19],['Рассмотреть фрески',21],['В библиотеку',22]]};
+
+S[19]={img:'gallery',title:'Галерея портретов',
+text:'Длинный коридор两侧满是 портретов в золочёных рамах. Рыцари, дамы с веерами, учёные. Один портрет — молодая женщина с загадочной улыбкой, в руке — ключ.',
+char:'lc',ct:'«Интересно, ты тоже видишь её? Это леди Целестина — последняя владелица замка. Говорят, она спрятала ключ от тайной комнаты среди этих портретов...»',
+choices:[['«Я поищу ключ»',23],['«Кто вы?»',24],['Пройти мимо',25]]};
+
+S[20]={img:'mirror',title:'Таинственная комната на гобелене',
+text:'На гобелене — комната зеркал, отражающих не реальность, а видения: башни из стекла, летающие carriage, люди с экранами. Пророчество? Или воспоминание о будущем?',
+choices:[['Запомнить видения',18],['Подняться по лестнице',18]]};
+
+S[21]={img:'hall',title:'Фрески',
+text:'На фресках — сцены жизни замка. Одна особенно интригует: группа людей перед порталом с голубоватым светом. Надпись: <i>«Когда знание встретит технологии — откроется путь»</i>.',
+choices:[['Второй этаж',19],['Изучить фреску подробнее',25]]};
+
+S[22]={img:'library',title:'Библиотека',
+text:'С потолка до пола — книжные полки с томами в кожаных переплётах. Стол с лампой и открытыми книгами. Аромат старого пергамента и ванили.',
+char:'mn',ct:'«Добро пожаловать в хранилище знаний. Я — Минерва, библиотекарь. Каждая книга — ключ к разгадке. Но будь осторожен: некоторые хранят не только знания, но и ловушки для неразумных.»',
+choices:[['Книга о тайных комнатах',26],['Старинная карта',27],['Вернуться в коридор',19]]};
+
+S[23]={img:'gallery',title:'Поиск ключа',
+text:'Вы пристально разглядываете портреты. За портретом леди Целестины — небольшая щель в раме. Отодвинув портрет, вы находите тайник: серебряный ключ с гравировкой «Бал» и записка: <i>«Для того, кто поймёт танец зеркал»</i>.',
+choices:[['Взять ключ',25]],
+act:function(){addItem('Ключ от бального зала');}};
+
+S[24]={img:'gallery',title:'Леди Целестина',
+text:'<b>«Я — леди Целестина, или её призрак. Я жила здесь двести лет назад и знала все тайны замка. Ты на верном пути. Ищи три символа: щит, корону и звезду. Собрав их все, ты откроешь врата нового мира.»</b>',
+choices:[['«Где найти символы?»',28],['Поблагодарить',19]]};
+
+S[25]={img:'gallery',title:'Коридор второго этажа',
+text:'Широкий коридор с бархатными коврами. На стенах — картины маслом в золочёных рамах. Витражные окна. В конце — два прохода: бальный зал и оружейная.',
+choices:[['Бальный зал',29],['Оружейная',30],['Изучить картины',31]]};
+
+S[26]={img:'library',title:'Книга о тайных комнатах',
+text:'Потрёпанный фолиант: <i>«Тайные покои замка Вечности»</i>. Чертежи подземных ходов, описание артефактов, карта тайных комнат. Страница特别标记: «Зеркальная комната — ключ к будущему. Найди звезду».',
+choices:[['Запомнить чертёж',22],['Взять книгу',22]],
+act:function(){addItem('Книга о тайных комнатах');}};
+
+S[27]={img:'library',title:'Старинная карта',
+text:'Карта замка: Западное крыло (оружейная), Восточное (библиотека и лаборатории), Северное (башни). В центре — подземелье с вопросительным знаком. Рядом — компас с дёргающейся стрелкой.',
+choices:[['Изучить подземелье',27],['Вернуться в коридор',19]]};
+
+S[28]={img:'gallery',title:'Три символа',
+text:'<b>«Щит — в оружейной, отражает правду. Корона — в тронном зале, только для тех, кто понимает: власть = ответственность. Звезда — в зеркальной комнате, где отражения говорят правду. Собрав все три, ты откроешь портал в новый мир.»</b> Леди Целестина растворяется, оставляя аромат роз.',
+choices:[['В оружейную',30],['В тронный зал',32],['В зеркальную комнату',33]]};
+
+S[29]={img:'ballroom',title:'Бальный зал',
+text:'Хрустальные люстры, зеркальные стены, паркетный пол. В углах — колонны с плющом. Тихая музыка без музыкантов. По краю — дамы и кавалеры, застывшие в танцевальных позах — живые статуи.',
+choices:[['Танцевать со статуей',34],['Искать тайный проход',35],['Вернуться',25]]};
+
+S[30]={img:'armory',title:'Оружейная',
+text:'Мечи, щиты, копья, арбалеты. В нишах — полные комплекты доспехов. В центре — легендарный меч короля Альфреда, клинок которого至今保持своё сияние.',
+choices:[['Изучить щиты',36],['Меч Альфреда',37],['Зеркальный щит',38]]};
+
+S[31]={img:'gallery',title:'Картина из будущего',
+text:'Среди картин — необычная. Она изображает людей в странных костюмах, летающие carriage, стеклянные башни. Подпись: <i>«Видение леди Целестины, 1747 год»</i>. Как она могла знать о будущем?',
+choices:[['Запомнить',25],['В бальный зал',29]]};
+
+S[32]={img:'throne',title:'Тронный зал',
+text:'На возвышении — трон из красного дерева с золотом и самоцветами. Герб: золотой лев на багровом. Стражники в полном облачении. На полу — мозаика коронации.',
+choices:[['Подойти к трону',39],['Изучить мозаику',40],['Поговорить со стражником',41]]};
+
+S[33]={img:'mirror',title:'Зеркальная комната',
+text:'Зеркала отражают бесконечность, но каждое — немного иначе. В одном вы — ребёнок, в другом — старик, в третьем — рыцарь. Комната возможностей.',
+choices:[['Центральное зеркало',42],['Выйти',25]],
+puzzle:{q:'Загадка зеркал',d:'Какое зеркало показывает правду? Ответ — одно слово.',a:'central',ar:'центральное',reward:'Хрустальная звезда'}};
+
+S[34]={img:'ballroom',title:'Танец со статуей',
+text:'Вы берёте статую за руку и начинаете вальс. Статуя оживает! Движения становятся плавными, в глазах — блеск. Вы танцуете под незримую музыку.',
+char:'js',ct:'«Хо-хо! Ты нашёл способ! Я — Шут Бен-Джестер. Танец — ключ ко многим дверям. В этом замке самое важное — найти правильный ритм!»',
+choices:[['«Какой ритм для следующей комнаты?»',35],['Продолжить танец',34]]};
+
+S[35]={img:'ballroom',title:'Тайный проход',
+text:'Шут подсказывает: <b>«Ищи зеркало, которое не отражает!»</b> Вы замечаете одно зеркало — темнее других, без отражения. Нажав на раму, слышите щелчок — зеркало поворачивается, открывая проход.',
+choices:[['Пройти через проход',43]]};
+
+S[36]={img:'armory',title:'Щиты',
+text:'Среди щитов — один из полированного металла, блестящий как зеркало! Гравировка: <i>«Тот, кто смотрит в правду, увидит путь»</i>. В отражении — дверь с надписью «Портал».',
+choices:[['Взять зеркальный щит',44]],
+act:function(){addItem('Зеркальный щит (Символ Щита)');}};
+
+S[37]={img:'armory',title:'Меч Альфреда',
+text:'Когда ваши пальцы касаются рукояти, по залу проходит волна энергии. Меч весит почти ничего. На клинке: <i>«Сила — в мудрости, мудрость — в знании»</i>.',
+choices:[['Вернуть меч',44],['Оставить при себе',44]],
+act:function(){addItem('Меч короля Альфреда');}};
+
+S[38]={img:'armory',title:'Зеркальный щит',
+text:'Зеркальный щит висит в нише, охраняемый лучами света. В отражении — светлая комната с technologies. Это портал! Но нужны все три символа.',
+choices:[['Взять щит',44]],
+act:function(){addItem('Зеркальный щит (Символ Щита)');}};
+
+S[39]={img:'throne',title:'Подход к трону',
+text:'Под подушкой трона — блестит корона! Но стражники поднимают копья: <b>«Корона для тех, кто докажет право. Что важнее для короля — сила или мудрость?»</b>',
+choices:[['Ответить «мудрость»',44],['Ответить «сила»',39],['Уйти',25]],
+puzzle:{q:'Вопрос стражника',d:'Что важнее для короля: сила или мудрость? Ответ — одно слово.',a:'мудрость',ar:'мудрость',reward:'Корона'}};
+
+S[40]={img:'throne',title:'Мозаика',
+text:'Тысячи кусочков стекла и камня: король Альфред接受корону от силы света. Вокруг — рыцари, мудрецы, художники. У ног короля — маленькая фигура в мантии с книгой. Первый куратор замка.',
+choices:[['К трону',39],['Поговорить со стражником',41]]};
+
+S[41]={img:'throne',title:'Куратор Альберт',
+text:'Стражник снимает шлем — пожилой мужчина с добрыми глазами.',
+char:'cu',ct:'«Я — куратор Альберт. Храню замок пятьдесят лет. Щит — в оружейной, Корона — здесь, Звезда — в зеркальной комнате. Помни: каждый символ требует не силы, а сообразительности. Замок любит тех, кто думает.»',
+choices:[['Взять корону',39],['За остальными символами',25]]};
+
+S[42]={img:'mirror',title:'Центральное зеркало',
+text:'В зеркале — ваше отражение, но оно улыбается раньше вас. Зеркало светится голубоватым, и из поверхности появляется хрустальная звезда, мерцающая всеми цветами радуги.',
+choices:[['Взять звезду',45],['Спросить о будущем',46]]};
+
+S[43]={img:'tunnel',title:'Тайный коридор',
+text:'За зеркалом — узкий коридор с факелами. Стены покрыты письменами на неизвестном языке. Запах старого камня. Коридор ведёт вниз, к подземелью.',
+choices:[['Спуститься',47],['Вернуться',29]]};
+
+S[44]={img:'armory',title:'Символ получен',
+text:'Важный символ у вас! Нужно собрать все три для портала. Оружейная кажется теперь дружелюбной — даже доспехи, кажется, улыбаются.',
+choices:[['За короной',32],['За звездой',33],['В главный зал',13]]};
+
+S[45]={img:'mirror',title:'Хрустальная звезда',
+text:'Звезда пульсирует, как живая. Зеркальная комната становится теплее. Два символа — нужна корона.',
+choices:[['За короной',33],['Изучить другие зеркала',33]],
+act:function(){addItem('Хрустальная звезда (Символ Звезды)');puzzleOK['Загадка зеркал']=true;}};
+
+S[46]={img:'mirror',title:'Разговор с зеркалом',
+text:'Зеркало: <b>«Будущее — не место, а состояние ума. Тот, кто видит возможности там, где другие видят конец, — тот откроет врата. Главный ключ — внутри тебя.»</b> Зеркало гаснет.',
+choices:[['Взять звезду',45],['Покинуть комнату',25]]};
+
+S[47]={img:'tunnel',title:'Подземелье',
+text:'Лабиринт коридоров и залов. Cooler, чем наверху. Барельефы строительства замка. Мастерская алхимика — котлы, реторты, цветные жидкости. И алхимик, живущий здесь по сей день.',
+char:'fa',ct:'«Приветствую, искатель! Я — алхимик Фауст. Ищу портал? Помогу, но сначала — загадка. Смешай правильные жидкости!»',
+choices:[['«Готов!»',48],['«Не нужно»',49],['Изучить мастерскую',48]]};
+
+S[48]={img:'alchemy',title:'Загадка алхимика',
+text:'Пять колб: красная, синяя, зелёная, жёлтая, фиолетовая. <b>«Смешай три правильные — получишь эликсир ясности ума. Ошибка — навсегда в подземелье!»</b>',
+choices:[['Попробовать',48],['Вернуться наверх',25]],
+puzzle:{q:'Эликсир алхимика',d:'Какие три цвета смешать? (через запятую)',a:'красный, синий, зелёный',ar:'красный, синий, зеленый',reward:'Эликсир ясности ума'}};
+
+S[49]={img:'tunnel',title:'Уход',
+text:'<b>«Жаль. Ты упускаешь эликсир, проясняющий ум. Но выбор за тобой. В этом замке знание — самое ценное оружие.»</b>',
+choices:[['Наверх',25]]};
+
+S[50]={img:'modern',title:'Технологический рай',
+text:'Три символа — щит, корона, звезда — вставлены в портал. Он раскрывается! За ним — другой мир: светлый, чистый, наполненный technologies. Летающие машины, стеклянные башни, роботы-помощники, солнечные панели, люди в гармонии с природой. <b>«Добро пожаловать в технологический рай!»</b>',
+choices:[['Исследовать мир!',51]]};
+
+S[51]={img:'modern',title:'Финал — Конец',
+text:'Вы стоите на смотровой площадке высочайшей башни. Внизу — город будущего: парки, солнечные панели, роботы ухаживают за садами, дети играют с голографическими питомцами. Из динамиков — музыка с нотами средневековья. Где-то далеко стоит Замок Вечности, хранящий секреты прошлого для тех, кто строит будущее.<br><br><b>Конец!</b><br><br><i>Спасибо за прохождение! Вы встретили рыцаря Альдрика, леди Целестину, принцессу Розалинду, шута Бен-Джестер, куратора Альберта, библиотекаря Минерву и алхимика Фауста. Вы разгадали загадки и прошли через 50 сцен!</i>',
+choices:[['🏰 Начать заново',1]]};
+
+</script>
+</body>
+</html>

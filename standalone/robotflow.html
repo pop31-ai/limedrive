@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>RobotFlow v2 — Логистика Роботов</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#fff;font-family:'Segoe UI',Tahoma,sans-serif;overflow:hidden;display:flex;flex-direction:column;height:100vh;user-select:none}
+#game-container{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+canvas{display:block;border:2px solid #1a3a5a;border-radius:8px;margin:4px auto;cursor:pointer}
+#top-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:#0d1525;border-bottom:1px solid #1a3a5a}
+#top-bar h1{font-size:18px;color:#00e5ff;text-shadow:0 0 10px rgba(0,229,255,.4)}
+.stat{font-size:13px;color:#aaa}.stat b{color:#00e5ff}
+#bottom-bar{width:100%;padding:6px 12px;background:#0d1525;border-top:1px solid #1a3a5a;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#flow-queue{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.flow-item{padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;border:2px solid;display:flex;align-items:center;gap:4px;white-space:nowrap;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.btn{padding:4px 10px;border:1px solid #4a6a8a;background:#1a2a3a;color:#8af;border-radius:8px;cursor:pointer;font-size:12px;transition:all .2s}
+.btn:hover{background:#2a3a5a}.btn.active{background:#00e5ff;color:#000;border-color:#00e5ff}
+.overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(10,10,26,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+.overlay h1{font-size:48px;color:#00e5ff;text-shadow:0 0 40px rgba(0,229,255,.6);margin-bottom:10px}
+.overlay h2{font-size:28px;color:#00e5ff;margin-bottom:16px}
+.overlay p{font-size:15px;color:#8899aa;margin-bottom:20px;text-align:center;max-width:520px;line-height:1.6}
+.overlay button{padding:14px 40px;font-size:18px;background:linear-gradient(135deg,#004466,#0088aa);color:#fff;border:2px solid #00e5ff;border-radius:12px;cursor:pointer;transition:all .3s;margin:6px}
+.overlay button:hover{background:linear-gradient(135deg,#006688,#00aaee);transform:scale(1.05)}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tag{font-size:11px;padding:3px 8px;border-radius:8px;font-weight:600}
+#leaderboard{margin-top:16px;text-align:left;width:300px}
+#leaderboard div{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid #1a2a3a;font-size:13px}
+#leaderboard span:first-child{color:#8899aa}#leaderboard span:last-child{color:#00e5ff;font-weight:bold}
+</style>
+</head>
+<body>
+<div id="game-container">
+  <div id="top-bar">
+    <h1>⚙ RobotFlow</h1>
+    <div class="stat">Уровень: <b id="hud-level">1</b></div>
+    <div class="stat">Очки: <b id="hud-score">0</b></div>
+    <div class="stat">Время: <b id="hud-time">90</b>с</div>
+    <div class="stat">Бонусы: <b id="hud-bonus">0</b></div>
+  </div>
+  <canvas id="game"></canvas>
+  <div id="bottom-bar">
+    <span style="font-size:12px;color:#667;font-weight:600">ПОТОК:</span>
+    <div id="flow-queue"></div>
+    <button class="btn" id="btn-bridge" onclick="toggleBridgeMode()">🔧 Мостик</button>
+    <span id="bridge-count" style="font-size:12px;color:#8af">×3</span>
+    <button class="btn" id="btn-pause" onclick="togglePause()">⏸</button>
+    <button class="btn" onclick="toggleSound()">🔊</button>
+  </div>
+  <div id="screen-start" class="overlay">
+    <h1>⚙ RobotFlow</h1>
+    <p>Управляй роботами на конвейерной линии!<br>
+    Кликни робота → кликни портал.<br>
+    Учитывай навыки и пересечения потоков!<br>
+    Собирай бонусы на поле для бонусных очков.</p>
+    <div class="legend">
+      <span class="tag" style="background:#ff4444;color:#fff">🔧 Тяжёлый</span>
+      <span class="tag" style="background:#4488ff;color:#fff">🎯 Точный</span>
+      <span class="tag" style="background:#44cc44;color:#fff">⚡ Быстрый</span>
+      <span class="tag" style="background:#ffcc00;color:#000">★ Универсал</span>
+      <span class="tag" style="background:#cc44ff;color:#fff">🔮 Хакер</span>
+      <span class="tag" style="background:#ff8844;color:#fff">🛡 Инженер</span>
+    </div>
+    <button onclick="startGame()">▶ ИГРАТЬ</button>
+    <button onclick="showLeader()">🏆 РЕКОРДЫ</button>
+    <div id="leaderboard"></div>
+  </div>
+  <div id="screen-pause" class="overlay" style="display:none">
+    <h2>⏸ ПАУЗА</h2>
+    <button onclick="togglePause()">▶ Продолжить</button>
+    <button onclick="quitToMenu()">🏠 В меню</button>
+  </div>
+  <div id="screen-end" class="overlay" style="display:none">
+    <h2 id="end-title"></h2>
+    <p id="end-text"></p>
+    <div id="end-leader" class="legend" style="margin-bottom:12px"></div>
+    <button id="end-next" onclick="nextLevel()">▶ Далее</button>
+    <button onclick="quitToMenu()">🏠 Меню</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════ ЗВУК (Web Audio API, 8-bit бипы) ═══════════════
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let soundOn = true;
+
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playTone(freq, dur, type, vol) {
+  if (!soundOn) return;
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type || 'square';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(vol || 0.08, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + dur);
+}
+
+function sfx(name) {
+  const s = {
+    select:  [600, 0.1, 'square', 0.06],
+    assign:  [800, 0.15, 'square', 0.07],
+    error:   [200, 0.2, 'sawtooth', 0.08],
+    truck:   [400, 0.3, 'triangle', 0.09],
+    bonus:   [1200, 0.15, 'sine', 0.06],
+    bridge:  [300, 0.2, 'triangle', 0.07],
+    levelup: [0, 0.01],
+    click:   [500, 0.05, 'square', 0.04],
+    warn:    [150, 0.3, 'sawtooth', 0.06]
+  };
+  if (name === 'levelup') {
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.2, 'square', 0.07), i * 100));
+    return;
+  }
+  const p = s[name];
+  if (p) playTone(...p);
+}
+
+function toggleSound() { soundOn = !soundOn; }
+
+// ═══════════════ КАНВАС ═══════════════
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = Math.min(1200, window.innerWidth - 20);
+  H = Math.min(680, window.innerHeight - 110);
+  canvas.width = W; canvas.height = H;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ═══════════════ УТИЛИТЫ ═══════════════
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function gp(rx, ry) { return { x: rx * W, y: ry * H }; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function lineHit(p1, p2, p3, p4) {
+  const d = (p1.x-p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x-p4.x);
+  if (Math.abs(d) < 0.001) return false;
+  const t = ((p1.x-p3.x)*(p3.y-p4.y) - (p1.y-p3.y)*(p3.x-p4.x)) / d;
+  const u = -((p1.x-p2.x)*(p1.y-p3.y) - (p1.y-p2.y)*(p1.x-p3.x)) / d;
+  return t > 0.1 && t < 0.9 && u > 0.1 && u < 0.9;
+}
+
+// ═══════════════ НАВЫКИ РОБОТОВ ═══════════════
+const SKILLS = {
+  heavy:     { name:'Тяжёлый',  color:'#ff4444', icon:'🔧', speed:0.7, load:3 },
+  precise:   { name:'Точный',   color:'#4488ff', icon:'🎯', speed:0.9, load:2 },
+  fast:      { name:'Быстрый',  color:'#44cc44', icon:'⚡', speed:1.4, load:1 },
+  universal: { name:'Универсал',color:'#ffcc00', icon:'★',  speed:1.0, load:2 },
+  hacker:    { name:'Хакер',    color:'#cc44ff', icon:'🔮', speed:1.1, load:2 },
+  engineer:  { name:'Инженер',  color:'#ff8844', icon:'🛡', speed:0.8, load:3 }
+};
+
+// ═══════════════ УРОВНИ (10 штук) ═══════════════
+const LEVELS = [
+  { name:'Знакомство', time:80, flowInt:5, bridges:3,
+    portals:[{x:.5,y:.18,skills:['heavy','universal']},{x:.5,y:.78,skills:['fast','universal']}],
+    trucks:[{dx:.9,dy:.18,skills:['heavy'],cap:4},{dx:.9,dy:.78,skills:['fast'],cap:4}],
+    conv:[{p:0,t:0},{p:1,t:1}],
+    spawn:{x:.06,y:.3,w:.12,h:.4}, cranes:[] },
+  { name:'Перекрёсток', time:90, flowInt:4.5, bridges:3,
+    portals:[{x:.3,y:.14,skills:['heavy','universal']},{x:.7,y:.14,skills:['precise','universal']},{x:.5,y:.82,skills:['fast','universal']}],
+    trucks:[{dx:.9,dy:.14,skills:['heavy'],cap:5},{dx:.9,dy:.48,skills:['precise'],cap:5},{dx:.9,dy:.82,skills:['fast'],cap:5}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2}],
+    spawn:{x:.05,y:.28,w:.12,h:.44}, cranes:[{x:.5,y:.46}] },
+  { name:'Завод', time:100, flowInt:4, bridges:4,
+    portals:[{x:.22,y:.12,skills:['heavy']},{x:.5,y:.12,skills:['precise']},{x:.78,y:.12,skills:['fast']},{x:.5,y:.84,skills:['universal','engineer']}],
+    trucks:[{dx:.9,dy:.12,skills:['heavy'],cap:6},{dx:.9,dy:.42,skills:['precise'],cap:6},{dx:.9,dy:.72,skills:['fast'],cap:6},{dx:.12,dy:.84,skills:['universal'],cap:6}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3}],
+    spawn:{x:.04,y:.32,w:.11,h:.36}, cranes:[{x:.35,y:.46},{x:.65,y:.46}] },
+  { name:'Кибер-Склад', time:100, flowInt:3.8, bridges:4,
+    portals:[{x:.2,y:.15,skills:['heavy','engineer']},{x:.5,y:.15,skills:['precise','hacker']},{x:.8,y:.15,skills:['fast']},{x:.35,y:.82,skills:['universal']},{x:.65,y:.82,skills:['hacker','precise']}],
+    trucks:[{dx:.9,dy:.15,skills:['heavy'],cap:6},{dx:.9,dy:.45,skills:['precise'],cap:6},{dx:.9,dy:.75,skills:['fast'],cap:6},{dx:.12,dy:.82,skills:['universal'],cap:6}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3},{p:4,t:1}],
+    spawn:{x:.04,y:.28,w:.1,h:.44}, cranes:[{x:.3,y:.48},{x:.7,y:.48}] },
+  { name:'Мега-Логистика', time:110, flowInt:3.5, bridges:5,
+    portals:[{x:.18,y:.1,skills:['heavy']},{x:.42,y:.1,skills:['precise']},{x:.66,y:.1,skills:['fast']},{x:.3,y:.86,skills:['engineer','heavy']},{x:.7,y:.86,skills:['hacker','fast']}],
+    trucks:[{dx:.9,dy:.1,skills:['heavy'],cap:7},{dx:.9,dy:.35,skills:['precise'],cap:7},{dx:.9,dy:.6,skills:['fast'],cap:7},{dx:.12,dy:.86,skills:['engineer'],cap:7},{dx:.5,dy:.86,skills:['hacker'],cap:7}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3},{p:4,t:4}],
+    spawn:{x:.04,y:.25,w:.1,h:.5}, cranes:[{x:.3,y:.4},{x:.7,y:.4},{x:.5,y:.6}] },
+  { name:'Робо-Мегаполис', time:110, flowInt:3.2, bridges:5,
+    portals:[{x:.16,y:.08,skills:['heavy']},{x:.4,y:.08,skills:['precise']},{x:.64,y:.08,skills:['fast']},{x:.88,y:.45,skills:['universal']},{x:.16,y:.88,skills:['engineer']},{x:.64,y:.88,skills:['hacker']}],
+    trucks:[{dx:.9,dy:.08,skills:['heavy'],cap:8},{dx:.9,dy:.25,skills:['precise'],cap:8},{dx:.9,dy:.65,skills:['fast'],cap:8},{dx:.5,dy:.88,skills:['universal'],cap:8},{dx:.12,dy:.45,skills:['engineer','hacker'],cap:8}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3},{p:4,t:4},{p:5,t:3}],
+    spawn:{x:.03,y:.22,w:.09,h:.56}, cranes:[{x:.3,y:.35},{x:.7,y:.35},{x:.5,y:.55}] },
+  { name:'Нейро-Фабрика', time:120, flowInt:3, bridges:6,
+    portals:[{x:.14,y:.1,skills:['heavy','engineer']},{x:.38,y:.1,skills:['precise']},{x:.62,y:.1,skills:['fast','hacker']},{x:.86,y:.1,skills:['universal']},{x:.3,y:.88,skills:['heavy']},{x:.7,y:.88,skills:['precise','fast']}],
+    trucks:[{dx:.9,dy:.12,skills:['heavy'],cap:9},{dx:.9,dy:.38,skills:['precise'],cap:9},{dx:.9,dy:.64,skills:['fast'],cap:9},{dx:.9,dy:.88,skills:['universal'],cap:9},{dx:.12,dy:.5,skills:['engineer','hacker'],cap:9}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3},{p:4,t:4},{p:5,t:2}],
+    spawn:{x:.03,y:.2,w:.08,h:.6}, cranes:[{x:.25,y:.42},{x:.5,y:.42},{x:.75,y:.42}] },
+  { name:'Квантовый Терминал', time:120, flowInt:2.8, bridges:6,
+    portals:[{x:.12,y:.12,skills:['hacker']},{x:.36,y:.12,skills:['precise']},{x:.6,y:.12,skills:['fast']},{x:.84,y:.12,skills:['heavy']},{x:.24,y:.86,skills:['engineer','universal']},{x:.76,y:.86,skills:['hacker','precise']},{x:.5,y:.5,skills:['universal']}],
+    trucks:[{dx:.92,dy:.12,skills:['hacker'],cap:9},{dx:.92,dy:.38,skills:['precise'],cap:9},{dx:.92,dy:.64,skills:['fast'],cap:9},{dx:.08,dy:.86,skills:['heavy'],cap:9},{dx:.5,dy:.86,skills:['engineer'],cap:9}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3},{p:4,t:4},{p:5,t:1},{p:6,t:4}],
+    spawn:{x:.03,y:.22,w:.07,h:.56}, cranes:[{x:.2,y:.4},{x:.5,y:.3},{x:.8,y:.4},{x:.5,y:.65}] },
+  { name:'Апекс Автоматики', time:130, flowInt:2.5, bridges:7,
+    portals:[{x:.1,y:.1,skills:['heavy']},{x:.3,y:.1,skills:['precise']},{x:.5,y:.1,skills:['fast']},{x:.7,y:.1,skills:['hacker']},{x:.9,y:.1,skills:['universal']},{x:.2,y:.88,skills:['engineer']},{x:.5,y:.88,skills:['heavy','fast']},{x:.8,y:.88,skills:['precise','hacker']}],
+    trucks:[{dx:.92,dy:.2,skills:['heavy'],cap:10},{dx:.92,dy:.42,skills:['precise'],cap:10},{dx:.92,dy:.64,skills:['fast'],cap:10},{dx:.08,dy:.88,skills:['engineer'],cap:10},{dx:.5,dy:.88,skills:['hacker'],cap:10},{dx:.92,dy:.88,skills:['universal'],cap:10}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3},{p:4,t:5},{p:5,t:4},{p:6,t:2},{p:7,t:3}],
+    spawn:{x:.02,y:.2,w:.07,h:.6}, cranes:[{x:.15,y:.42},{x:.4,y:.42},{x:.65,y:.42},{x:.9,y:.42}] },
+  { name:'Робо-Сингулярность', time:140, flowInt:2.2, bridges:8,
+    portals:[{x:.1,y:.08,skills:['heavy']},{x:.28,y:.08,skills:['precise']},{x:.46,y:.08,skills:['fast']},{x:.64,y:.08,skills:['hacker']},{x:.82,y:.08,skills:['universal']},{x:.1,y:.9,skills:['engineer']},{x:.35,y:.9,skills:['heavy','hacker']},{x:.6,y:.9,skills:['precise','fast']},{x:.85,y:.9,skills:['universal','engineer']}],
+    trucks:[{dx:.92,dy:.15,skills:['heavy'],cap:11},{dx:.92,dy:.35,skills:['precise'],cap:11},{dx:.92,dy:.55,skills:['fast'],cap:11},{dx:.92,dy:.75,skills:['hacker'],cap:11},{dx:.08,dy:.5,skills:['universal'],cap:11},{dx:.08,dy:.9,skills:['engineer'],cap:11}],
+    conv:[{p:0,t:0},{p:1,t:1},{p:2,t:2},{p:3,t:3},{p:4,t:4},{p:5,t:5},{p:6,t:0},{p:7,t:2},{p:8,t:4}],
+    spawn:{x:.02,y:.18,w:.06,h:.64}, cranes:[{x:.18,y:.4},{x:.42,y:.4},{x:.66,y:.4},{x:.9,y:.4},{x:.5,y:.6}] }
+];
+
+// ═══════════════ СОСТОЯНИЕ ИГРЫ ═══════════════
+let S = {};
+function resetState() {
+  S = {
+    level:0, score:0, totalScore:0, time:90, running:false, paused:false,
+    robots:[], trucks:[], bridges:[], cranes:[],
+    flowQueue:[], flowTimer:0, flowInt:5,
+    selected:null, msgs:[], particles:[], bonuses:[],
+    bridgeMode:false, bridgeCount:3, bonusCount:0,
+    mouseX:0, mouseY:0, hover:null,
+    hints:[], hintTimer:0, tipIdx:0,
+    trucksDone:0, combo:0, comboTimer:0,
+    tutorialStep:0, tutorialShown:false,
+    warnTime:false, warnFlow:false
+  };
+}
+resetState();
+
+// ═══════════════ ПОДСКАЗКИ / ТУТОРИАЛ / ДОСТИЖЕНИЯ ═══════════════
+const TIPS = [
+  '💡 Кликни робота, потом кликни портал — он побежит!',
+  '💡 Навыки робота должны совпадать с навыком портала',
+  '💡 Смотри очередь потока внизу экрана',
+  '💡 Мостики помогают обойти пересечения',
+  '💡 ПКМ снимает выбор робота',
+  '💡 Бонусы на поле дают время, очки или мостики',
+  '💡 Если робот ждёт — значит пересекается с другим',
+  '💡 Краны перевозят роботов через потоки',
+  '💡 Нажми P или Esc для паузы',
+  '💡 Клавиша B включает режим строительства мостиков'
+];
+
+const LEVEL_TIPS = [
+  'Тут всего 2 портала — идеально для начала!',
+  'Здесь конвейеры пересекаются — используй мостики!',
+  '4 типа роботов — следи за навыками!',
+  'Появились Хакеры и Инженеры — новые навыки!',
+  '5 порталов — планируй поток заранее!',
+  'Большой завод — краны спасут от коллизий!',
+  'Сложная логистика — следи за очередью потока!',
+  'Квантовый терминал — 7 порталов, фокус!',
+  'Почти финал — тут нужно думать быстро!',
+  'Финальный уровень — покажи кто тут босс!'
+];
+
+const ACHIEVEMENTS = {
+  firstTruck: { text:'✅ Первый грузовик загружен!', color:'#44ff88' },
+  fiveTrucks: { text:'🔥 5 грузовиков загружено!', color:'#ffcc00' },
+  tenTrucks:  { text:'💎 10 грузовиков — машина!', color:'#00e5ff' },
+  combo3:     { text:'⚡ Комбо x3 — быстро!', color:'#ff8844' },
+  combo5:     { text:'🌟 Комбо x5 — невероятно!', color:'#ff44ff' },
+  noErrors:   { text:'🏆 Без единой ошибки!', color:'#44ff88' },
+  bonusCollect:{ text:'🎁 Бонус собран!', color:'#ffcc00' },
+  bridgeBuilt: { text:'🌉 Мостик построен!', color:'#8a7a5a' },
+  robotWait:   { text:'⏳ Робот ждёт — пересечение!', color:'#ffcc00' },
+  nearEnd:     { text:'⏰ Время почти вышло!', color:'#ff4444' },
+  almostDone:  { text:'📦 Грузовик почти полон!', color:'#44ccff' },
+  flowFlood:   { text:'📋 Поток заполняется — поторопись!', color:'#ff8844' }
+};
+
+function addHint(text, color, x, y) {
+  S.hints.push({ text, color: color||'#00e5ff', t:3, x: x||W/2, y: y||H/2, vy:-25 });
+}
+
+function addTip() {
+  const tip = TIPS[S.tipIdx % TIPS.length];
+  S.tipIdx++;
+  addMsg(tip, '#8899aa');
+}
+
+function showAchievement(key) {
+  const a = ACHIEVEMENTS[key];
+  if(!a) return;
+  addMsg(a.text, a.color);
+  addPart(W/2, 60, a.color, 10);
+}
+
+function showLevelWelcome(idx) {
+  const L = LEVELS[idx % LEVELS.length];
+  addMsg(`📍 Уровень ${idx+1}: ${L.name}`, '#00e5ff');
+  setTimeout(()=> addHint(LEVEL_TIPS[idx % LEVEL_TIPS.length], '#8899aa'), 1500);
+  if(idx === 0) {
+    setTimeout(()=> addHint('Шаг 1: Кликни на робота слева 👈', '#00ff88', W*0.15, H*0.45), 2500);
+    setTimeout(()=> addHint('Шаг 2: Кликни на портал с номером 1️⃣', '#00ff88', W*0.5, H*0.18), 5000);
+    setTimeout(()=> addHint('Шаг 3: Робот побежит и загрузит грузовик! 🚛', '#00ff88', W*0.75, H*0.5), 7500);
+  }
+}
+
+let lastTrucksDone = 0;
+let lastCombo = 0;
+let tipTimer = 0;
+let warnTimeShown = false;
+let warnFlowShown = false;
+
+function lvl() { return LEVELS[S.level % LEVELS.length]; }
+
+// ═══════════════ СОХРАНЕНИЕ / РЕКОРДЫ ═══════════════
+function saveProgress() {
+  const d = JSON.parse(localStorage.getItem('rf_save') || '{}');
+  d.maxLevel = Math.max(d.maxLevel || 0, S.level);
+  d.totalScore = (d.totalScore || 0) + S.score;
+  localStorage.setItem('rf_save', JSON.stringify(d));
+}
+
+function saveRecord(score, level) {
+  let recs = JSON.parse(localStorage.getItem('rf_records') || '[]');
+  recs.push({ score, level, date: new Date().toLocaleDateString('ru') });
+  recs.sort((a, b) => b.score - a.score);
+  recs = recs.slice(0, 10);
+  localStorage.setItem('rf_records', JSON.stringify(recs));
+}
+
+function getRecords() { return JSON.parse(localStorage.getItem('rf_records') || '[]'); }
+
+// ═══════════════ СООБЩЕНИЯ / ЧАСТИЦЫ ═══════════════
+function addMsg(text, color) {
+  S.msgs.push({ text, color: color || '#00e5ff', t: 2.5, y: H / 2 });
+}
+
+function addPart(x, y, color, n) {
+  for (let i = 0; i < (n || 8); i++)
+    S.particles.push({ x, y, vx: rnd(-70,70), vy: rnd(-70,70), life: rnd(0.3,0.9), color, r: rnd(1.5,3.5) });
+}
+
+// ═══════════════ РОБОТЫ ═══════════════
+function spawnRobot(skill) {
+  const sa = lvl().spawn;
+  const types = Object.keys(SKILLS);
+  const sk = skill || pick(types);
+  const r = 14;
+  let px, py, ok;
+  for (let i = 0; i < 25; i++) {
+    px = rnd(sa.x*W+r, (sa.x+sa.w)*W-r);
+    py = rnd(sa.y*H+r, (sa.y+sa.h)*H-r);
+    ok = true;
+    for (const o of S.robots) if (dist({x:px,y:py},o) < r*2.2) { ok=false; break; }
+    if (ok) break;
+  }
+  const robot = {
+    id: Date.now()+Math.random(), x:px, y:py, r, skill:sk,
+    path:null, pathIdx:0, speed: SKILLS[sk].speed,
+    assigned:false, selected:false, waiting:false, waitT:0, portalIdx:-1
+  };
+  S.robots.push(robot);
+  return robot;
+}
+
+function buildPath(robot, portal) {
+  const p = gp(portal.x, portal.y);
+  const dx = p.x-robot.x, dy = p.y-robot.y;
+  const steps = Math.max(3, Math.ceil(Math.hypot(dx,dy)/80));
+  const pts = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i/steps;
+    pts.push({ x: robot.x+dx*t, y: robot.y+dy*t });
+  }
+  return pts;
+}
+
+function assignRobot(robot, pi) {
+  const L = lvl();
+  const portal = L.portals[pi];
+  if (!portal || !portal.skills.includes(robot.skill)) return false;
+  robot.assigned = true;
+  robot.selected = false;
+  robot.path = buildPath(robot, portal);
+  robot.pathIdx = 0;
+  robot.portalIdx = pi;
+  sfx('assign');
+  addMsg(`${SKILLS[robot.skill].icon} → Портал ${pi+1}`, SKILLS[robot.skill].color);
+  // Комбо
+  S.combo++;
+  S.comboTimer = 3;
+  if(S.combo === 3) showAchievement('combo3');
+  if(S.combo >= 5) showAchievement('combo5');
+  return true;
+}
+
+// ═══════════════ БОНУСЫ НА ПОЛЕ ═══════════════
+function spawnBonus() {
+  if (S.bonuses.length >= 3) return;
+  const x = rnd(W*0.15, W*0.85);
+  const y = rnd(H*0.2, H*0.8);
+  const types = ['time','score','bridge','speed'];
+  const type = pick(types);
+  const colors = { time:'#44ccff', score:'#ffcc00', bridge:'#8a7a5a', speed:'#44ff88' };
+  S.bonuses.push({ x, y, type, color: colors[type], r: 14, life: 12 });
+}
+
+function collectBonus(bonus, robot, clicked) {
+  sfx('bonus');
+  addPart(bonus.x, bonus.y, bonus.color, 12);
+  showAchievement('bonusCollect');
+  const mult = clicked ? 2 : 1;
+  switch (bonus.type) {
+    case 'time':
+      const sec = 10 * mult;
+      S.time = Math.min(S.time + sec, lvl().time + 60);
+      addMsg(`+${sec} секунд!${clicked?' ⚡x2':''}`, '#44ccff');
+      break;
+    case 'score':
+      const pts = 75 * mult;
+      S.score += pts;
+      addMsg(`+${pts} очков!${clicked?' ⚡x2':''}`, '#ffcc00');
+      break;
+    case 'bridge':
+      S.bridgeCount += mult;
+      addMsg(`+${mult} мостик${mult>1?'а':''}!${clicked?' ⚡x2':''}`, '#8a7a5a');
+      break;
+    case 'speed':
+      const boost = clicked ? 2.5 : 1.5;
+      if(robot) robot.speed *= boost;
+      else S.robots.forEach(r=>{ if(!r.assigned) r.speed *= boost; });
+      addMsg(`⚡ Скорость x${boost.toFixed(1)}!${clicked?' ⚡x2':''}`, '#44ff88');
+      break;
+  }
+  S.bonusCount++;
+}
+
+// ═══════════════ ИНИЦИАЛИЗАЦИЯ УРОВНЯ ═══════════════
+function initLevel(idx) {
+  S.level = idx;
+  S.robots = []; S.trucks = []; S.bridges = []; S.cranes = [];
+  S.selected = null; S.msgs = []; S.particles = []; S.bonuses = [];
+  S.time = lvl().time; S.flowTimer = 0; S.flowInt = lvl().flowInt;
+  S.bridgeCount = lvl().bridges; S.bridgeMode = false; S.bonusCount = 0;
+
+  const L = lvl();
+  L.trucks.forEach(t => {
+    const p = gp(t.dx, t.dy);
+    S.trucks.push({ x:p.x, y:p.y, skills:t.skills, cap:t.cap, load:0, loaded:false });
+  });
+  L.cranes.forEach(c => {
+    const p = gp(c.x, c.y);
+    S.cranes.push({ x:p.x, y:p.y });
+  });
+  for (let i = 0; i < 3; i++) spawnRobot();
+  lastTrucksDone = 0;
+  warnTimeShown = false;
+  warnFlowShown = false;
+  tipTimer = 8;
+  updateHUD();
+  setTimeout(()=> showLevelWelcome(idx), 300);
+}
+
+function genFlow() {
+  const L = lvl();
+  const sk = pick(Object.keys(SKILLS));
+  const pi = Math.floor(Math.random() * L.portals.length);
+  return { skill:sk, portalIdx:pi };
+}
+
+// ═══════════════ HUD ═══════════════
+function updateHUD() {
+  document.getElementById('hud-level').textContent = S.level+1;
+  document.getElementById('hud-score').textContent = S.score;
+  document.getElementById('hud-time').textContent = Math.max(0,Math.ceil(S.time));
+  document.getElementById('hud-bonus').textContent = S.bonusCount;
+  document.getElementById('bridge-count').textContent = '×'+S.bridgeCount;
+  document.getElementById('btn-bridge').className = 'btn'+(S.bridgeMode?' active':'');
+  const q = document.getElementById('flow-queue');
+  q.innerHTML = '';
+  S.flowQueue.slice(0,8).forEach(it => {
+    const sk = SKILLS[it.skill];
+    const d = document.createElement('div');
+    d.className = 'flow-item';
+    d.style.borderColor = d.style.color = sk.color;
+    d.style.background = sk.color+'15';
+    d.innerHTML = `${sk.icon}→П${it.portalIdx+1}`;
+    q.appendChild(d);
+  });
+}
+
+// ═══════════════ ТУЛТИПЫ НАВЕДЕНИЯ ═══════════════
+function getHoverTarget(mx, my) {
+  const L = lvl();
+  // порталы
+  for(let i=0;i<L.portals.length;i++){
+    const pp=gp(L.portals[i].x,L.portals[i].y);
+    if(dist({x:mx,y:my},pp)<35){
+      const sk=L.portals[i].skills.map(s=>`${SKILLS[s].icon} ${SKILLS[s].name}`).join(', ');
+      return { type:'portal', idx:i, text:`Портал #${i+1}`, sub:`Навыки: ${sk}`, color:'#00e5ff' };
+    }
+  }
+  // роботы
+  for(const r of S.robots){
+    if(dist({x:mx,y:my},r)<r.r+5){
+      const sk=SKILLS[r.skill];
+      const status=r.assigned?'✅ В пути':(r.waiting?'⏳ Ждёт':'🟢 Свободен');
+      return { type:'robot', text:`${sk.icon} ${sk.name}`, sub:`Скорость: ${(r.speed*100).toFixed(0)}% | ${status}`, color:sk.color };
+    }
+  }
+  // грузовики
+  for(const t of S.trucks){
+    if(Math.abs(mx-t.x)<35 && Math.abs(my-t.y)<20){
+      const fill=Math.floor(t.load/t.cap*100);
+      const sk=t.skills.map(s=>SKILLS[s].icon).join('');
+      return { type:'truck', text:`🚛 Грузовик ${sk}`, sub:`Загрузка: ${fill}% | Вместимость: ${t.cap}`, color:t.loaded?'#44cc44':'#4488ff' };
+    }
+  }
+  // краны
+  for(const cr of S.cranes){
+    if(dist({x:mx,y:my},cr)<30){
+      return { type:'crane', text:'🏗 Кран', sub:'Перевозит роботов через потоки', color:'#aa8a3a' };
+    }
+  }
+  // бонусы
+  for(const b of S.bonuses){
+    if(dist({x:mx,y:my},b)<b.r+8){
+      const names={time:'⏱ +10 секунд',score:'💰 +75 очков',bridge:'🔧 +1 мостик',speed:'⚡ +скорость'};
+      return { type:'bonus', text:names[b.type]||'Бонус', sub:`Осталось: ${Math.ceil(b.life)}с`, color:b.color };
+    }
+  }
+  return null;
+}
+
+function drawTooltip() {
+  const ht = getHoverTarget(S.mouseX, S.mouseY);
+  if(!ht) return;
+  const tx = Math.min(S.mouseX + 15, W - 200);
+  const ty = Math.max(S.mouseY - 60, 10);
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,20,35,0.92)';
+  ctx.strokeStyle = ht.color;
+  ctx.lineWidth = 1.5;
+  const tw = 185, th = 48;
+  ctx.beginPath(); ctx.roundRect(tx, ty, tw, th, 8); ctx.fill(); ctx.stroke();
+  ctx.font = 'bold 12px monospace';
+  ctx.fillStyle = ht.color;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(ht.text, tx+8, ty+6);
+  ctx.font = '10px monospace';
+  ctx.fillStyle = '#aabbcc';
+  ctx.fillText(ht.sub, tx+8, ty+26);
+  ctx.restore();
+}
+
+function drawBg() {
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0d1a2d'); g.addColorStop(1,'#0a1520');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#111e30'; ctx.lineWidth = 1;
+  for (let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for (let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+}
+
+function drawConveyor(x1,y1,x2,y2) {
+  ctx.save();
+  const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy), a=Math.atan2(dy,dx);
+  ctx.translate(x1,y1); ctx.rotate(a);
+  ctx.fillStyle='#1a1a2a'; ctx.fillRect(0,-7,len,14);
+  ctx.strokeStyle='#3a4a5a'; ctx.lineWidth=1; ctx.strokeRect(0,-7,len,14);
+  const t=(Date.now()/300)%1;
+  ctx.fillStyle='#2a3a4a';
+  for(let i=-1;i<len/12+2;i++){const bx=((i*12+t*12)%(len+12))-6;if(bx>=-6&&bx<=len+6)ctx.fillRect(bx,-5,5,10);}
+  ctx.restore();
+}
+
+function drawPortal(portal, idx) {
+  const p = gp(portal.x, portal.y);
+  const t = Date.now()/1000;
+  const pulse = Math.sin(t*2+idx)*3;
+  ctx.save();
+  ctx.shadowColor='#00e5ff'; ctx.shadowBlur=15+pulse;
+  ctx.beginPath(); ctx.arc(p.x,p.y,28+pulse,0,Math.PI*2);
+  ctx.fillStyle='#0a2a4a'; ctx.fill();
+  ctx.strokeStyle='#00e5ff'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(p.x,p.y,20,0,Math.PI*2);
+  ctx.strokeStyle='#00557a'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.font='bold 16px monospace'; ctx.fillStyle='#00e5ff';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(idx+1,p.x,p.y);
+  ctx.font='9px monospace'; ctx.fillStyle='#667';
+  ctx.fillText(portal.skills.map(s=>SKILLS[s].icon).join(''),p.x,p.y+38);
+  ctx.restore();
+}
+
+function drawTruck(truck) {
+  ctx.save();
+  const{x,y}=truck;
+  ctx.fillStyle='#2a2a3a'; ctx.strokeStyle=truck.loaded?'#44cc44':'#4a5a6a'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(x-30,y-16,60,32,5); ctx.fill(); ctx.stroke();
+  const fill=truck.load/truck.cap;
+  if(fill>0){
+    const fw=54*fill;
+    ctx.fillStyle=truck.loaded?'#44cc44':'#4488ff'; ctx.globalAlpha=0.3;
+    ctx.fillRect(x-27+(54-fw),y-12,fw,24); ctx.globalAlpha=1;
+  }
+  ctx.font='9px monospace'; ctx.fillStyle='#aab'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(`${truck.loaded?'✅':'🚛'} ${Math.floor(fill*100)}%`,x,y);
+  ctx.font='8px monospace'; ctx.fillStyle='#556';
+  ctx.fillText(truck.skills.map(s=>SKILLS[s].icon).join(''),x,y+24);
+  ctx.restore();
+}
+
+function drawRobot(robot) {
+  ctx.save();
+  const{x,y}=robot, sk=SKILLS[robot.skill];
+  if(robot.selected){
+    ctx.shadowColor='#00ff88'; ctx.shadowBlur=20;
+    ctx.beginPath(); ctx.arc(x,y,robot.r+6,0,Math.PI*2);
+    ctx.strokeStyle='#00ff88'; ctx.lineWidth=2; ctx.stroke(); ctx.shadowBlur=0;
+  }
+  ctx.beginPath(); ctx.arc(x,y,robot.r,0,Math.PI*2);
+  const bg=ctx.createRadialGradient(x-3,y-3,2,x,y,robot.r);
+  bg.addColorStop(0,'#3a4a5a'); bg.addColorStop(1,'#1a2a3a');
+  ctx.fillStyle=bg; ctx.fill();
+  ctx.strokeStyle=sk.color; ctx.lineWidth=2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x,y,robot.r-5,0,Math.PI*2);
+  ctx.fillStyle=sk.color+'25'; ctx.fill();
+  ctx.fillStyle=robot.assigned?sk.color:(robot.selected?'#00ff88':'#aabbcc');
+  ctx.beginPath(); ctx.arc(x-4,y-2,2.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+4,y-2,2.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=sk.color; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(x-2,y+4); ctx.lineTo(x+2,y+4); ctx.stroke();
+  ctx.font='8px monospace'; ctx.fillStyle=sk.color; ctx.textAlign='center';
+  ctx.fillText(sk.icon,x,y-robot.r-5);
+  if(robot.waiting){
+    ctx.font='10px monospace'; ctx.fillStyle='#ffcc00';
+    ctx.fillText('⏳',x,y-robot.r-16);
+  }
+  ctx.restore();
+}
+
+function drawCrane(cr) {
+  ctx.save();
+  const{x,y}=cr, t=Date.now()/1000;
+  ctx.strokeStyle='#8a6a2a'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x-25,y+10); ctx.lineTo(x-20,y-15); ctx.lineTo(x+20,y-15); ctx.lineTo(x+25,y+10); ctx.stroke();
+  ctx.fillStyle='#5a4a1a'; ctx.fillRect(x-22,y-18,44,6);
+  const hx=x+Math.sin(t*0.8)*12;
+  ctx.strokeStyle='#aa8a3a'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(hx,y-12); ctx.lineTo(hx,y+5); ctx.stroke();
+  ctx.fillStyle='#aa8a3a';
+  ctx.beginPath(); ctx.moveTo(hx-4,y+5); ctx.lineTo(hx+4,y+5); ctx.lineTo(hx+2,y+10); ctx.lineTo(hx-2,y+10); ctx.closePath(); ctx.fill();
+  ctx.font='7px monospace'; ctx.fillStyle='#aa8a3a'; ctx.textAlign='center'; ctx.fillText('КРАН',x,y+20);
+  ctx.restore();
+}
+
+function drawBridge(b) {
+  ctx.save();
+  ctx.fillStyle='#3a2a1a'; ctx.fillRect(b.x-28,b.y-4,56,8);
+  ctx.strokeStyle='#8a7a5a'; ctx.lineWidth=1.5; ctx.strokeRect(b.x-28,b.y-4,56,8);
+  ctx.fillStyle='#5a4a3a'; for(let i=-24;i<24;i+=10)ctx.fillRect(b.x+i,b.y-3,5,6);
+  ctx.font='9px monospace'; ctx.fillStyle='#8a7a5a'; ctx.textAlign='center'; ctx.fillText('🌉',b.x,b.y-10);
+  ctx.restore();
+}
+
+function drawBonus(b) {
+  ctx.save();
+  const pulse = Math.sin(Date.now()/200)*3;
+  ctx.shadowColor = b.color; ctx.shadowBlur = 12+pulse;
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r+pulse,0,Math.PI*2);
+  ctx.fillStyle = b.color+'30'; ctx.fill();
+  ctx.strokeStyle = b.color; ctx.lineWidth=2; ctx.stroke();
+  ctx.shadowBlur=0;
+  const icons = {time:'⏱',score:'💰',bridge:'🔧',speed:'⚡'};
+  ctx.font='14px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(icons[b.type]||'?',b.x,b.y);
+  ctx.restore();
+}
+
+function drawParticles() {
+  S.particles.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=p.color; ctx.globalAlpha=p.life; ctx.fill(); ctx.globalAlpha=1;
+  });
+}
+
+function drawMsgs() {
+  S.msgs.forEach(m => {
+    const a=Math.min(1,m.t), sc=1+(1-a)*0.5;
+    ctx.save(); ctx.globalAlpha=a;
+    ctx.font=`bold ${26*sc}px monospace`; ctx.fillStyle=m.color;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor=m.color; ctx.shadowBlur=15;
+    ctx.fillText(m.text,W/2,m.y); ctx.shadowBlur=0; ctx.restore();
+    m.y-=12;
+  });
+}
+
+function drawHints() {
+  S.hints.forEach(h => {
+    const a = Math.min(1, h.t / 0.5);
+    const fade = h.t < 0.5 ? h.t / 0.5 : 1;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = h.color;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = h.color;
+    ctx.shadowBlur = 10;
+    // Стрелка-указатель
+    ctx.fillText(h.text, h.x, h.y);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    h.y += h.vy * (1/60);
+  });
+}
+
+function drawOverlay() {
+  if(S.bridgeMode){
+    ctx.save(); ctx.fillStyle='rgba(0,50,80,0.15)'; ctx.fillRect(0,0,W,H);
+    ctx.font='bold 13px monospace'; ctx.fillStyle='#00e5ff'; ctx.textAlign='center';
+    ctx.fillText('Кликни чтобы поставить мостик',W/2,32);
+    ctx.font='10px monospace'; ctx.fillStyle='#556'; ctx.fillText('(Кнопка — отмена)',W/2,48);
+    ctx.restore();
+  }
+  if(S.paused){
+    ctx.save(); ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(0,0,W,H);
+    ctx.font='bold 36px monospace'; ctx.fillStyle='#00e5ff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⏸ ПАУЗА',W/2,H/2); ctx.restore();
+  }
+}
+
+function draw() {
+  drawBg();
+  const L = lvl();
+  L.conv.forEach(c => {
+    const portal = L.portals[c.p];
+    const truck = S.trucks[c.t];
+    if(portal && truck) drawConveyor(gp(portal.x,portal.y).x,gp(portal.x,portal.y).y,truck.x,truck.y);
+  });
+  S.bridges.forEach(drawBridge);
+  S.cranes.forEach(drawCrane);
+  S.trucks.forEach(drawTruck);
+  L.portals.forEach((p,i)=>drawPortal(p,i));
+  S.bonuses.forEach(drawBonus);
+  S.robots.forEach(drawRobot);
+  drawParticles();
+  drawMsgs();
+  drawHints();
+  drawOverlay();
+  drawTooltip();
+  // HUD on canvas
+  ctx.save();
+  const tc = S.time<15?'#ff4444':(S.time<30?'#ffcc00':'#44cc44');
+  ctx.font='bold 11px monospace'; ctx.fillStyle=tc; ctx.textAlign='right';
+  ctx.fillText(`⏱${Math.ceil(S.time)}с`,W-12,18);
+  ctx.font='10px monospace'; ctx.fillStyle='#334'; ctx.textAlign='left';
+  ctx.fillText('Кликни робота → кликни портал  |  ПКМ — снять выбор',12,H-8);
+  ctx.restore();
+}
+
+// ═══════════════ ИГРОВОЙ ЦИКЛ ═══════════════
+function update(dt) {
+  if(!S.running||S.paused) return;
+  S.time -= dt;
+  if(S.time <= 0){ endLevel(); return; }
+
+  // таймер потока
+  S.flowTimer -= dt;
+  if(S.flowTimer<=0 && S.flowQueue.length<10){ S.flowQueue.push(genFlow()); S.flowTimer=S.flowInt; }
+
+  // ═══ КОНТЕКСТНЫЕ ПОДСКАЗКИ ═══
+  tipTimer += dt;
+  if(tipTimer > 12){ tipTimer=0; addTip(); }
+
+  // Предупреждение: время
+  if(S.time < 20 && !warnTimeShown){ warnTimeShown=true; showAchievement('nearEnd'); sfx('warn'); }
+  if(S.time < 60 && S.time > 58) warnTimeShown = false;
+
+  // Предупреждение: поток заполняется
+  if(S.flowQueue.length > 6 && !warnFlowShown){ warnFlowShown=true; showAchievement('flowFlood'); }
+  if(S.flowQueue.length < 4) warnFlowShown = false;
+
+  // Грузовик почти полон
+  S.trucks.forEach(truck=>{
+    if(!truck.loaded){
+      const fill = truck.load / truck.cap;
+      if(fill > 0.7 && fill < 0.85 && !truck._almostHint){
+        truck._almostHint = true;
+        showAchievement('almostDone');
+      }
+    }
+  });
+
+  // Комбо-система
+  if(S.combo > 0){
+    S.comboTimer -= dt;
+    if(S.comboTimer <= 0) S.combo = 0;
+  }
+
+  // бонусы
+  if(Math.random()<dt*0.15) spawnBonus();
+  S.bonuses.forEach(b=>b.life-=dt);
+  S.bonuses=S.bonuses.filter(b=>b.life>0);
+
+  const L = lvl();
+
+  // роботы
+  S.robots.forEach(robot => {
+    if(!robot.path || robot.pathIdx>=robot.path.length) return;
+    if(robot.waiting){ robot.waitT-=dt; if(robot.waitT<=0) robot.waiting=false; return; }
+    const tgt=robot.path[robot.pathIdx];
+    const dx=tgt.x-robot.x, dy=tgt.y-robot.y;
+    const d=Math.hypot(dx,dy);
+    const spd=80*robot.speed;
+    if(d<spd*dt){
+      robot.x=tgt.x; robot.y=tgt.y; robot.pathIdx++;
+      if(robot.pathIdx>=robot.path.length){
+        robot.path=null;
+        const pp=gp(L.portals[robot.portalIdx].x,L.portals[robot.portalIdx].y);
+        robot.x=pp.x; robot.y=pp.y;
+        addPart(robot.x,robot.y,SKILLS[robot.skill].color);
+        sfx('truck');
+        const ci=L.conv.find(c=>c.p===robot.portalIdx);
+        if(ci&&S.trucks[ci.t]) S.trucks[ci.t].load+=SKILLS[robot.skill].load;
+        S.robots=S.robots.filter(r=>r.id!==robot.id);
+        // проверяем бонусы
+        S.bonuses.forEach(b=>{ if(dist(robot,b)<30) collectBonus(b,robot,false); });
+      }
+    } else {
+      robot.x+=dx/d*spd*dt; robot.y+=dy/d*spd*dt;
+    }
+  });
+
+  // коллизии
+  const moving = S.robots.filter(r=>r.path&&r.pathIdx<r.path.length&&!r.waiting);
+  for(let i=0;i<moving.length;i++){
+    for(let j=i+1;j<moving.length;j++){
+      const a=moving[i], b=moving[j];
+      if(a.path&&b.path&&a.path.length>1&&b.path.length>1){
+        for(let k=0;k<a.path.length-1;k++){
+          for(let l=0;l<b.path.length-1;l++){
+            if(lineHit(a.path[k],a.path[k+1],b.path[l],b.path[l+1])){
+              if(!a.waiting) showAchievement('robotWait');
+              a.waiting=true; a.waitT=0.4;
+              b.waiting=true; b.waitT=0.4;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // грузовики
+  S.trucks.forEach(truck=>{
+    if(!truck.loaded && truck.load>=truck.cap){
+      truck.loaded=true;
+      const pts=50*(S.level+1);
+      S.score+=pts;
+      S.trucksDone++;
+      addPart(truck.x,truck.y,'#44cc44',15);
+      sfx('truck');
+      addMsg(`🚛 +${pts} очков!`,'#44cc44');
+      // Достижения
+      if(S.trucksDone===1 && lastTrucksDone===0){ showAchievement('firstTruck'); lastTrucksDone=1; }
+      if(S.trucksDone===5 && lastTrucksDone<5){ showAchievement('fiveTrucks'); lastTrucksDone=5; }
+      if(S.trucksDone===10 && lastTrucksDone<10){ showAchievement('tenTrucks'); lastTrucksDone=10; }
+      setTimeout(()=>{
+        truck.load=0; truck.loaded=false;
+        truck._almostHint=false;
+      },3000);
+    }
+  });
+
+  // частицы
+  S.particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;});
+  S.particles=S.particles.filter(p=>p.life>0);
+  S.msgs.forEach(m=>m.t-=dt);
+  S.msgs=S.msgs.filter(m=>m.t>0);
+}
+
+// ═══════════════ КОНЕЦ УРОВНЯ ═══════════════
+function endLevel() {
+  S.running=false;
+  saveProgress();
+  const done=S.trucks.filter(t=>t.loaded).length;
+  const bonus=done*100*(S.level+1);
+  S.score+=bonus;
+  saveRecord(S.score, S.level+1);
+  sfx('levelup');
+
+  const next=S.level+1;
+  const screen=document.getElementById('screen-end');
+  const title=document.getElementById('end-title');
+  const text=document.getElementById('end-text');
+  const nextBtn=document.getElementById('end-next');
+
+  if(next<LEVELS.length){
+    title.textContent=`✅ Уровень ${S.level+1} пройден!`;
+    text.innerHTML=`Бонус за грузовики: <b style="color:#44cc44">+${bonus}</b><br>Очки: <b style="color:#00e5ff">${S.score}</b>`;
+    nextBtn.style.display='';
+  } else {
+    title.textContent=`🏆 ВСЕ УРОВНИ ПРОЙДЕНЫ!`;
+    text.innerHTML=`Итого: <b style="color:#00e5ff">${S.score} очков</b><br>Ты лучший логист!`;
+    nextBtn.style.display='none';
+  }
+  screen.style.display='flex';
+}
+
+function nextLevel() {
+  document.getElementById('screen-end').style.display='none';
+  S.level++;
+  initLevel(S.level);
+  S.running=true;
+}
+
+function startGame() {
+  document.getElementById('screen-start').style.display='none';
+  document.getElementById('screen-end').style.display='none';
+  resetState();
+  initLevel(0);
+  S.running=true;
+}
+
+function togglePause() {
+  S.paused=!S.paused;
+  document.getElementById('screen-pause').style.display=S.paused?'flex':'none';
+}
+
+function quitToMenu() {
+  S.running=false; S.paused=false;
+  document.getElementById('screen-pause').style.display='none';
+  document.getElementById('screen-end').style.display='none';
+  document.getElementById('screen-start').style.display='flex';
+}
+
+function toggleBridgeMode(){ S.bridgeMode=!S.bridgeMode; updateHUD(); }
+
+function showLeader() {
+  const recs=getRecords();
+  const el=document.getElementById('leaderboard');
+  if(!recs.length){ el.innerHTML='<div style="color:#556;text-align:center">Пока нет рекордов</div>'; return; }
+  el.innerHTML='<div style="font-weight:bold;color:#00e5ff;margin-bottom:4px">🏆 Топ-10</div>'+
+    recs.map((r,i)=>`<div><span>#${i+1} Ур.${r.level}</span><span>${r.score} очков</span></div>`).join('');
+}
+
+// ═══════════════ ВВОД ═══════════════
+canvas.addEventListener('mousemove', e => {
+  const rect=canvas.getBoundingClientRect();
+  S.mouseX=e.clientX-rect.left;
+  S.mouseY=e.clientY-rect.top;
+  canvas.style.cursor = getHoverTarget(S.mouseX,S.mouseY) ? 'pointer' : 'crosshair';
+});
+
+canvas.addEventListener('click', e => {
+  if(!S.running||S.paused) return;
+  ensureAudio();
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+
+  if(S.bridgeMode){
+    if(S.bridgeCount>0){
+      S.bridges.push({x:mx,y:my}); S.bridgeCount--;
+      addPart(mx,my,'#8a7a5a',10); sfx('bridge');
+      showAchievement('bridgeBuilt');
+      if(S.bridgeCount<=0) S.bridgeMode=false;
+      updateHUD();
+    }
+    return;
+  }
+
+  // бонус (клик = x2 эффект)
+  for(const b of S.bonuses){
+    if(dist({x:mx,y:my},b)<b.r+8){
+      collectBonus(b, null, true);
+      S.bonuses=S.bonuses.filter(bb=>bb!==b);
+      return;
+    }
+  }
+
+  let hit=false;
+  // робот
+  for(const r of S.robots){
+    if(!r.assigned && dist({x:mx,y:my},r)<r.r+5){
+      S.robots.forEach(rr=>rr.selected=false);
+      r.selected=true; S.selected=r;
+      sfx('select'); hit=true; break;
+    }
+  }
+  // портал
+  if(!hit && S.selected){
+    const L=lvl();
+    for(let i=0;i<L.portals.length;i++){
+      const pp=gp(L.portals[i].x,L.portals[i].y);
+      if(dist({x:mx,y:my},pp)<35){
+        if(assignRobot(S.selected,i)){
+          S.selected=null; hit=true; break;
+        } else {
+          sfx('error');
+          addMsg('❌ Навыки не подходят!','#ff4444');
+          S.selected.selected=false; S.selected=null;
+        }
+        break;
+      }
+    }
+  }
+  if(!hit){ S.robots.forEach(r=>r.selected=false); S.selected=null; }
+  updateHUD();
+});
+
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  S.robots.forEach(r=>r.selected=false); S.selected=null;
+  S.bridgeMode=false; updateHUD();
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape'||e.key==='p'||e.key==='P'||e.key==='з'||e.key==='З') togglePause();
+  if(e.key==='b'||e.key==='B'||e.key==='и'||e.key==='И') toggleBridgeMode();
+});
+
+// ═══════════════ ГЛАВНЫЙ ЦИКЛ ═══════════════
+function loop(ts) {
+  const dt=Math.min((ts-(loop.last||ts))/1000, 0.05);
+  loop.last=ts;
+  update(dt);
+  draw();
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

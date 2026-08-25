@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ГЛИТЧЕР — Пиксельный Пазл-Экшен</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Courier New',monospace; background:#0a0a0a; color:#0f0; overflow:hidden; height:100vh; }
+        body::after {
+            content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+            pointer-events:none; z-index:5;
+        }
+        .overlay {
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            background:#050508; z-index:50; gap:20px;
+        }
+        .overlay.hidden { display:none; }
+        .overlay h1 { font-size:2.8em; color:#0f0; text-shadow:0 0 30px #0f0, 0 0 60px #0f08; letter-spacing:8px; }
+        .overlay .story {
+            color:#0f0; border:1px solid #0f03; padding:24px 30px; max-width:560px; text-align:center;
+            line-height:2; background:rgba(0,255,0,0.02); font-size:0.92em;
+        }
+        .overlay input {
+            padding:12px 24px; font-size:1em; border:1px solid #0f04;
+            background:rgba(0,255,0,0.03); color:#0f0; width:280px; outline:none;
+            font-family:'Courier New',monospace;
+        }
+        .overlay input:focus { box-shadow:0 0 15px #0f04; border-color:#0f0; }
+        .overlay button {
+            padding:14px 40px; font-size:1.1em; font-weight:bold; border:1px solid #0f0;
+            background:rgba(0,255,0,0.08); color:#0f0; cursor:pointer;
+            font-family:'Courier New',monospace; transition:all 0.3s; letter-spacing:2px;
+        }
+        .overlay button:hover { background:rgba(0,255,0,0.2); box-shadow:0 0 30px #0f06; }
+        .overlay .err { color:#f44; font-size:0.8em; min-height:1.2em; }
+        .intro-art { position:relative; width:320px; height:300px; }
+        .intro-art svg { width:100%; height:100%; }
+        .goal-art { position:relative; width:280px; height:260px; }
+
+        #game { display:none; height:100vh; flex-direction:column; position:relative; z-index:10; }
+        #topbar {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:6px 12px; background:rgba(0,255,0,0.04); border-bottom:1px solid #0f02;
+            height:44px; flex-shrink:0; font-size:0.85em;
+        }
+        .ts { display:flex; align-items:center; gap:4px; }
+        .tv { color:#0ff; font-weight:bold; }
+        #main { display:flex; flex:1; overflow:hidden; }
+        #field-wrap { flex:1; display:flex; align-items:center; justify-content:center; }
+        #grid { display:grid; gap:2px; background:#080808; border:1px solid #0f03; padding:4px; position:relative; }
+        .cell {
+            width:48px; height:48px; display:flex; align-items:center; justify-content:center;
+            background:#0a0a0a; border:1px solid #0f01; cursor:pointer;
+            font-size:1.4em; transition:all 0.15s; position:relative; overflow:hidden;
+        }
+        .cell::before {
+            content:''; position:absolute; top:0; left:0; width:100%; height:100%;
+            background:linear-gradient(135deg, rgba(0,255,0,0.03) 25%, transparent 25%, transparent 50%, rgba(0,255,0,0.03) 50%, rgba(0,255,0,0.03) 75%, transparent 75%);
+            background-size:8px 8px; pointer-events:none;
+        }
+        .cell:hover { background:rgba(0,255,0,0.1); border-color:#0f05; }
+        .cell.glitch { animation:gf 0.3s infinite; }
+        .cell.fixed { background:rgba(0,255,0,0.12); border-color:#0f06; }
+        .cell.player { box-shadow:inset 0 0 10px #0ff4; border-color:#0ff6; }
+        @keyframes gf { 0%{transform:translate(0)}25%{transform:translate(-1px,1px)}50%{transform:translate(1px,-1px)}75%{transform:translate(-1px,0)}100%{transform:translate(0)} }
+        #sidebar {
+            width:260px; display:flex; flex-direction:column;
+            background:rgba(0,0,0,0.5); border-left:1px solid #0f03; flex-shrink:0;
+        }
+        #abils { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; padding:8px; border-bottom:1px solid #0f02; }
+        .abil-btn {
+            padding:8px 4px; font-size:0.75em; border:1px solid #0f04;
+            background:rgba(0,255,0,0.05); color:#0f0; cursor:pointer;
+            text-align:center; font-family:'Courier New',monospace;
+        }
+        .abil-btn:hover:not(:disabled) { background:rgba(0,255,0,0.2); }
+        .abil-btn:disabled { opacity:0.3; cursor:default; }
+        #sector-info { padding:8px; border-bottom:1px solid #0f02; font-size:0.8em; }
+        #sector-info .sname { color:#0ff; font-size:1.1em; }
+        #sector-info .sdiff { color:#ff0; }
+        #log { flex:1; overflow-y:auto; padding:6px 8px; font-size:0.72em; }
+        .le { padding:2px 0; border-bottom:1px solid rgba(0,255,0,0.05); }
+        .le-SYSTEM { color:#0f0; font-style:italic; }
+        .le-LOOT { color:#0ff; }
+        .le-ERROR { color:#f44; }
+        #glitch-popup {
+            display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+            background:#0a0a0a; border:1px solid #0f06; padding:20px; z-index:60;
+            text-align:center; min-width:260px;
+        }
+        #glitch-popup .gp-title { font-size:1.3em; color:#0f0; margin-bottom:8px; }
+        #glitch-popup .gp-desc { color:#0a0; font-size:0.85em; margin-bottom:12px; }
+        #glitch-popup .gp-btns { display:flex; gap:8px; justify-content:center; }
+        #glitch-popup .gp-btns button {
+            padding:8px 18px; border:1px solid #0f0; background:rgba(0,255,0,0.1);
+            color:#0f0; cursor:pointer; font-family:'Courier New',monospace;
+        }
+        #level-complete {
+            display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+            background:#0a0a0a; border:2px solid #0ff; padding:25px; z-index:60; text-align:center;
+        }
+        #level-complete h2 { color:#0ff; margin-bottom:10px; }
+        #level-complete p { color:#0f0; margin-bottom:15px; }
+        #level-complete button {
+            padding:10px 30px; border:1px solid #0ff; background:rgba(0,255,255,0.1);
+            color:#0ff; cursor:pointer; font-family:'Courier New',monospace; font-size:1em;
+        }
+    </style>
+</head>
+<body>
+    <!-- INTRO с поли-арт роботом -->
+    <div class="overlay" id="intro">
+        <div class="intro-art" id="intro-art-container"></div>
+        <h1>ГЛИТЧЕР</h1>
+        <div class="story">
+            Ты — Глитчер, последний рабочий программы восстановления.<br>
+            Мир данных заражён вирусом Глитч.<br>
+            Каждый уровень — заражённый сектор.<br>
+            Чини глитчи, собирай фрагменты кода.<br>
+            Восстанови систему.
+        </div>
+        <button id="btn-start">НАЧАТЬ ВОССТАНОВЛЕНИЕ</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="overlay hidden" id="login">
+        <h1>ВХОД В СИСТЕМУ</h1>
+        <input id="inp-id" placeholder="ID оператора">
+        <input id="inp-name" placeholder="Позывной (опционально)">
+        <button id="btn-join">ПОДКЛЮЧИТЬСЯ</button>
+        <div class="err" id="login-err"></div>
+    </div>
+
+    <!-- GOAL с поли-арт свечой восстановления -->
+    <div class="overlay hidden" id="goal-overlay">
+        <div class="goal-art" id="goal-art-container"></div>
+        <h1>ПРОТОКОЛ ВОССТАНОВЛЕНИЯ</h1>
+        <div class="story">
+            Пройди 10 секторов, собери 10 фрагментов кода.<br>
+            Активируй Протокол Восстановления.<br>
+            Мир данных будет спасён.
+        </div>
+        <button onclick="document.getElementById('goal-overlay').classList.add('hidden')">ЗАКРЫТЬ</button>
+    </div>
+
+    <!-- GAME -->
+    <div id="game">
+        <div id="topbar">
+            <div class="ts">🔧 <span class="tv" id="s-name"></span></div>
+            <div class="ts">Сектор <span class="tv" id="s-sector">1</span>/10</div>
+            <div class="ts">⚡<span class="tv" id="s-energy">100</span></div>
+            <div class="ts">💻<span class="tv" id="s-code">0</span></div>
+            <div class="ts">🧩<span class="tv" id="s-frag">0</span>/10</div>
+            <div class="ts">🔑<span class="tv" id="s-keys">0</span></div>
+            <div class="ts" style="cursor:pointer;color:#0f0" id="btn-goal">📖</div>
+        </div>
+        <div id="main">
+            <div id="field-wrap"><div id="grid"></div></div>
+            <div id="sidebar">
+                <div id="sector-info">
+                    <div class="sname" id="si-name">Загрузка</div>
+                    <div class="sdiff" id="si-diff">Лёгкий</div>
+                    <div id="si-progress" style="color:#0f0;margin-top:4px"></div>
+                </div>
+                <div id="abils">
+                    <button class="abil-btn" id="ab-dash">⚡ Рывок<br><small>20⚡</small></button>
+                    <button class="abil-btn" id="ab-field" disabled>🛡️ Поле<br><small>40⚡</small></button>
+                    <button class="abil-btn" id="ab-scan" disabled>🔍 Скан<br><small>15⚡</small></button>
+                    <button class="abil-btn" id="ab-tp" disabled>🌀 ТП<br><small>30⚡</small></button>
+                </div>
+                <div id="log"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="glitch-popup">
+        <div class="gp-title" id="gp-title"></div>
+        <div class="gp-desc" id="gp-desc"></div>
+        <div class="gp-btns">
+            <button id="gp-fix">⚡ ЧИНИТЬ</button>
+            <button id="gp-close">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+    <div id="level-complete">
+        <h2 id="lc-title">СЕКТОР ОЧИЩЕН!</h2>
+        <p id="lc-text"></p>
+        <button id="lc-next">СЛЕДУЮЩИЙ СЕКТОР →</button>
+    </div>
+
+<script>
+/**
+ * @fileoverview Глитчер — поли-арт графика с золотым сечением
+ * @description Все пропорции фигур основаны на φ = 1.618
+ */
+var PHI = 1.618033988749895;
+var G={ws:null,pid:null,player:null,level:null,sectors:null,selectedGlitch:null};
+function $(id){return document.getElementById(id);}
+
+/* ========== ПОЛИ-АРТ РИСОВАНИЕ ========== */
+
+/**
+ * Рисует полигонального робота на SVG-контейнере
+ * @param {string} containerId - ID контейнера
+ * @param {string} accent - Основной цвет
+ * @param {string} secondary - Вторичный цвет
+ */
+function drawPolyRobot(containerId, accent, secondary) {
+    var c = $(containerId);
+    if (!c) return;
+    // Золотое сечение: базовый размер 100,肢体 = 100/φ ≈ 61.8, голова = 61.8/φ ≈ 38.2
+    var base = 100, limb = base / PHI, head = limb / PHI, eye = head / PHI;
+    var cx = 160, cy = 150;
+
+    var svg = '<svg viewBox="0 0 320 300" xmlns="http://www.w3.org/2000/svg">';
+    // Glow filter
+    svg += '<defs>';
+    svg += '<filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+    svg += '<linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">';
+    svg += '<stop offset="0%" stop-color="' + accent + '"/>';
+    svg += '<stop offset="100%" stop-color="' + secondary + '"/>';
+    svg += '</linearGradient>';
+    svg += '</defs>';
+
+    // Тело — полигональный шестиугольник (φ-пропорции)
+    var bodyW = base * 0.8, bodyH = base;
+    var bodyPts = [];
+    for (var i = 0; i < 6; i++) {
+        var a = (Math.PI / 3) * i - Math.PI / 2;
+        bodyPts.push((cx + bodyW * 0.5 * Math.cos(a)) + ',' + (cy + bodyH * 0.5 * Math.sin(a)));
+    }
+    svg += '<polygon points="' + bodyPts.join(' ') + '" fill="url(#bodyGrad)" stroke="' + accent + '" stroke-width="1.5" filter="url(#glow)" opacity="0.9"/>';
+
+    // Голова — восьмиугольник (φ)
+    var headR = head * 0.55;
+    var headCy = cy - bodyH * 0.5 - headR * 0.6;
+    var headPts = [];
+    for (var i = 0; i < 8; i++) {
+        var a = (Math.PI / 4) * i - Math.PI / 8;
+        headPts.push((cx + headR * Math.cos(a)) + ',' + (headCy + headR * Math.sin(a)));
+    }
+    svg += '<polygon points="' + headPts.join(' ') + '" fill="' + accent + '" stroke="#fff" stroke-width="1" filter="url(#glow)" opacity="0.95"/>';
+
+    // Глаза — два ромба (φ)
+    var eyeW = eye * 0.4, eyeH = eye * 0.25;
+    var eyeY = headCy - 2;
+    svg += '<polygon points="' + (cx-8)+','+(eyeY-eyeH)+' '+(cx-8+eyeW)+','+eyeY+' '+(cx-8)+','+(eyeY+eyeH)+' '+(cx-8-eyeW)+','+eyeY+'" fill="#0ff" filter="url(#glow)"/>';
+    svg += '<polygon points="' + (cx+8)+','+(eyeY-eyeH)+' '+(cx+8+eyeW)+','+eyeY+' '+(cx+8)+','+(eyeY+eyeH)+' '+(cx+8-eyeW)+','+eyeY+'" fill="#0ff" filter="url(#glow)"/>';
+
+    // Антенна — треугольник (φ)
+    var antH = headR * 0.8;
+    svg += '<polygon points="'+cx+','+(headCy-headR-antH)+' '+(cx-4)+','+(headCy-headR)+' '+(cx+4)+','+(headCy-headR)+'" fill="#ff0" filter="url(#glow)"/>';
+
+    // Руки — ромбы (φ-пропорции)
+    var armW = limb * 0.3, armH = limb * 0.5;
+    var armY = cy - 5;
+    // Левая
+    svg += '<polygon points="'+(cx-bodyW*0.5-5)+','+(armY-armH)+' '+((cx-bodyW*0.5-5)+armW)+','+armY+' '+(cx-bodyW*0.5-5)+','+(armY+armH)+' '+((cx-bodyW*0.5-5)-armW)+','+armY+'" fill="'+secondary+'" stroke="'+accent+'" stroke-width="1" filter="url(#glow)"/>';
+    // Правая
+    svg += '<polygon points="'+(cx+bodyW*0.5+5)+','+(armY-armH)+' '+((cx+bodyW*0.5+5)+armW)+','+armY+' '+(cx+bodyW*0.5+5)+','+(armY+armH)+' '+((cx+bodyW*0.5+5)-armW)+','+armY+'" fill="'+secondary+'" stroke="'+accent+'" stroke-width="1" filter="url(#glow)"/>';
+
+    // Ноги — трапеции (φ)
+    var legW = limb * 0.2, legH = limb * 0.6;
+    var legY = cy + bodyH * 0.5;
+    svg += '<polygon points="'+(cx-12)+','+legY+' '+(cx-12+legW)+','+(legY+legH)+' '+(cx-12-legW*0.5)+','+(legY+legH)+' '+(cx-12-legW)+','+legY+'" fill="'+secondary+'" stroke="'+accent+'" stroke-width="0.8"/>';
+    svg += '<polygon points="'+(cx+12)+','+legY+' '+(cx+12+legW)+','+(legY+legH)+' '+(cx+12-legW*0.5)+','+(legY+legH)+' '+(cx+12-legW)+','+legY+'" fill="'+secondary+'" stroke="'+accent+'" stroke-width="0.8"/>';
+
+    // Свечение вокруг
+    svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(base*0.7)+'" fill="none" stroke="'+accent+'" stroke-width="0.5" opacity="0.2"/>';
+    svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(base*0.7*PHI)+'" fill="none" stroke="'+accent+'" stroke-width="0.3" opacity="0.1"/>';
+
+    svg += '</svg>';
+    c.innerHTML = svg;
+}
+
+/**
+ * Рисует поли-арт Восстановительную Свечу (цель игры)
+ */
+function drawPolyCandle(containerId) {
+    var c = $(containerId);
+    if (!c) return;
+    var cx = 140, cy = 130;
+    var svg = '<svg viewBox="0 0 280 260" xmlns="http://www.w3.org/2000/svg">';
+    svg += '<defs>';
+    svg += '<filter id="glow2"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+    svg += '<linearGradient id="waxGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffd700"/><stop offset="100%" stop-color="#b8860b"/></linearGradient>';
+    svg += '<radialGradient id="flameGrad" cx="50%" cy="30%"><stop offset="0%" stop-color="#fff"/><stop offset="40%" stop-color="#ffd700"/><stop offset="100%" stop-color="#ff6600" stop-opacity="0"/></radialGradient>';
+    svg += '</defs>';
+
+    // Лучи — полигональные (φ)
+    for (var i = 0; i < 12; i++) {
+        var a = (Math.PI / 6) * i;
+        var r1 = 80, r2 = 110 * (i % 2 === 0 ? PHI : 1);
+        var x1 = cx + r1 * Math.cos(a), y1 = cy - 20 + r1 * Math.sin(a);
+        var x2 = cx + r2 * Math.cos(a), y2 = cy - 20 + r2 * Math.sin(a);
+        svg += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="#ffd700" stroke-width="'+(i%2===0?1.5:0.5)+'" opacity="0.3" filter="url(#glow2)"/>';
+    }
+
+    // Основание свечи — восьмиугольник
+    var baseR = 28, baseY = cy + 60;
+    var basePts = [];
+    for (var i = 0; i < 8; i++) {
+        var a = (Math.PI / 4) * i;
+        basePts.push((cx + baseR * Math.cos(a)) + ',' + (baseY + baseR * 0.4 * Math.sin(a)));
+    }
+    svg += '<polygon points="'+basePts.join(' ')+'" fill="url(#waxGrad)" stroke="#ffd700" stroke-width="1" filter="url(#glow2)"/>';
+
+    // Тело свечи — шестиугольник (φ-высота)
+    var candleH = 70;
+    var candleW = 20;
+    svg += '<polygon points="'+(cx-candleW)+','+(baseY-2)+' '+(cx-candleW+4)+','+(baseY-candleH)+' '+(cx+candleW-4)+','+(baseY-candleH)+' '+(cx+candleW)+','+(baseY-2)+'" fill="url(#waxGrad)" stroke="#ffd700" stroke-width="1" filter="url(#glow2)"/>';
+
+    // Капля воска — ромб (φ)
+    svg += '<polygon points="'+(cx+candleW+2)+','+(baseY-15)+' '+(cx+candleW+8)+','+(baseY-10)+' '+(cx+candleW+2)+','+(baseY-5)+' '+(cx+candleW-4)+','+(baseY-10)+'" fill="#ffd700" opacity="0.7"/>';
+
+    // Фитиль
+    svg += '<line x1="'+cx+'" y1="'+(baseY-candleH)+'" x2="'+cx+'" y2="'+(baseY-candleH-10)+'" stroke="#333" stroke-width="2"/>';
+
+    // Пламя — полигональное (3 слоя, φ-пропорции)
+    var flameBase = baseY - candleH - 10;
+    var flameH1 = 35, flameH2 = 28, flameH3 = 18;
+    var flameW1 = 12, flameW2 = 8, flameW3 = 4;
+    // Внешнее
+    svg += '<polygon points="'+cx+','+(flameBase-flameH1)+' '+(cx+flameW1)+','+flameBase+' '+(cx-flameW1)+','+flameBase+'" fill="url(#flameGrad)" filter="url(#glow2)" opacity="0.6"/>';
+    // Среднее
+    svg += '<polygon points="'+cx+','+(flameBase-flameH2)+' '+(cx+flameW2)+','+flameBase+' '+(cx-flameW2)+','+flameBase+'" fill="#ffd700" filter="url(#glow2)" opacity="0.8"/>';
+    // Внутреннее
+    svg += '<polygon points="'+cx+','+(flameBase-flameH3)+' '+(cx+flameW3)+','+flameBase+' '+(cx-flameW3)+','+flameBase+'" fill="#fff" filter="url(#glow2)"/>';
+
+    // Текст "ПРОТОКОЛ"
+    svg += '<text x="'+cx+'" y="'+(cy+baseR*0.4+baseR+20)+'" text-anchor="middle" fill="#0f0" font-family="Courier New" font-size="11" opacity="0.6">ПРОТОКОЛ ВОССТАНОВЛЕНИЯ</text>';
+
+    svg += '</svg>';
+    c.innerHTML = svg;
+}
+
+/* ========== ИНИЦИАЛИЗАЦИЯ АРТА ========== */
+drawPolyRobot('intro-art-container', '#0f0', '#040');
+drawPolyCandle('goal-art-container');
+
+/* ========== НАВИГАЦИЯ ========== */
+$('btn-start').onclick = function(){ $('intro').classList.add('hidden'); $('login').classList.remove('hidden'); };
+$('btn-goal').onclick = function(){ $('goal-overlay').classList.remove('hidden'); };
+
+/* ========== ВХОД ========== */
+$('btn-join').onclick = function(){
+    var id = $('inp-id').value.trim();
+    var name = $('inp-name').value.trim();
+    if(!id){ $('login-err').textContent='Введите ID!'; return; }
+    $('login-err').textContent='Подключение...';
+    G.pid = id;
+    try { G.ws = new WebSocket('ws://'+location.hostname+':3002'); }
+    catch(e) { $('login-err').textContent='Ошибка:'+e.message; return; }
+    G.ws.onopen = function(){ G.ws.send(JSON.stringify({type:'join',id:id,name:name})); };
+    G.ws.onmessage = function(ev){ try{handleMsg(JSON.parse(ev.data));}catch(e){console.error(e);} };
+    G.ws.onerror = function(){$('login-err').textContent='Нет соединения с сервером';};
+};
+$('inp-name').onkeydown = function(e){ if(e.key==='Enter') $('btn-join').click(); };
+$('inp-id').onkeydown = function(e){ if(e.key==='Enter') $('inp-name').focus(); };
+
+/* ========== СООБЩЕНИЯ ========== */
+function handleMsg(m){
+    switch(m.type){
+        case 'joined':
+            G.player=m.data; $('login').classList.add('hidden'); $('game').style.display='flex';
+            updateUI(); addLog('SYSTEM','Система подключена. Сектор: '+SECTOR_NAME(G.player.sector));
+            G.ws.send(JSON.stringify({type:'getLevel',sector:G.player.sector}));
+            break;
+        case 'sectors': G.sectors=m.data; break;
+        case 'level': G.level=m.data; renderGrid(); break;
+        case 'playerUpdate': G.player=m.data; updateUI(); break;
+        case 'actionResult':
+            if(m.data.error){ addLog('ERROR',m.data.error); break; }
+            if(m.data.fixed){
+                addLog('SYSTEM','Глитч исправлен! +5💻');
+                $('glitch-popup').style.display='none';
+                if(m.data.level) G.level=m.data.level;
+                renderGrid(); checkSectorComplete();
+            } else if(m.data.clicksLeft!==undefined){
+                addLog('SYSTEM','Осталось кликов: '+m.data.clicksLeft);
+                if(m.data.level) G.level=m.data.level;
+                if(G.selectedGlitch!==null){
+                    var g2=G.level.glitches.find(function(g){return g.id===G.selectedGlitch;});
+                    if(g2){ $('gp-desc').textContent=g2.type.description+' ('+g2.clicksLeft+' кликов)'; $('gp-fix').textContent='⚡ ЧИНИТЬ ('+g2.clicksLeft+')'; }
+                }
+                updateUI();
+            } else if(m.data.ability){ addLog('SYSTEM','Способность: '+m.data.ability); }
+              else if(m.data.sector){ if(m.data.level) G.level=m.data.level; addLog('SYSTEM','Открыт сектор: '+m.data.name); $('glitch-popup').style.display='none'; renderGrid(); }
+            break;
+        case 'log': if(m.data) addLog(m.data.type,m.data.message); break;
+    }
+}
+function SECTOR_NAME(n){ return ['Загрузка','Память','Процессор','Сеть','Данные','Шифрование','Ядро','Архив','Виртуал','Протокол'][n-1]||'?'; }
+function SECTOR_DIFF(n){ return ['Лёгкий','Лёгкий','Средний','Средний','Средний','Сложный','Сложный','Сложный','Эксперт','Босс'][n-1]||'?'; }
+
+function updateUI(){
+    var p=G.player; if(!p) return;
+    $('s-name').textContent=p.name; $('s-sector').textContent=p.sector;
+    $('s-energy').textContent=p.energy; $('s-code').textContent=p.code;
+    $('s-frag').textContent=p.fragments; $('s-keys').textContent=p.keys||0;
+    $('si-name').textContent=SECTOR_NAME(p.sector); $('si-diff').textContent=SECTOR_DIFF(p.sector);
+    if(G.level){ var f=G.level.glitches.filter(function(g){return g.fixed;}).length; $('si-progress').textContent='Глитчей: '+f+'/'+G.level.glitches.length; }
+    $('ab-field').disabled=!p.abilities.field||p.energy<40;
+    $('ab-scan').disabled=!p.abilities.scan||p.energy<15;
+    $('ab-tp').disabled=!p.abilities.teleport||p.energy<30;
+    if(p.completed){ $('lc-title').textContent='🏆 ПРОТОКОЛ АКТИВИРОВАН!'; $('lc-text').textContent='Ты восстановил мир данных! Фрагментов: '+p.fragments+'/10, Код: '+p.code; $('lc-next').textContent='ИГРА ОКОНЧЕНА'; $('lc-next').disabled=true; $('level-complete').style.display='block'; }
+}
+
+/* ========== СЕТКА ========== */
+function renderGrid(){
+    if(!G.level||!G.player) return;
+    var grid=$('grid'); var s=G.level.gridSize;
+    grid.style.gridTemplateColumns='repeat('+s+', 48px)';
+    grid.innerHTML='';
+    for(var y=0;y<s;y++){
+        for(var x=0;x<s;x++){
+            var cell=document.createElement('div');
+            cell.className='cell'; cell.dataset.x=x; cell.dataset.y=y;
+            var glitch=null;
+            for(var i=0;i<G.level.glitches.length;i++){ var g=G.level.glitches[i]; if(g.x===x&&g.y===y){glitch=g;break;} }
+            if(G.player.position.x===x&&G.player.position.y===y){ cell.classList.add('player'); cell.textContent='🤖'; }
+            if(glitch){
+                if(!glitch.fixed){
+                    cell.classList.add('glitch');
+                    // Рисуем мини-поли-арт вместо эмодзи
+                    cell.innerHTML=drawMiniGlitch(glitch.type);
+                    cell.title=glitch.type.name+': '+glitch.type.description;
+                    (function(gid){ cell.onclick=function(){openGlitch(gid);}; })(glitch.id);
+                } else {
+                    cell.classList.add('fixed');
+                    cell.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24"><polygon points="12,2 22,12 12,22 2,12" fill="none" stroke="#0f0" stroke-width="1.5" opacity="0.6"/><polygon points="12,6 18,12 12,18 6,12" fill="#0f03"/></svg>';
+                }
+            }
+            (function(cx2,cy2){
+                cell.addEventListener('click',function(e){
+                    if(e.target.closest('.glitch'))return;
+                    sendAction({type:'move',target:{x:cx2,y:cy2}});
+                    G.player.position={x:cx2,y:cy2}; renderGrid();
+                });
+            })(x,y);
+            grid.appendChild(cell);
+        }
+    }
+}
+
+/**
+ * Мини-поли-арт для типа глитча (SVG)
+ * @param {Object} gtype - тип глитча
+ * @returns {string} SVG-строка
+ */
+function drawMiniGlitch(gtype){
+    var colors = {
+        rift:'#ff4444', infect:'#ff00ff', loop:'#ffff00', distort:'#ff8844',
+        lock:'#8888ff', virus:'#ff44ff', crack:'#44ff44', warp:'#44ffff'
+    };
+    var col = colors[gtype.type]||'#0f0';
+    // Разные поли-формы для разных типов
+    var shapes = {
+        rift:    '<polygon points="12,2 22,8 20,20 4,20 2,8" fill="'+col+'" opacity="0.7"/><polygon points="12,6 18,10 16,18 8,18 6,10" fill="#000" opacity="0.5"/>',
+        infect:  '<circle cx="12" cy="12" r="9" fill="'+col+'" opacity="0.5"/><polygon points="12,4 16,10 16,16 12,20 8,16 8,10" fill="'+col+'" opacity="0.8"/>',
+        loop:    '<polygon points="12,2 22,12 12,22 2,12" fill="none" stroke="'+col+'" stroke-width="2"/><polygon points="12,7 17,12 12,17 7,12" fill="'+col+'" opacity="0.4"/>',
+        distort: '<polygon points="4,4 20,4 22,12 20,20 4,20 2,12" fill="'+col+'" opacity="0.4"/><polygon points="8,8 16,8 18,12 16,16 8,16 6,12" fill="'+col+'" opacity="0.7"/>',
+        lock:    '<polygon points="6,12 12,6 18,12 12,18" fill="'+col+'" opacity="0.6"/><circle cx="12" cy="12" r="3" fill="#000"/>',
+        virus:   '<polygon points="12,2 15,8 22,8 17,13 19,20 12,16 5,20 7,13 2,8 9,8" fill="'+col+'" opacity="0.7"/>',
+        crack:   '<polygon points="12,2 20,8 20,18 12,22 4,18 4,8" fill="none" stroke="'+col+'" stroke-width="1.5"/><line x1="12" y1="2" x2="12" y2="22" stroke="'+col+'" stroke-width="1" opacity="0.5"/>',
+        warp:    '<polygon points="12,2 22,12 12,22 2,12" fill="'+col+'" opacity="0.3"/><circle cx="12" cy="12" r="5" fill="none" stroke="'+col+'" stroke-width="1.5"/><circle cx="12" cy="12" r="2" fill="'+col+'"/>'
+    };
+    return '<svg viewBox="0 0 24 24" width="28" height="28">'+(shapes[gtype.type]||shapes.rift)+'</svg>';
+}
+
+function openGlitch(id){
+    if(!G.level) return;
+    var glitch=G.level.glitches.find(function(g){return g.id===id;});
+    if(!glitch||glitch.fixed) return;
+    G.selectedGlitch=id;
+    $('gp-title').textContent=glitch.type.name;
+    $('gp-title').style.color=glitch.type.color;
+    var desc=glitch.type.description;
+    if(glitch.clicksLeft>0) desc+=' ('+glitch.clicksLeft+' кликов)';
+    $('gp-desc').textContent=desc;
+    var isLock=glitch.type.type==='lock';
+    if(isLock){ $('gp-fix').textContent=G.player.keys>0?'🔓 ОТКРЫТЬ':'🔒 НЕТ КЛЮЧЕЙ'; $('gp-fix').disabled=G.player.keys<=0; }
+    else { $('gp-fix').textContent='⚡ ЧИНИТЬ ('+glitch.clicksLeft+')'; $('gp-fix').disabled=false; }
+    $('glitch-popup').style.display='block';
+}
+$('gp-fix').onclick=function(){ console.log('FIX CLICKED', G.selectedGlitch); if(G.selectedGlitch===null) return; sendAction({type:'fix',glitchId:G.selectedGlitch}); };
+$('gp-close').onclick=function(){$('glitch-popup').style.display='none';};
+
+function checkSectorComplete(){
+    if(!G.level||!G.player) return;
+    var allFixed=G.level.glitches.every(function(g){return g.fixed;});
+    if(allFixed){
+        var secs=G.sectors||[]; var sec=secs[G.player.sector-1];
+        $('lc-title').textContent='СЕКТОР #'+G.player.sector+' ОЧИЩЕН!';
+        $('lc-text').textContent=(sec?'Награда: +'+sec.codeReward+'💻':'')+' Фрагмент: '+G.player.fragments+'/10';
+        $('lc-next').textContent=G.player.sector<10?'СЛЕДУЮЩИЙ СЕКТОР →':'🏆 ФИНАЛ';
+        $('lc-next').disabled=false; $('level-complete').style.display='block';
+    }
+}
+$('lc-next').onclick=function(){
+    $('level-complete').style.display='none';
+    if(G.player&&G.player.sector<10){ sendAction({type:'nextSector'}); }
+};
+
+$('ab-dash').onclick=function(){sendAction({type:'dash'});};
+$('ab-field').onclick=function(){sendAction({type:'field'});};
+$('ab-scan').onclick=function(){sendAction({type:'scan'});};
+$('ab-tp').onclick=function(){
+    if(!G.level)return;
+    var x=Math.floor(Math.random()*G.level.gridSize), y=Math.floor(Math.random()*G.level.gridSize);
+    sendAction({type:'move',target:{x:x,y:y}}); G.player.position={x:x,y:y}; renderGrid();
+};
+
+function sendAction(action){ if(!G.ws||G.ws.readyState!==1) return; G.ws.send(JSON.stringify({type:'action',action:action})); }
+function addLog(type,msg){
+    var log=$('log'); var el=document.createElement('div');
+    el.className='le le-'+type; el.textContent='['+type+'] '+msg;
+    log.insertBefore(el,log.firstChild);
+    while(log.children.length>40) log.removeChild(log.lastChild);
+}
+</script>
+</body>
+</html>

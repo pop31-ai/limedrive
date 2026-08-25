@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Фабрика Мечтаний</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Roboto:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  #game-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+  }
+
+  header {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    border: 2px solid #e94560;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 20px,
+      rgba(233,69,96,0.03) 20px,
+      rgba(233,69,96,0.03) 40px
+    );
+    animation: bgScroll 20s linear infinite;
+  }
+
+  @keyframes bgScroll { to { transform: translate(40px, 40px); } }
+
+  header h1 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 2.2em;
+    color: #e94560;
+    text-shadow: 0 0 20px rgba(233,69,96,0.5);
+    position: relative;
+  }
+
+  header p {
+    color: #aaa;
+    margin-top: 5px;
+    position: relative;
+  }
+
+  #stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #16213e, #1a1a2e);
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: #e94560;
+  }
+
+  .stat-card .icon { font-size: 1.8em; }
+  .stat-card .label { font-size: 0.7em; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-card .value { font-family: 'Russo One', sans-serif; font-size: 1.3em; color: #53d8fb; }
+
+  #main-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 768px) {
+    #main-area { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: linear-gradient(135deg, #16213e, #1a1a2e);
+    border: 1px solid #0f3460;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .panel h2 {
+    font-family: 'Russo One', sans-serif;
+    color: #e94560;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    border-bottom: 1px solid #0f3460;
+    padding-bottom: 8px;
+  }
+
+  #factory-view {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    background: #0a0a1a;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #0f3460;
+  }
+
+  #factory-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .conveyor-line {
+    stroke: #444;
+    stroke-width: 3;
+    stroke-dasharray: 8 4;
+    animation: conveyorMove 1s linear infinite;
+  }
+
+  @keyframes conveyorMove { to { stroke-dashoffset: -12; } }
+
+  .machine-body { fill: #2a2a4a; stroke: #0f3460; stroke-width: 2; }
+  .machine-active { fill: #2a2a4a; stroke: #53d8fb; stroke-width: 2; filter: drop-shadow(0 0 6px rgba(83,216,251,0.4)); }
+  .gear { fill: #444; stroke: #e94560; stroke-width: 1.5; transform-origin: center; animation: gearSpin 3s linear infinite; }
+  .gear-fast { animation-duration: 1s; }
+  .gear-reverse { animation-direction: reverse; }
+
+  @keyframes gearSpin { to { transform: rotate(360deg); } }
+
+  .product-box { fill: #e94560; rx: 3; ry: 3; }
+  .product-gem { fill: #53d8fb; }
+  .product-chip { fill: #f5c542; }
+
+  .spark {
+    fill: #f5c542;
+    animation: sparkle 0.6s ease-out forwards;
+  }
+
+  @keyframes sparkle {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(2); }
+  }
+
+  .smoke-particle {
+    fill: rgba(150,150,150,0.3);
+    animation: smokeRise 2s ease-out forwards;
+  }
+
+  @keyframes smokeRise {
+    0% { opacity: 0.5; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-40px) scale(2); }
+  }
+
+  .worker {
+    animation: workerBob 1.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes workerBob {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-3px); }
+  }
+
+  #upgrades-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+
+  #upgrades-list::-webkit-scrollbar { width: 6px; }
+  #upgrades-list::-webkit-scrollbar-track { background: #0a0a1a; border-radius: 3px; }
+  #upgrades-list::-webkit-scrollbar-thumb { background: #e94560; border-radius: 3px; }
+
+  .upgrade-btn {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #eee;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .upgrade-btn:hover:not(:disabled) {
+    border-color: #e94560;
+    transform: translateX(4px);
+    background: linear-gradient(135deg, #16213e, #1a1a2e);
+  }
+
+  .upgrade-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .upgrade-btn .up-icon { font-size: 1.6em; min-width: 36px; text-align: center; }
+  .upgrade-btn .up-info { flex: 1; }
+  .upgrade-btn .up-name { font-weight: 700; font-size: 0.9em; }
+  .upgrade-btn .up-desc { font-size: 0.7em; color: #888; margin-top: 2px; }
+  .upgrade-btn .up-cost { font-family: 'Russo One', sans-serif; color: #f5c542; font-size: 0.85em; white-space: nowrap; }
+
+  #log-panel {
+    margin-bottom: 16px;
+  }
+
+  #log-content {
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 0.78em;
+    font-family: monospace;
+    background: #0a0a1a;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  #log-content::-webkit-scrollbar { width: 4px; }
+  #log-content::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 2px; }
+
+  .log-entry {
+    padding: 2px 0;
+    border-bottom: 1px solid #111;
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+  }
+
+  .log-entry .time { color: #555; }
+  .log-entry .msg-good { color: #53d8fb; }
+  .log-entry .msg-warn { color: #f5c542; }
+  .log-entry .msg-bad { color: #e94560; }
+
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  #start-screen {
+    position: fixed;
+    inset: 0;
+    background: #0a0a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 0.5s;
+  }
+
+  #start-screen h1 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 3em;
+    color: #e94560;
+    text-shadow: 0 0 40px rgba(233,69,96,0.6);
+    margin-bottom: 10px;
+  }
+
+  #start-screen p { color: #888; margin-bottom: 30px; }
+
+  #start-btn {
+    background: linear-gradient(135deg, #e94560, #c23152);
+    border: none;
+    color: white;
+    font-family: 'Russo One', sans-serif;
+    font-size: 1.3em;
+    padding: 16px 50px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 30px rgba(233,69,96,0.4);
+  }
+
+  #start-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px rgba(233,69,96,0.7);
+  }
+
+  #start-art {
+    margin-bottom: 30px;
+  }
+
+  .tooltip {
+    position: fixed;
+    background: #16213e;
+    border: 1px solid #e94560;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.75em;
+    pointer-events: none;
+    z-index: 50;
+    max-width: 200px;
+    display: none;
+  }
+
+  #achievements-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .achievement {
+    background: #16213e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.75em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.5;
+    transition: all 0.3s;
+  }
+
+  .achievement.unlocked {
+    opacity: 1;
+    border-color: #f5c542;
+    background: linear-gradient(135deg, #16213e, #1a1a2e);
+    box-shadow: 0 0 10px rgba(245,197,66,0.2);
+  }
+
+  .achievement .ach-icon { font-size: 1.2em; }
+
+  #save-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #16213e;
+    border: 1px solid #53d8fb;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.75em;
+    color: #53d8fb;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 50;
+  }
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <svg id="start-art" width="200" height="160" viewBox="0 0 200 160">
+    <rect x="60" y="60" width="80" height="80" rx="6" fill="#2a2a4a" stroke="#0f3460" stroke-width="2"/>
+    <rect x="75" y="40" width="20" height="30" rx="3" fill="#444" stroke="#e94560" stroke-width="1.5"/>
+    <rect x="105" y="35" width="15" height="35" rx="3" fill="#444" stroke="#e94560" stroke-width="1.5"/>
+    <circle cx="90" cy="100" r="12" fill="none" stroke="#53d8fb" stroke-width="2">
+      <animateTransform attributeName="transform" type="rotate" from="0 90 100" to="360 90 100" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="stroke" values="#53d8fb;#e94560;#f5c542;#53d8fb" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="90" cy="100" r="6" fill="#53d8fb" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <rect x="110" y="90" width="20" height="14" rx="2" fill="#e94560" opacity="0.8">
+      <animate attributeName="y" values="90;86;90" dur="0.8s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="20" y="120" width="160" height="4" rx="2" fill="#333"/>
+    <rect x="20" y="120" width="40" height="4" rx="2" fill="#e94560">
+      <animate attributeName="x" values="20;160;20" dur="3s" repeatCount="indefinite"/>
+    </rect>
+    <circle cx="30" cy="30" r="4" fill="#f5c542" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="170" cy="25" r="3" fill="#53d8fb" opacity="0.4">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </svg>
+  <h1>⚙️ Фабрика Мечтаний</h1>
+  <p>Стройте, улучшайте,.production!</p>
+  <button id="start-btn" onclick="startGame()">Запустить Фабрику</button>
+</div>
+
+<div id="game-container" style="display:none;">
+  <header>
+    <h1>⚙️ Фабрика Мечтаний</h1>
+    <p>Управляйте своей империей производства</p>
+  </header>
+
+  <div id="achievements-bar"></div>
+
+  <div id="stats-bar">
+    <div class="stat-card">
+      <div class="icon">💰</div>
+      <div class="label">Финансы</div>
+      <div class="value" id="stat-money">100</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">📦</div>
+      <div class="label">Продукция / сек</div>
+      <div class="value" id="stat-prod">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">⚡</div>
+      <div class="label">Энергия</div>
+      <div class="value" id="stat-energy">5</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">👷</div>
+      <div class="label">Рабочие</div>
+      <div class="value" id="stat-workers">1</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">🏆</div>
+      <div class="label">Всего произведено</div>
+      <div class="value" id="stat-total">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">📈</div>
+      <div class="label">Уровень</div>
+      <div class="value" id="stat-level">1</div>
+    </div>
+  </div>
+
+  <div id="main-area">
+    <div class="panel">
+      <h2>🏭 Производственный Цех</h2>
+      <div id="factory-view">
+        <svg id="factory-canvas" viewBox="0 0 560 380"></svg>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>🔧 Улучшения</h2>
+      <div id="upgrades-list"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="log-panel">
+    <h2>📋 Журнал Производства</h2>
+    <div id="log-content"></div>
+  </div>
+</div>
+
+<div id="save-indicator">💾 Сохранено</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const G = {
+  money: 100,
+  production: 0,
+  baseProd: 0.5,
+  energy: 5,
+  maxEnergy: 5,
+  workers: 1,
+  totalProduced: 0,
+  level: 1,
+  xp: 0,
+  xpNeeded: 50,
+  tick: 0,
+  running: false,
+  machines: 1,
+  machineLevel: [],
+  products: [],
+  sparkles: [],
+  smoke: [],
+  conveyorOffset: 0,
+};
+
+const UPGRADES = [
+  { id: 'worker', icon: '👷', name: 'Нанять рабочего', desc: '+1 рабочий, +0.3/сек', baseCost: 50, costMul: 1.8, count: 0, max: 20, effect: () => { G.workers++; G.baseProd += 0.3; }, visible: () => true },
+  { id: 'machine', icon: '⚙️', name: 'Купить станок', desc: '+1 станок, +1.0/сек', baseCost: 150, costMul: 2.0, count: 0, max: 10, effect: () => { G.machines++; G.baseProd += 1.0; }, visible: () => G.totalProduced >= 10 },
+  { id: 'energy', icon: '⚡', name: 'Генератор', desc: '+3 макс. энергия', baseCost: 200, costMul: 2.2, count: 0, max: 8, effect: () => { G.maxEnergy += 3; G.energy = G.maxEnergy; }, visible: () => G.totalProduced >= 30 },
+  { id: 'speed', icon: '🚀', name: 'Турбо-режим', desc: 'x1.5 к скорости', baseCost: 300, costMul: 2.5, count: 0, max: 5, effect: () => { G.baseProd *= 1.5; }, visible: () => G.totalProduced >= 80 },
+  { id: 'quality', icon: '💎', name: 'Контроль качества', desc: '+50% к цене продукции', baseCost: 250, costMul: 2.0, count: 0, max: 5, effect: () => {}, visible: () => G.totalProduced >= 60 },
+  { id: 'automate', icon: '🤖', name: 'Автоматизация', desc: '+2.5/сек', baseCost: 500, costMul: 2.5, count: 0, max: 5, effect: () => { G.baseProd += 2.5; }, visible: () => G.totalProduced >= 150 },
+  { id: 'marketing', icon: '📢', name: 'Маркетинг', desc: 'x2 к продажам', baseCost: 400, costMul: 2.8, count: 0, max: 4, effect: () => {}, visible: () => G.totalProduced >= 100 },
+  { id: 'prestige', icon: '🌟', name: 'Премиум-линия', desc: 'x3 к цене, +1 уровень', baseCost: 2000, costMul: 3.0, count: 0, max: 5, effect: () => { G.level++; G.baseProd += 5; }, visible: () => G.totalProduced >= 500 },
+];
+
+const ACHIEVEMENTS = [
+  { id: 'first', icon: '🎯', name: 'Первый шаг', desc: 'Произвести 1 предмет', check: () => G.totalProduced >= 1 },
+  { id: 'hundred', icon: '💯', name: 'Сотня', desc: 'Произвести 100 предметов', check: () => G.totalProduced >= 100 },
+  { id: 'rich', icon: '💰', name: 'Богач', desc: 'Накопить 5000 монет', check: () => G.money >= 5000 },
+  { id: 'mega', icon: '🏭', name: 'Мега-фабрика', desc: '5+ станков', check: () => G.machines >= 5 },
+  { id: 'army', icon: '👷‍♂️', name: 'Армия рабочих', desc: '10+ рабочих', check: () => G.workers >= 10 },
+  { id: 'thousand', icon: '🔥', name: 'Тысяча', desc: 'Произвести 1000 предметов', check: () => G.totalProduced >= 1000 },
+  { id: 'speeddemon', icon: '⚡', name: 'Молния', desc: '10+/сек', check: () => G.production >= 10 },
+  { id: 'tycoon', icon: '👑', name: 'Тайкун', desc: '50000 монет', check: () => G.money >= 50000 },
+];
+
+const LOG_MAX = 30;
+let unlockedAch = new Set();
+let animFrame;
+
+function getQualityMul() {
+  const q = UPGRADES.find(u => u.id === 'quality');
+  return 1 + q.count * 0.5;
+}
+
+function getMarketingMul() {
+  const m = UPGRADES.find(u => u.id === 'marketing');
+  return Math.pow(2, m.count);
+}
+
+function getSellPrice() {
+  return Math.round(10 * getQualityMul() * getMarketingMul() * G.level);
+}
+
+function getUpgradeCost(u) {
+  return Math.round(u.baseCost * Math.pow(u.costMul, u.count));
+}
+
+function startGame() {
+  document.getElementById('start-screen').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-container').style.display = 'block';
+    G.running = true;
+    loadGame();
+    renderUpgrades();
+    renderAchievements();
+    gameLoop();
+  }, 500);
+}
+
+function gameLoop() {
+  if (!G.running) return;
+  G.tick++;
+
+  if (G.tick % 10 === 0) {
+    G.production = G.baseProd * Math.min(G.energy, G.workers) * 0.5;
+    const earned = G.production * getSellPrice() * 0.1;
+    G.money += earned;
+    G.totalProduced += G.production * 0.1;
+    G.xp += G.production * 0.05;
+
+    if (G.energy > 0) G.energy = Math.min(G.energy + 0.02, G.maxEnergy);
+  }
+
+  while (G.xp >= G.xpNeeded) {
+    G.xp -= G.xpNeeded;
+    G.level++;
+    G.xpNeeded = Math.round(G.xpNeeded * 1.5);
+    addLog('🎉 Уровень increased! Ур. ' + G.level, 'msg-good');
+  }
+
+  updateStats();
+  renderFactory();
+  checkAchievements();
+
+  if (G.tick % 100 === 0) saveGame();
+
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+function updateStats() {
+  document.getElementById('stat-money').textContent = Math.floor(G.money).toLocaleString();
+  document.getElementById('stat-prod').textContent = G.production.toFixed(1);
+  document.getElementById('stat-energy').textContent = Math.floor(G.energy) + '/' + G.maxEnergy;
+  document.getElementById('stat-workers').textContent = G.workers;
+  document.getElementById('stat-total').textContent = Math.floor(G.totalProduced).toLocaleString();
+  document.getElementById('stat-level').textContent = G.level;
+}
+
+function renderUpgrades() {
+  const list = document.getElementById('upgrades-list');
+  list.innerHTML = '';
+  UPGRADES.forEach(u => {
+    if (!u.visible()) return;
+    const cost = getUpgradeCost(u);
+    const btn = document.createElement('button');
+    btn.className = 'upgrade-btn';
+    btn.disabled = G.money < cost || u.count >= u.max;
+    btn.innerHTML = `
+      <span class="up-icon">${u.icon}</span>
+      <div class="up-info">
+        <div class="up-name">${u.name} ${u.count > 0 ? '(' + u.count + ')' : ''}</div>
+        <div class="up-desc">${u.desc}</div>
+      </div>
+      <span class="up-cost">💰 ${cost.toLocaleString()}</span>
+    `;
+    btn.onclick = () => buyUpgrade(u);
+    list.appendChild(btn);
+  });
+}
+
+function buyUpgrade(u) {
+  const cost = getUpgradeCost(u);
+  if (G.money < cost || u.count >= u.max) return;
+  G.money -= cost;
+  u.count++;
+  u.effect();
+  addLog(u.icon + ' Куплено: ' + u.name, 'msg-good');
+  renderUpgrades();
+}
+
+function renderFactory() {
+  const svg = document.getElementById('factory-canvas');
+  G.conveyorOffset = (G.conveyorOffset + 1) % 100;
+
+  let html = '';
+
+  html += `<defs>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a2a"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1e"/>
+    </linearGradient>
+  </defs>`;
+
+  html += `<rect width="560" height="380" fill="url(#skyGrad)"/>`;
+
+  html += `<rect x="0" y="280" width="560" height="100" fill="url(#floorGrad)" stroke="#0f3460" stroke-width="1"/>`;
+  for (let i = 0; i < 14; i++) {
+    html += `<line x1="${i*40}" y1="280" x2="${i*40}" y2="380" stroke="#16213e" stroke-width="1"/>`;
+  }
+
+  html += `<rect x="0" y="275" width="560" height="8" rx="4" fill="#0f3460"/>`;
+
+  const cw = 150 * Math.min(G.machines, 4);
+  const startX = (560 - cw) / 2;
+  html += `<line x1="${startX}" y1="290" x2="${startX + cw}" y2="290" class="conveyor-line"/>`;
+
+  for (let i = 0; i < Math.min(G.machines, 4); i++) {
+    const mx = startX + i * 150;
+    const my = 170;
+    const isActive = G.energy > 0 && G.workers > 0;
+
+    html += `<rect x="${mx}" y="${my}" width="100" height="100" class="${isActive ? 'machine-active' : 'machine-body'}" rx="8"/>`;
+    html += `<rect x="${mx+10}" y="${my+10}" width="80" height="30" rx="4" fill="#0a0a1a" stroke="#333" stroke-width="1"/>`;
+
+    if (isActive) {
+      html += `<rect x="${mx+15}" y="${my+16}" width="${30 + Math.sin(G.tick*0.05 + i)*15}" height="18" rx="3" fill="#53d8fb" opacity="0.6"/>`;
+    }
+
+    html += `<circle cx="${mx+50}" cy="${my+75}" r="18" fill="none" stroke="${isActive ? '#e94560' : '#333'}" stroke-width="2"/>`;
+    html += `<circle cx="${mx+50}" cy="${my+75}" r="8" fill="${isActive ? '#e94560' : '#222'}"/>`;
+
+    const gearR = isActive ? '' : `style="animation-play-state:paused"`;
+    html += `<circle cx="${mx+25}" cy="${my+60}" r="10" class="gear" ${gearR}/>`;
+    html += `<circle cx="${mx+75}" cy="${my+60}" r="10" class="gear gear-reverse" ${gearR}/>`;
+
+    if (i < Math.min(G.machines, 4) - 1) {
+      html += `<line x1="${mx+100}" y1="290" x2="${mx+150}" y2="290" class="conveyor-line"/>`;
+    }
+
+    if (isActive && G.tick % 20 === 0) {
+      const px = mx + 40 + Math.random() * 20;
+      const py = 280;
+      html += `<rect x="${px}" y="${py}" width="12" height="10" class="product-box" opacity="0.9">
+        <animate attributeName="x" values="${px};${px+30}" dur="2s" repeatCount="1" fill="freeze"/>
+        <animate attributeName="opacity" values="0.9;0" dur="2s" repeatCount="1" fill="freeze"/>
+      </rect>`;
+    }
+  }
+
+  for (let i = 0; i < Math.min(G.workers, 6); i++) {
+    const wx = 30 + i * 90;
+    const wy = 310;
+    html += `<g class="worker" style="animation-delay:${i*0.2}s">`;
+    html += `<circle cx="${wx}" cy="${wy}" r="8" fill="#f0c080"/>`;
+    html += `<rect x="${wx-6}" y="${wy+8}" width="12" height="16" rx="3" fill="#0f3460"/>`;
+    html += `<circle cx="${wx-3}" cy="${wy-1}" r="1" fill="#333"/>`;
+    html += `<circle cx="${wx+3}" cy="${wy-1}" r="1" fill="#333"/>`;
+    html += `<rect x="${wx-4}" y="${wy+4}" width="8" height="2" rx="1" fill="#333"/>`;
+    html += `</g>`;
+  }
+
+  if (G.machines >= 5) {
+    html += `<rect x="10" y="40" width="60" height="100" rx="6" fill="#2a2a4a" stroke="#f5c542" stroke-width="2"/>`;
+    html += `<text x="40" y="85" text-anchor="middle" fill="#f5c542" font-size="10" font-weight="bold">РЕЗЕРВ</text>`;
+    html += `<rect x="20" y="100" width="40" height="30" rx="4" fill="#0a0a1a"/>`;
+    if (G.energy > 2) {
+      html += `<rect x="25" y="105" width="${20 + Math.sin(G.tick*0.1)*10}" height="20" rx="3" fill="#f5c542" opacity="0.5"/>`;
+    }
+  }
+
+  for (let i = 0; i < 3; i++) {
+    const sx = 80 + i * 200;
+    html += `<circle cx="${sx}" cy="30" r="3" fill="#f5c542" opacity="${0.3 + Math.sin(G.tick*0.02+i)*0.3}">`;
+    html += `<animate attributeName="r" values="2;4;2" dur="${2+i}s" repeatCount="indefinite"/>`;
+    html += `</circle>`;
+  }
+
+  html += `<rect x="420" y="50" width="120" height="70" rx="8" fill="#2a2a4a" stroke="#0f3460" stroke-width="2"/>`;
+  html += `<text x="480" y="80" text-anchor="middle" fill="#53d8fb" font-size="11" font-weight="bold">УПРАВЛЕНИЕ</text>`;
+  html += `<text x="480" y="100" text-anchor="middle" fill="#888" font-size="9">Ур.${G.level} | ${G.machines} ст.</text>`;
+  html += `<rect x="430" y="110" width="100" height="6" rx="3" fill="#0a0a1a"/>`;
+  html += `<rect x="430" y="110" width="${Math.min((G.xp / G.xpNeeded) * 100, 100)}" height="6" rx="3" fill="#e94560"/>`;
+
+  svg.innerHTML = html;
+}
+
+function addLog(msg, cls = 'msg-good') {
+  const log = document.getElementById('log-content');
+  const t = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="time">[${t}]</span> <span class="${cls}">${msg}</span>`;
+  log.prepend(entry);
+  while (log.children.length > LOG_MAX) log.removeChild(log.lastChild);
+}
+
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if (!unlockedAch.has(a.id) && a.check()) {
+      unlockedAch.add(a.id);
+      addLog('🏅 Достижение: ' + a.name + ' — ' + a.desc, 'msg-warn');
+      renderAchievements();
+    }
+  });
+}
+
+function renderAchievements() {
+  const bar = document.getElementById('achievements-bar');
+  bar.innerHTML = '';
+  ACHIEVEMENTS.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'achievement' + (unlockedAch.has(a.id) ? ' unlocked' : '');
+    div.innerHTML = `<span class="ach-icon">${a.icon}</span> ${a.name}`;
+    bar.appendChild(div);
+  });
+}
+
+function saveGame() {
+  const data = {
+    money: G.money,
+    baseProd: G.baseProd,
+    energy: G.energy,
+    maxEnergy: G.maxEnergy,
+    workers: G.workers,
+    totalProduced: G.totalProduced,
+    level: G.level,
+    xp: G.xp,
+    xpNeeded: G.xpNeeded,
+    machines: G.machines,
+    upgrades: UPGRADES.map(u => u.count),
+    achievements: [...unlockedAch],
+  };
+  localStorage.setItem('factory-save', JSON.stringify(data));
+  const ind = document.getElementById('save-indicator');
+  ind.style.opacity = '1';
+  setTimeout(() => ind.style.opacity = '0', 1500);
+}
+
+function loadGame() {
+  const raw = localStorage.getItem('factory-save');
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw);
+    G.money = d.money || 100;
+    G.baseProd = d.baseProd || 0.5;
+    G.energy = d.energy || 5;
+    G.maxEnergy = d.maxEnergy || 5;
+    G.workers = d.workers || 1;
+    G.totalProduced = d.totalProduced || 0;
+    G.level = d.level || 1;
+    G.xp = d.xp || 0;
+    G.xpNeeded = d.xpNeeded || 50;
+    G.machines = d.machines || 1;
+    if (d.upgrades) d.upgrades.forEach((c, i) => { if (UPGRADES[i]) UPGRADES[i].count = c; });
+    if (d.achievements) unlockedAch = new Set(d.achievements);
+    addLog('💾 Игра загружена!', 'msg-good');
+  } catch(e) {
+    addLog('⚠️ Ошибка загрузки', 'msg-bad');
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 's' && e.ctrlKey) {
+    e.preventDefault();
+    saveGame();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && G.running) saveGame();
+});
+
+setInterval(() => {
+  if (G.running) renderUpgrades();
+}, 500);
+</script>
+</body>
+</html>

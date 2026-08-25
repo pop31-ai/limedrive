@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Завод мёда «Купол» — 3D</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; color: #dfe8f2; }
+  #cv { display: block; background: #0a1524; }
+  .panel {
+    position: fixed; background: rgba(10, 21, 36, 0.85); border: 1px solid rgba(140, 200, 255, 0.2);
+    border-radius: 10px; padding: 12px; backdrop-filter: blur(4px);
+  }
+  #kpi {
+    top: 12px; left: 12px; width: 260px;
+  }
+  #kpi h2 { font-size: 15px; color: #ffd84d; margin-bottom: 8px; }
+  .krow { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
+  .krow b { color: #fff; }
+  #profit { color: #6bf57b; font-weight: 700; }
+  #money { color: #ffd84d; font-weight: 700; }
+  #biz {
+    top: 12px; right: 12px; width: 300px; font-size: 12px; line-height: 1.5;
+  }
+  #biz h3 { font-size: 13px; color: #6fc3ff; margin-bottom: 6px; }
+  #biz table { width: 100%; border-collapse: collapse; }
+  #biz td { padding: 2px 0; }
+  #biz td:last-child { text-align: right; color: #ffd84d; }
+  #biz .ok { color: #6bf57b; }
+  #biz .bad { color: #ff6b6b; }
+  #zones {
+    top: 12px; left: 286px; width: 190px; max-height: 70vh; overflow-y: auto;
+  }
+  #zones h3 { font-size: 13px; color: #6fc3ff; margin-bottom: 6px; }
+  .zone-item {
+    padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 12px; margin: 2px 0;
+  }
+  .zone-item:hover { background: rgba(140, 200, 255, 0.15); }
+  .zone-item.sel { background: rgba(255, 216, 77, 0.2); color: #ffd84d; }
+  #zoneDetail {
+    bottom: 12px; left: 12px; width: 340px; display: none;
+  }
+  #zoneDetail h3 { color: #ffd84d; font-size: 14px; margin-bottom: 6px; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; }
+  .row label { width: 130px; }
+  .row input[type=range] { flex: 1; }
+  .row span { width: 48px; text-align: right; color: #ffd84d; }
+  #speedbar {
+    bottom: 12px; right: 12px; display: flex; gap: 6px;
+  }
+  #speedbar button {
+    background: rgba(140, 200, 255, 0.15); border: 1px solid rgba(140, 200, 255, 0.3);
+    color: #dfe8f2; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  #speedbar button:hover { background: rgba(140, 200, 255, 0.3); }
+  #hint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #8aa3b8; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="panel" id="kpi">
+  <h2>🏭 Комплекс «Купол»</h2>
+  <div class="krow"><span>Время</span><b id="kTime">0:00</b></div>
+  <div class="krow"><span>Капитал</span><b id="kMoney">0$</b></div>
+  <div class="krow"><span>Прибыль</span><b id="kProfit">0$/с</b></div>
+  <hr style="border-color:rgba(140,200,255,0.15); margin:6px 0;">
+  <div class="krow"><span>Мёд</span><b id="kHoney">0/с</b></div>
+  <div class="krow"><span>Витамины</span><b id="kVit">0/с</b></div>
+  <div class="krow"><span>Сахар (склад)</span><b id="kSugar">0</b></div>
+  <div class="krow"><span>Пыльца (склад)</span><b id="kPollen">0</b></div>
+  <div class="krow"><span>Пчёлы всего</span><b id="kBees">0</b></div>
+  <div class="krow"><span>Качество мёда</span><b id="kQuality">0%</b></div>
+</div>
+
+<div class="panel" id="biz">
+  <h3>Бизнес-план (финмодель)</h3>
+  <table>
+    <tr><td>Мёд</td><td>2.5$ × качество</td></tr>
+    <tr><td>Витамины</td><td>8.0$</td></tr>
+    <tr><td>Сахар</td><td>пром-основа (внутр.)</td></tr>
+    <tr><td>Маржа этапа мёда</td><td>×1.35 <span class="ok">✓</span></td></tr>
+    <tr><td>Маржа этапа витаминов</td><td>×1.5 <span class="ok">✓</span></td></tr>
+    <tr><td>Энергия</td><td>0.04$×пчела</td></tr>
+    <tr><td>Охлаждение</td><td>0.005$×мёд</td></tr>
+  </table>
+  <p style="margin-top:6px; font-size:11px; color:#8aa3b8;">
+    Прибыль = мёд×Ц + витамины×Ц − энергия − охлаждение.<br>
+    Цены консистентны: производные ≥ сырья → вся цепочка выгодна.
+  </p>
+</div>
+
+<div class="panel" id="zones">
+  <h3>Башни-фермы (100 роёв)</h3>
+  <div id="zonelist"></div>
+</div>
+
+<div class="panel" id="zoneDetail">
+  <h3 id="zoneName">—</h3>
+  <div class="row">
+    <label>Клапан: нектар → сахар</label>
+    <input type="range" id="valve1" min="0" max="1" step="0.05" value="0.3">
+    <span id="valve1v">30%</span>
+  </div>
+  <div class="row">
+    <label>Клапан: мёд → витамины</label>
+    <input type="range" id="valve2" min="0" max="1" step="0.05" value="0.3">
+    <span id="valve2v">30%</span>
+  </div>
+</div>
+
+<div id="speedbar" class="panel" style="position:fixed;">
+  <button id="speed1">1×</button>
+  <button id="speed4">4×</button>
+  <button id="speed10">10×</button>
+</div>
+
+<div id="hint">Мышь: вращение · колесо: зум · клик по башне: клапаны</div>
+
+<script src="js/vec.js"></script>
+<script src="js/render.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/zones/zone_01.js"></script>
+<script src="js/zones/zone_02.js"></script>
+<script src="js/zones/zone_03.js"></script>
+<script src="js/zones/zone_04.js"></script>
+<script src="js/zones/zone_05.js"></script>
+<script src="js/zones/zone_06.js"></script>
+<script src="js/zones/zone_07.js"></script>
+<script src="js/zones/zone_08.js"></script>
+<script src="js/zones/zone_09.js"></script>
+<script src="js/zones/zone_10.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

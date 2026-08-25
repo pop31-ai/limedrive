@@ -1,0 +1,775 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Война солдатиков</title><style>
+html,body{margin:0;min-height:100%;background:#12101a;color:#e8e6f0;font-family:Segoe UI,system-ui,sans-serif}
+[hidden]{display:none!important}
+header{text-align:center;padding:14px 0 4px}
+h1{margin:0;font-size:26px;letter-spacing:2px;color:#f2c14e;text-shadow:0 2px 10px #000}
+header span{font-size:12px;opacity:.55}
+main{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:flex-start;padding:10px 14px 22px}
+#board{display:grid;gap:3px;background:#0d0b15;padding:7px;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;border-radius:7px;cursor:pointer;user-select:none}
+.cell:hover{filter:brightness(1.12)}
+.tile{position:absolute;font-size:1.15em;opacity:.5;pointer-events:none}
+.unit{position:relative;width:80%;height:80%;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 -5px 8px rgba(0,0,0,.4),0 0 0 2px rgba(255,255,255,.4);transition:transform .12s,filter .12s}
+.unit:hover{transform:scale(1.08)}
+.unit .ic{font-size:1.45em;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55));transform:translateY(-2px)}
+.unit .hp{position:absolute;bottom:2px;left:14%;right:14%;height:5px;background:rgba(0,0,0,.55);border-radius:3px;overflow:hidden}
+.unit .hp i{display:block;height:100%;background:linear-gradient(#8ef07f,#2f9e44)}
+.unit.done{opacity:.42;filter:grayscale(.85)}
+.cell.sel .unit{outline:3px solid #54e8ff;box-shadow:0 0 14px #54e8ff88,inset 0 -5px 8px rgba(0,0,0,.4)}
+.cell.reach::after{content:'';position:absolute;inset:4px;border-radius:7px;background:#7CFC00;opacity:.28;pointer-events:none}
+.cell.reach:hover{box-shadow:inset 0 0 0 3px #7CFC00}
+.cell.atk::after{content:'';position:absolute;inset:4px;border-radius:7px;background:#ff4d55;opacity:.38;pointer-events:none}
+.cell.atk:hover{box-shadow:inset 0 0 0 3px #ff4d55;filter:none}
+.fx{position:absolute;z-index:6;font-weight:800;font-size:1.25em;pointer-events:none;animation:fox .95s ease-out forwards;text-shadow:0 2px 4px #000}
+@keyframes fox{0%{opacity:1;transform:translate(0,-4px) scale(1.15)}100%{opacity:0;transform:translate(0,-30px) scale(1)}}
+.fx.big{font-size:1.7em}
+aside{width:300px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 90px);overflow-y:auto}
+.card{background:#1c1829;border:1px solid #2c2740;border-radius:12px;padding:10px 12px}
+.tcard{border-width:2px}
+.tw{display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.g{font-size:14px}
+.tbon{font-size:12px;opacity:.75;margin-top:6px}
+.shead{display:flex;gap:10px;align-items:center}
+.sic{font-size:30px}
+.hpbar{width:120px;height:8px;background:#0008;border-radius:4px;overflow:hidden;margin:4px 0 2px}
+.hpbar i{display:block;height:100%;background:linear-gradient(#8ef07f,#2f9e44)}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px}
+.stats span{background:#0e0c16;padding:3px 7px;border-radius:6px}
+.note{font-size:12px;opacity:.8;margin-top:6px}
+.hint{font-size:12px;opacity:.7;margin-top:6px;color:#8fb3ff}
+.btn{margin-top:8px;background:#2b6ae0;border:0;color:#fff;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+.btn:hover{background:#3d7bf5}
+.rec{background:#0e0c16;border:1px solid #3a3353;border-radius:8px;padding:5px 9px;color:#f2c14e;cursor:pointer;font-size:12px;flex:none}
+.rec:disabled{opacity:.35;cursor:default}
+.rec:hover:enabled{border-color:#f2c14e}
+.row{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #241f38}
+.row:last-child{border-bottom:0}
+.ric{font-size:24px;flex:none}
+.rinfo{flex:1;min-width:0}
+.rinfo b{font-size:13px;display:block}
+.rinfo small{font-size:11px;color:#9aa0b8;display:block;margin-top:2px}
+.chead{font-size:13px;font-weight:700;margin-bottom:6px;color:#cfd4ea}
+.lg{margin:7px 0;font-size:12px}
+.lg b{display:inline-block;background:#241f38;padding:2px 7px;border-radius:6px;margin-bottom:2px}
+.lg span{color:#aab0c6;display:block;margin-top:3px;line-height:1.35}
+.abtn{display:flex;gap:6px;align-items:center;margin-top:8px}
+#logbox{font-size:11.5px;color:#aab0c6;max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+#logbox div{padding:2px 0;border-bottom:1px dashed #2a2438}
+.overlay{position:fixed;inset:0;background:rgba(18,16,26,.97);display:flex;align-items:center;justify-content:center;z-index:50}
+.mcard,.vcard{background:#1c1829;border:1px solid #3a3353;border-radius:16px;padding:26px 32px;text-align:center;width:min(560px,92vw);box-shadow:0 20px 60px #0008}
+.mcard h1{color:#f2c14e;margin:0 0 6px;font-size:30px}
+.mcard p{color:#9aa0b8;margin:4px 0 14px;font-size:13px}
+.mmode{display:flex;gap:8px;justify-content:center;margin:10px 0 16px}
+.mmode button{background:#241f38;border:1px solid #3a3353;color:#cfd4ea;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:13px}
+.mmode button.on{background:#2b6ae0;border-color:#2b6ae0;color:#fff}
+.mpick{display:flex;gap:20px;justify-content:center;align-items:flex-start;margin:4px 0 18px;flex-wrap:wrap}
+.mpick label{font-size:12px;color:#9aa0b8;display:block;margin-bottom:4px}
+.mpick select{background:#0e0c16;color:#e8e6f0;border:1px solid #3a3353;border-radius:8px;padding:8px 10px;font-size:14px}
+.start{background:#e8b31c;color:#20180a;border:0;padding:12px 34px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer}
+.start:hover{background:#f2c14e}
+.minfo{font-size:12px;color:#9aa0b8;margin-top:16px;line-height:1.5;text-align:left}
+.vcard h2{margin:0 0 8px;font-size:26px;color:#7CFC00}
+.vcard p{color:#9aa0b8;margin:4px 0 0}
+.vcard .btns{margin-top:18px;display:flex;gap:10px;justify-content:center}
+.gb{position:absolute;width:16px;height:16px;font-size:11px;line-height:16px;border-radius:50%;background:rgba(12,10,20,.88);box-shadow:0 0 0 1px #f2c14e;display:flex;align-items:center;justify-content:center;z-index:2}
+.gb.star{top:0;left:0;color:#f2c14e}
+.gb:not(.star){top:0;right:0}
+.wx{font-size:12px;color:#9fd8ff;margin-top:6px}
+.wrow{margin-top:8px;font-size:12px;background:#241f38;padding:4px 8px;border-radius:7px;color:#f2c14e}
+.wrow .owned{color:#7CFC00;margin-left:6px}
+.wrow .stk{color:#9aa0b8;margin-left:6px}
+.sigline{font-size:11.5px;color:#aab0c6;margin-bottom:6px;line-height:1.4}
+.scr{border:1px solid;border-radius:8px;padding:5px 8px;margin:4px 0;font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.scr .itog{margin-left:auto;color:#f2c14e}
+.why{color:#9aa0b8;font-size:13px;margin-bottom:10px}
+.sum{border-collapse:collapse;width:100%;margin:0 auto;font-size:12.5px}
+.sum th,.sum td{border:1px solid #3a3353;padding:5px 9px;text-align:center}
+.sum th{background:#241f38}
+.sum td:first-child{text-align:left;color:#aab0c6}
+.aiperf{margin-top:10px;font-size:12px;color:#c9a0ff;background:#241f38;padding:6px 10px;border-radius:8px}
+.hrow{font-size:12px;background:#1c1829;border:1px solid #2c2740;border-radius:9px;padding:6px 10px;margin:4px 0;text-align:left}
+.hrow small{display:block;color:#7c84a6;font-size:10.5px;margin-top:2px}
+.mbts{display:flex;gap:10px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.mbts .start.alt{background:#2b6ae0;color:#fff}
+.mbts .start.alt:hover{background:#3d7bf5}
+</style></head><body>
+<header><h1>⚔️ Война солдатиков</h1><span>персы · римляне · греки · викинги</span></header>
+<main>
+<div id=board></div>
+<aside>
+ <div id=panel></div>
+ <div class=card><div class=chead>📋 Бой</div><div id=logbox></div></div>
+</aside>
+</main>
+
+<div id=menu class=overlay>
+ <div class=mcard>
+  <h1>⚔️ Война солдатиков</h1>
+  <p>Пошаговое сражение игрушечных армий. Выбирай армию, нанимай бойцов, займи высоты и разбей врага!</p>
+  <div class=mmode>
+   <button id=mb0 data-act=mode0 class=on>🤖 Против ИИ</button>
+   <button id=mb1 data-act=mode1>👥 Вдвоём (1 устройство)</button>
+  </div>
+  <div class=mpick>
+   <div><label>Сторона 1 · слева</label><select id=sel0></select></div>
+   <div><label>Сторона 2 · справа</label><select id=sel1></select></div>
+  </div>
+  <div class=mbts>
+   <button data-act=start class=start>▶ Начать новый бой</button>
+   <button id=rb data-act=resume class=start alt>📂 Продолжить партию</button>
+  </div>
+  <div id=hist class=minfo></div>
+  <div class=minfo>
+   <b>Как играть (всё локально, без сети):</b><br>
+   ⚔️ Юнит → зелёные (движение) → красные (атака).<br>
+   ⚔️ У каждого солдатика фирменное ★ оружие (лучшее). За капитал можно снарядить и купить альтернативу.<br>
+   🛡️ Лес +3, холм +2. Погода меняет бой.<br>
+   🏆 Победа: разгром армии или лучший Итог к 10 раунду.<br>
+   💾 Автосейв каждый ход — игра читается сама при открытии страницы.
+  </div>
+ </div>
+</div>
+
+<div id=vic class=overlay hidden>
+ <div class=vcard>
+  <h2 id=vt></h2>
+  <div id=vs></div>
+  <div class=btns>
+   <button class=start data-act=rematch>🔄 Ещё раз</button>
+   <button class=btn data-act=tomenu>🏠 В меню</button>
+  </div>
+ </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const R=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.random()*a.length|0];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+const C=14,R2=9,INCOME=20,STARTG=110,MAXN=8;
+const DIR=[[1,0],[-1,0],[0,1],[0,-1]];
+const BON={per:'Быстрые: все юниты +1 к ходу',rom:'Аура центуриона: +2 атаки соседям',gre:'Фаланга: гоплит у гоплита +4 к защите',vik:'Ярость: берсерк ниже 50% HP +8 атаки'};
+const FACS=[
+ {id:'per',n:'Персы',c:'#eab308',t:'Всадники и бессмертные Дария'},
+ {id:'rom',n:'Римляне',c:'#e5484d',t:'Дисциплинированные легионы'},
+ {id:'gre',n:'Греки',c:'#3b82f6',t:'Фаланги гоплитов и спартанцы'},
+ {id:'vik',n:'Викинги',c:'#a855f7',t:'Яростные берсерки и рейдеры'}
+];
+const F={};FACS.forEach(f=>F[f.id]=f);
+const ARMY={
+ per:[{n:'Бессмертный',e:'⚔️',hp:45,atk:13,def:7,mov:3,rng:1,cost:60,note:'Элита Царя Царей',sig:'Меч и панцирь бессмертного'},{n:'Копейщик',e:'🔱',hp:38,atk:12,def:5,mov:3,rng:1,cost:35,note:'Недорогой воин ближнего боя',sig:'Копьё'},{n:'Конный лучник',e:'🐎',hp:30,atk:11,def:3,mov:5,rng:2,cost:40,note:'Стреляет с 2 клеток, очень быстрый',sig:'Композитный лук'}],
+ rom:[{n:'Центурион',e:'⚔️',hp:52,atk:15,def:10,mov:3,rng:1,cost:60,note:'Даёт соседям +2 атаки',sig:'Гладий центуриона'},{n:'Легионер',e:'🛡️',hp:46,atk:14,def:9,mov:3,rng:1,cost:40,note:'Универсальный тяжёлый пехотинец',sig:'Гладий и скутум'},{n:'Пилум-велит',e:'🗡️',hp:32,atk:13,def:4,mov:3,rng:2,cost:40,note:'Метает пилумы с 2 клеток',sig:'Пилум'}],
+ gre:[{n:'Спартанец',e:'🔱',hp:56,atk:14,def:10,mov:2,rng:1,cost:60,note:'Медленный, но несокрушимый',sig:'Дори и аспис'},{n:'Гоплит',e:'🛡️',hp:50,atk:12,def:8,mov:2,rng:1,cost:40,note:'Рядом с гоплитом +4 защиты',sig:'Дори и гоплон'},{n:'Лучник',e:'🏹',hp:32,atk:13,def:4,mov:3,rng:2,cost:40,note:'Обстреливает с 2 клеток',sig:'Критский лук'}],
+ vik:[{n:'Берсерк',e:'🪓',hp:40,atk:16,def:4,mov:3,rng:1,cost:60,note:'Ниже 50% HP +8 атаки',sig:'Топор и кольчуга'},{n:'Рейдер',e:'⚔️',hp:34,atk:15,def:5,mov:4,rng:1,cost:35,note:'Быстрый набег',sig:'Секира'},{n:'Топорник',e:'🪓',hp:30,atk:14,def:3,mov:3,rng:2,cost:40,note:'Метает топоры с 2 клеток',sig:'Метательный топор'}]
+};
+const ITEMS=[
+ {e:'🪓',n:'Тяжёлый топор',atk:4,def:-2,cost:30,any:1},
+ {e:'🛡️',n:'Башенный щит',def:4,mov:-1,cost:35,any:1},
+ {e:'💎',n:'Амулет удачи',hp:10,cost:40,any:1},
+ {e:'🐎',n:'Запасной конь',mov:1,cost:50,any:1},
+ {e:'🏹',n:'Дальнобойный лук',rng:1,atk:-2,cost:45,ranged:1},
+ {e:'🔥',n:'Огненные стрелы',atk:3,rng:-1,cost:40,ranged:1}
+];
+const WEATHERS={
+ clear:{e:'☀️',n:'Ясно',fx:'без эффектов'},
+ cloud:{e:'⛅',n:'Облачно',fx:'без эффектов'},
+ rain:{e:'🌧️',n:'Дождь',fx:'стрелки: −1 радиус'},
+ fog:{e:'🌫️',n:'Туман',fx:'всем: −1 радиус'},
+ snow:{e:'❄️',n:'Снег',fx:'всем: −1 движение, +1 защита',def:1},
+ wind:{e:'🌬️',n:'Ветер',fx:'стрелки: −2 атаки',satk:-2},
+ storm:{e:'⛈️',n:'Гроза',fx:'стрелки: −1 радиус, −1 атака',satk:-1}
+};
+const RLIMIT=10;
+const TERR={grass:{c:'#7f9b57',pass:1},forest:{c:'#4c7a35',pass:1,def:3,e:'🌲'},hill:{c:'#a99a6b',pass:1,def:2,atk:2,e:'⛰️'},rock:{c:'#6f7377',pass:0,e:'🪨'},water:{c:'#4682b4',pass:0,e:'🌊'}};
+
+let S=null,uid=1,map=[];
+
+function genMap(){
+ map=[];
+ const biome=pick(['forest','hills']);
+ for(let y=0;y<R2;y++){map[y]=[];
+  for(let x=0;x<C;x++){
+   let t='grass';
+   const spawn=(x<2)||(x>=C-2);
+   if(!spawn){
+    const r=Math.random();
+    if(biome==='forest'){if(r<.22)t='forest';else if(r<.28)t='water';}
+    else{if(r<.14)t='hill';else if(r<.21)t='rock';else if(r<.25)t='water';}
+    if(x>3&&x<C-4&&y>2&&y<R2-3&&Math.random()<.5)t=biome==='forest'?'forest':'hill';
+   }
+   map[y][x]=t;
+  }
+ }
+}
+
+const LS_SAVE='tsSoldierSave',LS_HIST='tsSoldierHist';
+function newStats(){return {rep:0,act:0,atks:0,kills:0,losses:0,hires:0,buys:0,dmg:0,idle:0,turnActs:0,turnKills:0,turnLosses:0}}
+function freshState(f0,f1,mode){
+ genMap();
+ const s={mode,turn:0,last:null,turns:0,weather:null,sel:null,units:[],fx:[],log:[],win:null,pcs:[{fac:f0,ai:false,gold:STARTG,recruited:false,stats:newStats()},{fac:f1,ai:mode===0,gold:STARTG,recruited:false,stats:newStats()}]};
+ uid=1;
+ placeArmy(s,0,f0);placeArmy(s,1,f1);
+ s.log.push('⚔️ '+F[f0].n+' против '+F[f1].n);
+ return s;
+}
+function placeArmy(s,pc,fac){
+ const arr=ARMY[fac];
+ const rows=[1,3,5,7,8],isR=pc===1;
+ for(let i=0;i<arr.length;i++){
+  const x=isR?(C-1-(i%2)):(i%2);
+  const y=rows[i];
+  s.units.push({id:uid++,pc,fac,t:i,def:arr[i],maxhp:arr[i].hp,hp:arr[i].hp,mov:arr[i].mov+(fac==='per'?1:0),items:[],x,y,done:false,moved:false});
+ }
+}
+const getU=id=>S.units.find(u=>u.id===id);
+function unitAt(x,y){return S.units.find(u=>u.x===x&&u.y===y)}
+function alive(pc){return S.units.filter(u=>u.pc===pc)}
+
+function itmAtk(u){let s=0;for(const i of u.items)s+=ITEMS[i].atk||0;return s}
+function itmDef(u){let s=0;for(const i of u.items)s+=ITEMS[i].def||0;return s}
+function itmMov(u){let s=0;for(const i of u.items)s+=ITEMS[i].mov||0;return s}
+function itmRng(u){let s=0;for(const i of u.items)s+=ITEMS[i].rng||0;return s}
+function wthrId(){return S.weather?S.weather.t:'clear'}
+function movBonus(){return wthrId()==='snow'?-1:0}
+function rngBonus(u){
+ const w=wthrId();
+ if(w==='fog')return -1;
+ if((w==='rain'||w==='storm')&&u.t===2)return -1;
+ return 0;
+}
+function effMov(u){return Math.max(1,u.mov+itmMov(u)+movBonus())}
+function effRng(u){return Math.max(1,u.def.rng+itmRng(u)+rngBonus(u))}
+function itemDesc(it){
+ let s=[];
+ if(it.atk)s.push('⚔️'+(it.atk>0?'+':'')+it.atk);
+ if(it.def)s.push('🛡️'+(it.def>0?'+':'')+it.def);
+ if(it.mov)s.push('👣'+(it.mov>0?'+':'')+it.mov);
+ if(it.rng)s.push('🎯'+(it.rng>0?'+':'')+it.rng);
+ if(it.hp)s.push('❤️+'+it.hp);
+ return s.join(' · ')+(it.ranged?' · только стрелки':'');
+}
+function score(pc){const s=S.pcs[pc].stats;return s.rep*30+S.pcs[pc].gold*3+s.act*25}
+
+function effATK(u){
+ let a=u.def.atk+itmAtk(u);
+ if(u.fac==='vik'&&u.t===0&&u.hp<=u.maxhp/2)a+=8;
+ for(const [dx,dy] of DIR){const n=unitAt(u.x+dx,u.y+dy);if(n&&n.pc===u.pc&&n.fac==='rom'&&n.t===0)a+=2;}
+ const w=wthrId();
+ if((w==='wind'||w==='storm')&&u.t===2)a+=(WEATHERS[w].satk||0);
+ return a;
+}
+function effDEF(u){
+ let d=u.def.def+itmDef(u);
+ if(u.fac==='gre'&&u.t===1){for(const [dx,dy] of DIR){const n=unitAt(u.x+dx,u.y+dy);if(n&&n.pc===u.pc&&n.fac==='gre'&&n.t===1)d+=4;}}
+ if(wthrId()==='snow')d+=(WEATHERS.snow.def||0);
+ return d;
+}
+function expectedDmg(a,v){
+ const atkT=TERR[map[a.y][a.x]].atk||0,defT=TERR[map[v.y][v.x]].def||0;
+ return Math.max(1,effATK(a)+atkT-effDEF(v)-defT);
+}
+function reachable(u){
+ const set=new Set([u.x+','+u.y]);
+ if(u.moved)return set;
+ const mov=effMov(u);
+ const q=[[u.x,u.y,0]],seen=new Set([u.x+','+u.y]);
+ while(q.length){
+  const [x,y,d]=q.shift();
+  for(const [dx,dy] of DIR){
+   const nx=x+dx,ny=y+dy;
+   if(nx<0||ny<0||nx>=C||ny>=R2)continue;
+   if(!TERR[map[ny][nx]].pass)continue;
+   const k=nx+','+ny;
+   if(seen.has(k)||unitAt(nx,ny))continue;
+   seen.add(k);set.add(k);
+   if(d+1<mov)q.push([nx,ny,d+1]);
+  }
+ }
+ return set;
+}
+function atkSet(u){
+ const set=new Set(),r=effRng(u);
+ for(const e of S.units){if(e.pc===u.pc)continue;
+  const d=Math.max(Math.abs(e.x-u.x),Math.abs(e.y-u.y));
+  if(d>=1&&d<=r)set.add(e.x+','+e.y);
+ }
+ return set;
+}
+function enemiesInRangeXY(u,x,y){
+ const r=effRng(u),res=[];
+ for(const e of S.units){if(e.pc===u.pc||e.id===u.id)continue;
+  const d=Math.max(Math.abs(e.x-x),Math.abs(e.y-y));
+  if(d>=1&&d<=r)res.push(e);
+ }
+ return res;
+}
+function topCounter(x,y,u){
+ let m=0;
+ for(const e of S.units){if(e.pc===u.pc)continue;
+  const d=Math.max(Math.abs(e.x-x),Math.abs(e.y-y));
+  if(d>=1&&d<=effRng(e))m=Math.max(m,expectedDmg(e,u));
+ }
+ return m;
+}
+
+function clickCell(x,y){
+ if(!S||S.win||S.pcs[S.turn].ai)return;
+ const pc=S.turn,u=unitAt(x,y),key=x+','+y;
+ if(S.sel){
+  const su=getU(S.sel);
+  if(su&&!su.done){
+   if(S.atk&&S.atk.has(key)&&u&&u.pc!==pc){attack(su,u);return;}
+   if(S.reach&&S.reach.has(key)&&!u){doMove(su,x,y);return;}
+   if(u&&u.pc===pc&&!u.done&&u.id!==su.id){S.sel=u.id;render();return;}
+   if(u&&u.id===su.id){S.sel=null;render();return;}
+   S.sel=null;render();return;
+  }
+ }
+ if(u&&u.pc===pc&&!u.done){S.sel=u.id;render();}
+}
+function doMove(u,x,y){
+ u.x=x;u.y=y;u.moved=true;
+ sfxMove();
+ render();
+ if(S.sel){
+  const su=getU(S.sel);
+  if(su&&!su.moved)return;
+  if(!enemiesInRangeXY(su,su.x,su.y).length){
+   su.done=true;S.sel=null;
+   addLog(F[su.fac].n+': '+su.def.n+' встал на позицию');
+   render();
+  }
+ }
+}
+function attack(a,t){
+ if(S.win||a.done)return;
+ const dmg=Math.max(1,expectedDmg(a,t)+Math.round(R(-2,3)));
+ t.hp-=dmg;
+ a.done=true;
+ S.fx.push({k:t.x+','+t.y,txt:'-'+dmg,c:'#ff5555'});
+ sfxHurt();
+ const as=S.pcs[a.pc].stats,ts=S.pcs[t.pc].stats;
+ as.act++;as.atks++;as.dmg+=dmg;as.turnActs++;
+ addLog(F[a.fac].n+' '+a.def.e+' '+a.def.n+' бьёт '+t.def.n+': −'+dmg);
+ if(t.hp<=0){
+  const k=t.x+','+t.y;
+  S.units=S.units.filter(u=>u.id!==t.id);
+  S.fx.push({k,txt:'💀',c:'#ffb800',big:true});
+  S.pcs[a.pc].gold+=t.def.cost;
+  as.rep+=2;as.kills++;as.turnKills++;
+  ts.losses++;ts.turnLosses++;ts.rep=Math.max(0,ts.rep-1);
+  addLog('💀 '+F[a.fac].n+': '+t.def.n+' уничтожен (+'+t.def.cost+'💰, репутация +2)');
+  sfxDie();
+  if(!alive(t.pc).length){endGame(a.pc);return;}
+ }
+ S.sel=null;
+ render();
+}
+function recruit(ti){
+ if(!S||S.win||S.pcs[S.turn].ai)return;
+ const p=S.pcs[S.turn],u=ARMY[p.fac][ti];
+ if(p.gold<u.cost||p.recruited||alive(S.turn).length>=MAXN)return;
+ if(ti===0&&S.units.filter(x=>x.pc===S.turn&&x.t===0).length>=1)return;
+ let cell=null;
+ const cols=S.turn===0?[0,1]:[C-2,C-1];
+ outer:for(const x of cols)for(let y=0;y<R2;y++){
+  if(TERR[map[y][x]].pass&&!unitAt(x,y)){cell={x,y};break outer;}
+ }
+ if(!cell){addLog('⛺ Лагерь забит, некуда поставить бойца');return;}
+ S.units.push({id:uid++,pc:S.turn,fac:p.fac,t:ti,def:u,maxhp:u.hp,hp:u.hp,mov:u.mov+(p.fac==='per'?1:0),items:[],x:cell.x,y:cell.y,done:false,moved:false});
+ p.gold-=u.cost;p.recruited=true;
+ const st=p.stats;st.act++;st.hires++;st.turnActs++;
+ S.fx.push({k:cell.x+','+cell.y,txt:'💰',c:'#f2c14e',big:true});
+ sfxBuy();
+ addLog('⛺ '+F[p.fac].n+' нанял '+u.e+' '+u.n+' (−'+u.cost+'💰)');
+ render();
+ autoSave();
+}
+function endTurn(){
+ S.sel=null;
+ S.turn=1-S.turn;
+ startTurn();
+}
+function startTurn(){
+ if(S.last!==null){
+  const q=S.pcs[S.last];
+  if(q.stats.turnActs===0)q.stats.idle++;
+  if(q.stats.turnKills>0&&q.stats.turnLosses===0){q.stats.rep++;addLog('🏅 '+F[q.fac].n+': раунд без потерь (+1 репутация)');}
+  q.stats.turnActs=0;q.stats.turnKills=0;q.stats.turnLosses=0;
+ }
+ S.turns++;
+ if(S.turns>RLIMIT*2){scoreWin();return;}
+ S.weather=S.weather||{t:'clear',online:true};
+ if(S.turns>1&&S.turns%2===0&&Math.random()<.3){rollWeather();}
+ const p=S.pcs[S.turn];
+ p.gold+=INCOME;p.recruited=false;
+ for(const u of S.units){u.done=false;u.moved=false;}
+ S.sel=null;
+ S.last=S.turn;
+ addLog('— Ход '+F[p.fac].n+' (+'+INCOME+'💰)');
+ render();
+ autoSave();
+ if(p.ai)runAI();
+}
+async function runAI(){
+ const pc=S.turn;
+ let guard=0;
+ while(guard++<24&&!S.win){
+  const un=alive(pc).filter(u=>!u.done);
+  if(!un.length)break;
+  aiAct(un[0]);
+  render();
+  if(S.win)return;
+  await sleep(330);
+ }
+ await sleep(240);
+ if(!S.win){S.turn=0;startTurn();}
+}
+function aiAct(u){
+ const reach=reachable(u);
+ let best=null;
+ for(const k of reach){
+  const [x,y]=k.split(',').map(Number);
+  for(const e of enemiesInRangeXY(u,x,y)){
+   const d=expectedDmg(u,e),kill=e.hp<=d,counter=topCounter(x,y,u);
+   let sc=kill?e.def.cost*2+60:d*2;
+   if(!kill&&counter>=u.hp)sc*=0.1;else sc-=counter;
+   if(best==null||sc>best.sc)best={x,y,e,d,kill,sc};
+  }
+ }
+ if(best){
+  if(u.x!==best.x||u.y!==best.y){u.x=best.x;u.y=best.y;u.moved=true;}
+  attack(u,best.e);
+  return;
+ }
+ let mv=null,bsc=-1e9;
+ for(const k of reach){
+  const [x,y]=k.split(',').map(Number);
+  let dmin=1e9;
+  for(const e of S.units){if(e.pc===u.pc)continue;
+   const d=Math.abs(e.x-x)+Math.abs(e.y-y);if(d<dmin)dmin=d;
+  }
+  const sc=-dmin*3+(TERR[map[y][x]].def||0)*1.5;
+  if(sc>bsc){bsc=sc;mv=k;}
+ }
+ if(mv){const [x,y]=mv.split(',').map(Number);u.x=x;u.y=y;u.moved=true;}
+ u.done=true;
+}
+function endGame(pc){
+ S.win=pc;
+ S.pcs[pc].stats.rep+=5;
+ showFinal(pc,'Армия противника уничтожена! (+5 репутации победителю)');
+}
+function scoreWin(){
+ const s0=score(0),s1=score(1);
+ let w=s0>s1?0:s1>s0?1:-1;
+ if(w<0)w=S.pcs[0].gold>S.pcs[1].gold?0:S.pcs[0].gold<S.pcs[1].gold?1:-1;
+ if(w<0)showFinal(-1,'Сыграно '+RLIMIT+' раундов — полная ничья.');
+ else showFinal(w,'Сыграно '+RLIMIT+' раундов. Победила сторона с большим Итогом.');
+}
+function showFinal(pc,why){
+ S.win=pc;
+ $('vt').textContent=pc<0?'🤝 Ничья!':'🏆 Победа — '+F[S.pcs[pc].fac].n+'!';
+ let h='<div class=why>'+why+'</div><table class=sum><tr><th></th>';
+ for(let i=0;i<2;i++)h+='<th style=color:'+F[S.pcs[i].fac].c+'>'+F[S.pcs[i].fac].n+'</th>';
+ h+='</tr>';
+ const rows=[['Репутация',p=>p.stats.rep],['Капитал (золото)',p=>p.gold],['Активность',p=>p.stats.act],['Атаки',p=>p.stats.atks],['Убито врагов',p=>p.stats.kills],['Потери',p=>p.stats.losses],['Найм / Снаряжение',p=>p.stats.hires+'/'+p.stats.buys],['Ср. урон за атаку',p=>p.stats.atks?(Math.round(p.stats.dmg/p.stats.atks)):0],['Итог',(p,i)=>score(i)]];
+ for(const r of rows){h+='<tr><td>'+r[0]+'</td>';
+  for(let i=0;i<2;i++)h+='<td>'+(r[1](S.pcs[i],i))+'</td>';
+  h+='</tr>';}
+ h+='</table>';
+ if(S.mode===0){
+  const a=S.pcs[1].stats,kl=a.kills,ls=a.losses;
+  const eff=kl+ls?Math.round(kl/(kl+ls)*100):0;
+  h+='<div class=aiperf>🤖 Производительность ИИ: убито '+kl+', потерь '+ls+', активность '+a.act+', эффективность '+eff+'%</div>';
+ }
+ $('vs').innerHTML=h;
+ $('vic').hidden=false;
+ sfxWin();
+ recHist(pc);
+ autoSave();
+ render();
+}
+function buy(ii){
+ if(!S||S.win||S.pcs[S.turn].ai)return;
+ const u=S.sel?getU(S.sel):null;
+ if(!u||u.pc!==S.turn)return;
+ const it=ITEMS[ii];
+ if(u.items.includes(ii))return;
+ if(it.ranged&&u.t!==2)return;
+ const p=S.pcs[S.turn];
+ if(p.gold<it.cost)return;
+ if(u.items.length){u.items.length=0;}
+ u.items.push(ii);
+ p.gold-=it.cost;
+ if(it.hp){u.maxhp+=it.hp;u.hp=Math.min(u.maxhp,u.hp+it.hp);}
+ const st=p.stats;st.act++;st.buys++;st.turnActs++;
+ S.fx.push({k:u.x+','+u.y,txt:it.e,c:'#7CFC00',big:true});
+ sfxBuy();
+ addLog('⚒️ '+F[u.fac].n+': '+u.def.n+' снаряжён '+it.e+' '+it.n+' (−'+it.cost+'💰)');
+ render();
+ autoSave();
+}
+function addLog(s){
+ S.log.push(s);
+ if(S.log.length>60)S.log.shift();
+}
+function rollWeather(){
+ const ks=Object.keys(WEATHERS);
+ const t=ks[Math.random()*ks.length|0];
+ S.weather={t,online:typeof navigator!=='undefined'&&!!navigator.onLine};
+ const w=WEATHERS[t];
+ addLog('🌦 Местная погода: '+w.e+' '+w.n+' — '+w.fx);
+}
+function autoSave(){
+ if(!S||S.win!==null)return;
+ try{localStorage.setItem(LS_SAVE,JSON.stringify({t:Date.now(),mode:S.mode,turn:S.turn,last:S.last,turns:S.turns,weather:S.weather,win:S.win,units:S.units,pcs:S.pcs,log:S.log,uid,map}));}catch(e){}
+}
+function hasSave(){try{return !!localStorage.getItem(LS_SAVE);}catch(e){return false}}
+function loadGame(){
+ try{
+  const j=localStorage.getItem(LS_SAVE);
+  if(!j)return false;
+  const d=JSON.parse(j);
+  S={mode:d.mode,turn:d.turn,last:d.last,turns:d.turns,weather:d.weather,win:d.win,units:d.units,pcs:d.pcs,log:d.log,fx:[],sel:null,pt:null,reach:new Set(),atk:new Set()};
+  map=d.map;uid=d.uid;
+  $('menu').hidden=true;$('vic').hidden=true;
+  render();
+  return true;
+ }catch(e){return false}
+}
+function recHist(w){
+ try{
+  let h=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
+  h.unshift({t:Date.now(),w,f0:S.pcs[0].fac,f1:S.pcs[1].fac,s0:score(0),s1:score(1),mode:S.mode,round:Math.ceil(S.turns/2)});
+  h=h.slice(0,12);
+  localStorage.setItem(LS_HIST,JSON.stringify(h));
+ }catch(e){}
+}
+function renderHistory(){
+ try{
+  const h=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
+  const rb=$('rb');
+  if(rb){rb.hidden=!hasSave();rb.textContent='📂 Продолжить партию'+(hasSave()?' (автосейв)':'');}
+  const el=$('hist');
+  el.innerHTML=h.length?'<div class=chead>📜 История боёв (локально)</div>'+h.map(x=>
+   '<div class=hrow>'+(F[x.w]?'🏆 Победа: '+F[x.w].n:'🤝 Ничья')+' · '+F[x.f0].n+' '+x.s0+':'+x.s1+' '+F[x.f1].n
+   +'<small>'+new Date(x.t).toLocaleString()+' · раунд '+x.round+' · '+(x.mode===0?'vs ИИ':'вдвоём')+'</small></div>'
+  ).join(''):'<div class=hint>Боёв пока не было — начните первую партию!</div>';
+ }catch(e){}
+}
+function cellW(){return Math.max(30,Math.min(56,Math.floor((Math.min(innerWidth-20,1240)-300)/C)))}
+
+function unitEl(u){
+ const f=F[u.fac];
+ const el=document.createElement('div');
+ el.className='unit'+(u.done?' done':'');
+ el.style.background='radial-gradient(circle at 50% 32%,'+f.c+', #0c0a14 160%)';
+ let bd='<span class=gb star title="Фирменное оружие">★</span>';
+ if(u.items.length)bd+='<span class=gb title="'+ITEMS[u.items[0]].n+'">'+ITEMS[u.items[0]].e+'</span>';
+ el.innerHTML='<span class=ic>'+u.def.e+'</span>'+bd+'<span class=hp><i style="width:'+(u.hp/u.maxhp*100)+'%"></i></span>';
+ el.title=f.n+' '+u.def.n+'\n★ '+u.def.sig+(u.items.length?'\n⚒️ '+ITEMS[u.items[0]].e+' '+ITEMS[u.items[0]].n:'')+'\n⚔️'+effATK(u)+' 🛡️'+effDEF(u)+' 👣'+effMov(u)+' 🎯'+effRng(u)+' HP '+u.hp+'/'+u.maxhp;
+ return el;
+}
+
+function render(){
+ if(!S)return;
+ const b=$('board');b.innerHTML='';
+ b.style.gridTemplateColumns='repeat('+C+','+cellW()+'px)';
+ b.style.gridTemplateRows='repeat('+R2+','+cellW()+'px)';
+ let reach=new Set(),atk=new Set();
+ const sel=S.sel?getU(S.sel):null;
+ if(sel&&!sel.done){reach=reachable(sel);atk=atkSet(sel);}
+ S.reach=reach;S.atk=atk;
+ const cells={};
+ for(let y=0;y<R2;y++)for(let x=0;x<C;x++){
+  const t=TERR[map[y][x]];
+  const c=document.createElement('div');
+  c.className='cell';
+  c.style.background=t.c;
+  if(t.e){const s=document.createElement('span');s.className='tile';s.textContent=t.e;c.appendChild(s);}
+  const u=unitAt(x,y);
+  if(u)c.appendChild(unitEl(u));
+  const k=x+','+y;
+  if(sel&&sel.x===x&&sel.y===y)c.classList.add('sel');
+  if(reach.has(k))c.classList.add('reach');
+  if(atk.has(k))c.classList.add('atk');
+  c.addEventListener('click',()=>clickCell(x,y));
+  cells[k]=c;
+  b.appendChild(c);
+ }
+ for(const f of S.fx){
+  if(cells[f.k]){
+   const s=document.createElement('span');
+   s.className='fx'+(f.big?' big':'');
+   s.textContent=f.txt;
+   s.style.color=f.c;
+   cells[f.k].appendChild(s);
+  }
+ }
+ S.fx=[];
+ renderPanel();
+ renderLog();
+ checkAutoPass();
+}
+function renderPanel(){
+ const p=S.pcs[S.turn],f=F[p.fac],mine=alive(S.turn);
+ const rnd=Math.ceil(S.turns/2);
+ const w=S.weather?WEATHERS[S.weather.t]:null;
+ let h='<div class="card tcard" style="border-color:'+f.c+'">'
+  +'<div class=tw>Ход: <b style=color:'+f.c+'>'+f.n+'</b>'
+  +'<span class=g>💰 '+p.gold+' <small>+'+INCOME+'/ход</small></span></div>'
+  +'<div class=tbon>'+BON[f.id]+'</div>'
+  +'<div class=wx>'+((w?w.e+' '+w.n+' — '+w.fx:'🌦 загрузка погоды…')+' · '+(S.weather?(S.weather.online?'🛰 онлайн':'📵 офлайн'):''))+'</div></div>';
+ const sel=S.sel?getU(S.sel):null;
+ h+='<div class=card>';
+ if(sel){
+  h+='<div class=shead><span class=sic>'+sel.def.e+'</span><div><b>'+sel.def.n+'</b>'
+   +'<div class=hpbar><i style="width:'+(sel.hp/sel.maxhp*100)+'%"></i></div>'
+   +'<small>HP '+sel.hp+'/'+sel.maxhp+'</small></div></div>'
+   +'<div class=stats><span>⚔️'+effATK(sel)+'</span><span>🛡️'+effDEF(sel)+'</span><span>👣'+effMov(sel)+'</span><span>🎯'+effRng(sel)+'</span></div>'
+   +'<div class=wrow>★ <b>'+sel.def.sig+'</b>'+(sel.items.length?'<span class=owned>⚒️ '+ITEMS[sel.items[0]].e+' '+ITEMS[sel.items[0]].n+'</span>':'<span class=stk>штатное · лучшее</span>')+'</div>'
+   +'<div class=note>'+sel.def.note+'</div>';
+  if(sel.moved&&S.atk.size)h+='<div class=hint>Атакуйте цель или нажмите «Готово».</div>';
+  h+='<button class=btn data-act=ready>'+(sel.moved?'✔ Готово':'Пропустить')+'</button>';
+ }else{
+  h+='<div class=hint>Кликните своего солдатика: он носит своё фирменное оружие ★, снарядить — в арсенале ниже.</div>';
+ }
+ h+='</div>';
+ if(sel){
+  h+='<div class=card><div class=chead>⚒️ Арсенал · '+sel.def.n+'</div>'
+   +'<div class=sigline>★ Фирменное оружие — лучшее для роли и включено в цену. Покупное снаряжение меняет стиль: у каждого своя цена (капитал) и компромиссы.</div>';
+  ITEMS.forEach((it,i)=>{
+   const own=sel.items.includes(i);
+   const can=p.gold>=it.cost&&(!it.ranged||sel.t===2)&&!own;
+   h+='<div class=row><span class=ric>'+it.e+'</span><div class=rinfo><b>'+it.n+'</b>'
+    +'<small>'+itemDesc(it)+'</small></div>'
+    +'<button class=rec data-act=buy data-ii='+i+(can?'':' disabled')+'>'+it.cost+'💰</button></div>';
+  });
+  if(sel.items.length)h+='<div class=hint>Снаряжён: '+ITEMS[sel.items[0]].e+' '+ITEMS[sel.items[0]].n+' (замена переснарядит)</div>';
+  h+='</div>';
+ }
+ h+='<div class="card"><div class=chead>🏆 Счёт · раунд '+rnd+'/'+RLIMIT+'</div>';
+ for(let i=0;i<2;i++){
+  const q=S.pcs[i],g=F[q.fac],st=q.stats;
+  h+='<div class=scr style="border-color:'+g.c+'"><b style=color:'+g.c+'>'+g.n+'</b>'
+   +'<span>🏅 реп '+st.rep+'</span><span>💰 '+q.gold+'</span><span>⚡ акт '+st.act+'</span>'
+   +'<b class=itog>Итог '+score(i)+'</b></div>';
+ }
+ if(S.mode===0){
+  const a=S.pcs[1].stats,kl=a.kills,ls=a.losses;
+  const eff=kl+ls?Math.round(kl/(kl+ls)*100):0;
+  h+='<div class=lg><b>🤖 Производительность ИИ</b><span>атак '+a.atks+' · убито '+kl+' · потерь '+ls+' · ср. урон '+(a.atks?Math.round(a.dmg/a.atks):0)+' · эфф. '+eff+'%</span></div>';
+ }
+ h+='</div>';
+ h+='<div class=card><div class=chead>⛺ Наём — за капитал (лагерь на краю поля)</div>';
+ ARMY[f.id].forEach((u,i)=>{
+  const cnt=S.units.filter(x=>x.pc===S.turn&&x.t===i).length;
+  const can=p.gold>=u.cost&&mine.length<MAXN&&!p.recruited&&!(i===0&&cnt>=1);
+  h+='<div class=row><span class=ric>'+u.e+'</span><div class=rinfo><b>'+u.n+'</b>'
+   +'<small>★ '+u.sig+' · ⚔️'+u.atk+' 🛡️'+u.def+' 👣'+u.mov+' 🎯'+u.rng+' · '+u.note+'</small></div>'
+   +'<button class=rec data-act=recruit data-ti='+i+(can?'':' disabled')+'>'+u.cost+'💰</button></div>';
+ });
+ if(p.recruited)h+='<div class=hint>В этот ход уже наняли.</div>';
+ if(mine.length>=MAXN)h+='<div class=hint>Армия полна ('+MAXN+').</div>';
+ h+='</div>';
+ h+='<div class=card><div class=chead>📜 Пояснения</div>'
+  +'<div class=lg><b>⚔️ Нападать</b><span>Красные клетки — враги в радиусе. Урон = атака − защита + бонус местности. После атаки юнит завершает ход.</span></div>'
+  +'<div class=lg><b>🛡️ Защищаться</b><span>Защита постоянна: лес +3, холм +2, плюс бонусы армий. Снег даёт +1 защиты.</span></div>'
+  +'<div class=lg><b>💰 Платить за фичи</b><span>Капитал тратится на наём и снаряжение. Доход +'+INCOME+'/ход, убийство даёт стоимость врага.</span></div>'
+  +'<div class=lg><b>🏆 Победа</b><span>Уничтожьте армию врага или к '+RLIMIT+' раунду превзойдите соперника по Итогу (репутация×30 + капитал×3 + активность×25).</span></div>'
+  +'<div class=lg><b>🌍 Местность и погода</b><span>🌲 лес +3 · ⛰️ холм +2 и атака · 🪨/🌊 непроходимы. Погода (☀️🌧️🌫️❄️🌬️⛈️) меняет радиус и атаки стрелков.</span></div></div>';
+ h+='<div class=abtn><button class=btn data-act=endturn>⏭ Конец хода</button>'
+  +'<button class=btn data-act=save title="Сохранить в localStorage">💾</button>'
+  +'<button class=btn data-act=restart>🔄</button><button class=btn data-act=menu>🏠</button></div>';
+ $('panel').innerHTML=h;
+}
+function renderLog(){
+ $('logbox').innerHTML=S.log.slice(-40).map(x=>'<div>'+x+'</div>').join('');
+ $('logbox').scrollTop=99999;
+}
+function checkAutoPass(){
+ clearTimeout(S.pt);
+ if(S.win||S.pcs[S.turn].ai)return;
+ const p=S.pcs[S.turn],mine=alive(S.turn);
+ if(mine.length&&mine.every(u=>u.done)&&p.stats.turnActs>0)S.pt=setTimeout(endTurn,600);
+}
+
+function uiMode(){
+ $('mb0').className=S.mode===0?'on':'';
+ $('mb1').className=S.mode===1?'on':'';
+}
+document.addEventListener('click',e=>{
+ const b=e.target&&e.target.closest?e.target.closest('[data-act]'):null;
+ if(!b||b.disabled)return;
+ const a=b.dataset.act;
+ if(a==='mode0'){S.mode=0;uiMode();return;}
+ if(a==='mode1'){S.mode=1;uiMode();return;}
+ if(a==='start'){startGame();return;}
+ if(a==='resume'){loadGame();return;}
+ if(a==='tomenu'){toMenu();return;}
+ if(!S)return;
+ if(a==='endturn')endTurn();
+ else if(a==='restart')rematch();
+ else if(a==='save'){autoSave();addLog('💾 Партия сохранена локально');render();}
+ else if(a==='menu'){clearTimeout(S.pt);$('menu').hidden=false;renderHistory();}
+ else if(a==='ready'){const s=S.sel?getU(S.sel):null;if(s){s.done=true;S.sel=null;render();}}
+ else if(a==='recruit')recruit(+b.dataset.ti);
+ else if(a==='buy')buy(+b.dataset.ii);
+});
+function startGame(){
+ const f0=$('sel0').value,f1=$('sel1').value;
+ S=freshState(f0,f1,S.mode);
+ $('menu').hidden=true;$('vic').hidden=true;
+ startTurn();
+ rollWeather();
+}
+function rematch(){
+ if(!S)return;
+ const f0=S.pcs[0].fac,f1=S.pcs[1].fac,m=S.mode;
+ $('vic').hidden=true;
+ S=freshState(f0,f1,m);
+ startTurn();
+ rollWeather();
+}
+function toMenu(){
+ clearTimeout(S.pt);
+ $('vic').hidden=true;$('menu').hidden=false;
+ renderHistory();
+}
+
+function sfxMove(){tone(230,.06,'triangle',.04)}
+function sfxHurt(){tone(150,.1,'sawtooth',.06);tone(100,.16,'sawtooth',.05)}
+function sfxDie(){tone(80,.4,'sawtooth',.09);tone(50,.5,'square',.06)}
+function sfxBuy(){tone(660,.07,'square',.05);tone(880,.1,'square',.05)}
+function sfxWin(){tone(523,.12,'square',.06);tone(659,.12,'square',.06);tone(784,.12,'square',.06);tone(1047,.3,'square',.07)}
+let AC=null;
+function tone(f,d,t,g){
+ try{
+  AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+  const o=AC.createOscillator(),gn=AC.createGain();
+  o.type=t||'square';o.frequency.value=f;
+  gn.gain.setValueAtTime(g||.05,AC.currentTime);
+  gn.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);
+  o.connect(gn);gn.connect(AC.destination);
+  o.start();o.stop(AC.currentTime+d+.02);
+ }catch(e){}
+}
+
+function boot(){
+ for(const f of FACS){
+  const o=document.createElement('option');
+  o.value=f.id;o.textContent=f.n+' · '+ARMY[f.id][0].e;
+  $('sel0').appendChild(o);
+  const o2=o.cloneNode();
+  $('sel1').appendChild(o2);
+ }
+ S={mode:0};uiMode();
+ $('vic').hidden=true;
+ renderHistory();
+ window.addEventListener('resize',()=>{if(S)render();});
+ if(hasSave()&&loadGame()){addLog('📂 Партия загружена из автосейва (localStorage)');render();}
+}
+boot();
+</script></body></html>

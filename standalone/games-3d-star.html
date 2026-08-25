@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>АСТРОБОТ: Путь к Авроре</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+body { font-family: 'Segoe UI', Consolas, monospace; color: #cfe8ff; user-select: none; }
+#c { position: fixed; inset: 0; z-index: 0; }
+#glow { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at 50% 40%, rgba(0,60,120,0.18), rgba(0,0,0,0) 60%); }
+
+.hud { position: fixed; top: 10px; left: 10px; z-index: 20; pointer-events: none; }
+.hudbar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; letter-spacing: 1px; text-shadow: 0 0 8px rgba(0,255,255,0.5); }
+.hudbar .lbl { width: 74px; text-align: right; color: #7fb4d8; }
+.bar { width: 150px; height: 12px; background: rgba(10,20,35,0.85); border: 1px solid #1b4a6b; }
+.bar > div { height: 100%; width: 100%; transition: width 0.4s; }
+#hFuel > div { background: linear-gradient(90deg,#3a9,#3ff); }
+#hHull > div { background: linear-gradient(90deg,#933,#f55); }
+#hEn > div  { background: linear-gradient(90deg,#73a,#b7f); }
+#hScrap { color: #ffd76a; }
+#hBond { color: #9ff; }
+#hSys { position: fixed; top: 10px; right: 12px; z-index: 20; font-size: 14px; letter-spacing: 2px; color: #9fe8ff; text-shadow: 0 0 10px rgba(0,255,255,0.7); pointer-events: none; }
+
+#btnBar { position: fixed; top: 64px; left: 10px; z-index: 30; display: flex; flex-direction: column; gap: 6px; }
+.gbtn { font-family: inherit; font-size: 12px; letter-spacing: 1px; color: #9fe8ff; background: rgba(8,20,40,0.75); border: 1px solid #1b5a7b; padding: 7px 12px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+.gbtn:hover { background: rgba(0,120,160,0.4); border-color: #3ff; box-shadow: 0 0 14px rgba(0,255,255,0.4); }
+.gbtn.off { opacity: 0.4; pointer-events: none; }
+.gbtn.primary { color: #000; background: #3ff; border-color: #3ff; font-weight: 700; }
+.gbtn.primary:hover { background: #9ff; }
+
+.overlay { position: fixed; inset: 0; z-index: 40; background: rgba(3,8,18,0.97); display: none; flex-direction: column; align-items: center; justify-content: center; }
+.overlay.on { display: flex; }
+#startScreen .title { font-size: 64px; color: #3ff; text-shadow: 0 0 30px #3ff, 0 0 80px #0af, 0 0 140px #06f; letter-spacing: 8px; }
+#startScreen .sub { font-size: 18px; color: #9fd8ff; margin-top: 8px; letter-spacing: 3px; }
+#startScreen .story { max-width: 640px; margin: 34px 12px 30px; font-size: 15px; line-height: 1.7; color: #bfe4ff; text-align: center; }
+#startScreen .crewline { color: #7fb4d8; font-size: 13px; margin-bottom: 34px; letter-spacing: 1px; }
+#startScreen .controls { color: #5f8fb0; font-size: 13px; margin-top: 26px; line-height: 1.8; text-align: center; }
+
+#endScreen .big { font-size: 52px; color: #6f6; text-shadow: 0 0 30px #3f6, 0 0 80px #2c9; letter-spacing: 4px; }
+#endScreen .ep { max-width: 620px; margin: 30px 12px; font-size: 16px; line-height: 1.8; color: #bfe4ff; text-align: center; }
+#endScreen .crewnote { color: #ffd76a; font-size: 14px; margin-bottom: 26px; }
+
+#map { z-index: 15; background: transparent; justify-content: flex-start; }
+#mapPanel { position: relative; width: 88%; max-width: 1100px; margin-top: 90px; border: 1px solid #1b4a6b; background: radial-gradient(ellipse at center, rgba(6,16,34,0.6), rgba(2,6,14,0.9)); padding: 34px 28px 26px; box-shadow: 0 0 40px rgba(0,120,200,0.15); }
+#mapPanel h2 { color: #3ff; letter-spacing: 4px; font-size: 22px; margin-bottom: 4px; text-shadow: 0 0 12px rgba(0,255,255,0.6); }
+#mapPanel .obj { color: #8fd0f0; font-size: 13px; margin-bottom: 22px; }
+#linePath { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.node { position: absolute; transform: translate(-50%, -50%); width: 118px; text-align: center; cursor: pointer; z-index: 3; }
+.node .ball { width: 46px; height: 46px; border-radius: 50%; margin: 0 auto 6px; border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #000; font-weight: 700; transition: transform 0.2s, box-shadow 0.2s; }
+.node:hover .ball { transform: scale(1.15); }
+.node .nm { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+.node .dst { font-size: 10px; color: #7fb4d8; }
+.node.lock .ball { filter: grayscale(0.9) brightness(0.45); cursor: not-allowed; }
+.node.lock { cursor: not-allowed; }
+.node.lock:hover .ball { transform: none; }
+.node.done .ball { opacity: 0.55; }
+.node.here { z-index: 4; }
+.node.here .ball { animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 6px 2px rgba(0,255,255,0.6); } 50% { box-shadow: 0 0 22px 8px rgba(0,255,255,0.9); } }
+
+#dlg { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(900px, 94vw); z-index: 50; display: none; }
+#dlg.on { display: block; }
+#dlgBox { background: rgba(4,10,22,0.94); border: 1px solid #1b5a7b; border-left: 4px solid #3ff; padding: 14px 18px 12px; box-shadow: 0 0 30px rgba(0,120,200,0.25); }
+#dlgHead { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+#dlgAvatar { width: 64px; height: 64px; border: 2px solid #3ff; border-radius: 6px; flex: 0 0 auto; }
+#dlgName { font-size: 18px; letter-spacing: 2px; color: #3ff; text-shadow: 0 0 10px rgba(0,255,255,0.6); text-transform: uppercase; }
+#dlgRole { font-size: 12px; color: #7fb4d8; letter-spacing: 1px; margin-top: 2px; }
+#dlgText { min-height: 56px; font-size: 16px; line-height: 1.6; color: #e6f4ff; white-space: pre-wrap; }
+#dlgText .caret { display: inline-block; width: 10px; color: #3ff; animation: blink 0.8s infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+#dlgNext { margin-top: 8px; text-align: right; }
+#dlgChoices { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.dlgChoice { text-align: left; font-family: inherit; font-size: 14px; color: #bfe4ff; background: rgba(10,30,55,0.85); border: 1px solid #1b5a7b; padding: 10px 14px; cursor: pointer; transition: all 0.15s; }
+.dlgChoice:hover { background: rgba(0,120,160,0.45); border-color: #3ff; transform: translateX(4px); }
+.dlgChoice .fx { display: block; font-size: 11px; color: #ffd76a; margin-top: 3px; }
+
+#eventBox { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(720px, 92vw); z-index: 45; display: none; }
+#eventBox.on { display: block; }
+#eventTitle { font-size: 20px; letter-spacing: 3px; color: #ffd76a; text-shadow: 0 0 12px rgba(255,200,80,0.5); margin-bottom: 8px; text-transform: uppercase; }
+#eventDesc { font-size: 15px; line-height: 1.65; color: #e6f4ff; margin-bottom: 8px; min-height: 60px; white-space: pre-wrap; }
+#eventCrew { font-size: 13px; line-height: 1.7; color: #9fe8ff; margin-bottom: 14px; min-height: 34px; }
+#eventChoices { display: flex; flex-direction: column; gap: 8px; }
+.evChoice { text-align: left; font-family: inherit; font-size: 14px; color: #bfe4ff; background: rgba(10,30,55,0.9); border: 1px solid #1b5a7b; padding: 11px 14px; cursor: pointer; transition: all 0.15s; }
+.evChoice:hover { background: rgba(0,120,160,0.5); border-color: #3ff; }
+.evChoice .fx { display: block; font-size: 11px; color: #ffd76a; margin-top: 3px; }
+
+#crewPanel { position: fixed; right: 12px; top: 120px; width: 250px; z-index: 30; background: rgba(4,10,22,0.92); border: 1px solid #1b5a7b; padding: 12px; display: none; }
+#crewPanel.on { display: block; }
+#shopPanel { position: fixed; right: 12px; top: 120px; width: 260px; z-index: 31; background: rgba(4,10,22,0.95); border: 1px solid #ffd76a; padding: 12px; display: none; }
+#shopPanel.on { display: block; }
+#shopPanel h3 { color: #ffd76a; font-size: 14px; letter-spacing: 3px; margin-bottom: 10px; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,200,80,0.4); }
+.shopCard { border: 1px solid #3a5520; padding: 8px; margin-bottom: 8px; background: rgba(10,25,15,0.5); }
+.shopCard .nm { color: #ffe9a8; font-size: 13px; letter-spacing: 1px; }
+.shopCard .ds { color: #9fc89f; font-size: 11px; line-height: 1.5; margin: 4px 0 6px; }
+.shopCard .pr { color: #ffd76a; font-size: 11px; }
+.shopCard.sold { opacity: 0.5; }
+#crewPanel h3 { color: #3ff; font-size: 14px; letter-spacing: 3px; margin-bottom: 10px; text-transform: uppercase; }
+.crewCard { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border: 1px solid #143a55; margin-bottom: 6px; cursor: pointer; transition: all 0.15s; background: rgba(8,20,40,0.5); }
+.crewCard:hover { background: rgba(0,100,140,0.4); border-color: #3ff; }
+.crewCard .av { width: 40px; height: 40px; border-radius: 4px; border: 1px solid; flex: 0 0 auto; }
+.crewCard .nm { font-size: 14px; letter-spacing: 1px; }
+.crewCard .rl { font-size: 11px; color: #7fb4d8; }
+.bonds { color: #ffd76a; font-size: 11px; letter-spacing: 3px; }
+
+#crewDetail { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 94vw); z-index: 55; background: rgba(4,10,22,0.97); border: 1px solid #3ff; box-shadow: 0 0 40px rgba(0,160,220,0.4); padding: 20px; display: none; }
+#crewDetail.on { display: block; }
+#cdTop { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
+#cdAvatar { width: 110px; height: 110px; border: 2px solid #3ff; border-radius: 8px; flex: 0 0 auto; }
+#cdName { font-size: 24px; letter-spacing: 3px; color: #3ff; text-shadow: 0 0 12px rgba(0,255,255,0.6); text-transform: uppercase; }
+#cdRole { color: #7fb4d8; font-size: 13px; margin: 3px 0 8px; }
+#cdDesc { color: #cfe8ff; font-size: 13px; line-height: 1.6; }
+#cdStory { margin-top: 12px; border-top: 1px solid #143a55; padding-top: 10px; }
+#cdStory .lab { color: #ffd76a; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+#cdStory .frag { color: #bfe4ff; font-size: 13px; line-height: 1.6; padding: 6px 8px; border-left: 2px solid #1b5a7b; margin-bottom: 6px; background: rgba(8,20,40,0.5); }
+#cdStory .frag.locked { color: #4a6a8a; border-left-color: #2a3a4a; }
+#cdBtns { margin-top: 14px; display: flex; gap: 10px; justify-content: flex-end; }
+
+#travelHud { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); width: min(620px, 92vw); z-index: 20; display: none; text-align: center; pointer-events: none; }
+#travelHud.on { display: block; }
+#tDest { font-size: 20px; letter-spacing: 4px; color: #3ff; text-shadow: 0 0 14px rgba(0,255,255,0.7); text-transform: uppercase; }
+#tProgress { height: 12px; width: 100%; margin-top: 10px; background: rgba(8,20,40,0.8); border: 1px solid #1b5a7b; }
+#tProgress > div { height: 100%; width: 0%; background: linear-gradient(90deg, #0af, #3ff); box-shadow: 0 0 12px rgba(0,255,255,0.7); }
+
+#combatHud { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 20; color: #ff8; font-size: 14px; letter-spacing: 2px; text-shadow: 0 0 8px rgba(255,220,80,0.6); display: none; }
+#combatHud.on { display: block; }
+#combatHud .w { color: #3ff; margin-bottom: 4px; }
+#vignette { position: fixed; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%); }
+
+#flash { position: fixed; inset: 0; z-index: 60; pointer-events: none; background: rgba(255,120,60,0); }
+.notice { position: fixed; left: 50%; top: 26%; transform: translateX(-50%); z-index: 44; color: #ffd76a; font-size: 18px; letter-spacing: 3px; text-shadow: 0 0 16px rgba(255,200,80,0.7); text-align: center; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.notice.on { opacity: 1; }
+#muteBtn { position: fixed; bottom: 12px; right: 12px; z-index: 70; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="glow"></div>
+<div id="vignette"></div>
+
+<div class="hud">
+  <div class="hudbar"><span class="lbl">ТОПЛИВО</span><div class="bar" id="hFuel"><div></div></div><span id="fuelNum"></span></div>
+  <div class="hudbar"><span class="lbl">КОРПУС</span><div class="bar" id="hHull"><div></div></div><span id="hullNum"></span></div>
+  <div class="hudbar"><span class="lbl">ЭНЕРГИЯ</span><div class="bar" id="hEn"><div></div></div><span id="enNum"></span></div>
+  <div class="hudbar"><span class="lbl">ЛОМ</span><span id="hScrap">0</span></div>
+  <div class="hudbar"><span class="lbl">СВЯЗЬ</span><span id="hBond">0/0</span></div>
+</div>
+<div id="hSys">Ангар-7</div>
+
+<div id="btnBar">
+  <button class="gbtn" id="btnMap" onclick="openMap()">КАРТА ЗВЁЗД</button>
+  <button class="gbtn" id="btnCrew" onclick="openCrewPanel()">ЭКИПАЖ</button>
+  <button class="gbtn" id="btnRefuel" onclick="refuel()">ЗАПРАВКА</button>
+  <button class="gbtn" id="btnShop" onclick="openShop()">МОДУЛИ</button>
+</div>
+
+<div id="shopPanel">
+  <h3>МАСТЕРСКАЯ</h3>
+  <div id="shopItems"></div>
+  <button class="gbtn" onclick="closeShop()">ЗАКРЫТЬ</button>
+</div>
+<button class="gbtn" id="muteBtn" onclick="toggleMute()">ЗВУК: ВКЛ</button>
+
+<div class="overlay" id="startScreen">
+  <div class="title">АСТРОБОТ</div>
+  <div class="sub">ПУТЬ К АВРОРЕ</div>
+  <div class="story">
+    Ты — ТЕ-7, робот-курьер старой закалки. Контракт прост: доставить груз на легендарную планету Аврора.
+    Но космос не любит простых маршрутов. Метеоритные поля, пиратские дроны, умирающие звёзды и — самое главное —
+    экипаж: четыре бота со своими характерами, привычками и секретами.<br><br>
+    Поговори с ними. Помоги им. Доверься им. И, может быть, ты донесёшь груз не просто до планеты — а до самого себя.
+  </div>
+  <div class="crewline">БИП · КИП · НЕРОН · ЛУМА</div>
+  <button class="gbtn primary" style="font-size:18px;padding:14px 46px" onclick="startGame()">В БОЙ, КАПИТАН</button>
+  <div class="controls">
+    МЫШЬ — выбор и прицел &nbsp;|&nbsp; КЛИК — лазер в бою &nbsp;|&nbsp; КАРТА ЗВЁЗД — путешествия
+  </div>
+</div>
+
+<div id="map" class="overlay">
+  <div id="mapPanel">
+    <h2 id="mpTitle">КАРТА ЗВЁЗД</h2>
+    <div class="obj" id="mpObj"></div>
+    <svg id="linePath"></svg>
+    <div id="nodes"></div>
+  </div>
+</div>
+
+<div id="dlg">
+  <div id="dlgBox">
+    <div id="dlgHead">
+      <img id="dlgAvatar" alt="">
+      <div>
+        <div id="dlgName"></div>
+        <div id="dlgRole"></div>
+      </div>
+    </div>
+    <div id="dlgText"></div>
+    <div id="dlgNext"><button class="gbtn" onclick="dlgNext()">ДАЛЬШЕ ▶</button></div>
+    <div id="dlgChoices"></div>
+  </div>
+</div>
+
+<div id="eventBox">
+  <div id="eventTitle"></div>
+  <div id="eventDesc"></div>
+  <div id="eventCrew"></div>
+  <div id="eventChoices"></div>
+</div>
+
+<div id="crewPanel">
+  <h3>ЭКИПАЖ</h3>
+  <div id="crewCards"></div>
+</div>
+
+<div id="crewDetail">
+  <div id="cdTop">
+    <img id="cdAvatar" alt="">
+    <div>
+      <div id="cdName"></div>
+      <div id="cdRole"></div>
+      <div id="cdDesc"></div>
+    </div>
+  </div>
+  <div id="cdStory"></div>
+  <div id="cdBtns">
+    <button class="gbtn" onclick="crewTalk()">ПОГОВОРИТЬ</button>
+    <button class="gbtn" onclick="closeCrewDetail()">ЗАКРЫТЬ</button>
+  </div>
+</div>
+
+<div id="travelHud">
+  <div id="tDest"></div>
+  <div id="tProgress"><div></div></div>
+</div>
+
+<div id="combatHud">
+  <div class="w" id="combatWave"></div>
+  <div id="combatInfo"></div>
+</div>
+
+<div class="notice" id="notice"></div>
+<div id="flash"></div>
+
+<div class="overlay" id="endScreen">
+  <div class="big" id="endTitle"></div>
+  <div class="crewnote" id="endNote"></div>
+  <div class="ep" id="endEp"></div>
+  <button class="gbtn primary" style="font-size:17px;padding:13px 40px" onclick="location.reload()">ИГРАТЬ СНОВА</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+
+function $(id){ return document.getElementById(id); }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function rand(a,b){ return a + Math.random()*(b-a); }
+function rint(a,b){ return Math.floor(rand(a,b+1)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function dist2(a,b){ return Math.hypot(a.x-b.x, a.y-b.y, a.z-b.z); }
+function fmtn(n){ return (n>=0?'+':'')+n; }
+function lerpColor(a,b,t){ const c1=new THREE.Color(a),c2=new THREE.Color(b); return c1.lerp(c2,t).getHex(); }
+
+const AUDIO = (function(){
+  let ctx=null, on=true;
+  function ac(){ if(!on) return null; if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); return ctx; }
+  function tone(f,d,type,vol,slide){
+    const c=ac(); if(!c) return;
+    const o=c.createOscillator(), g=c.createGain();
+    o.type=type||'square'; o.frequency.value=f;
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(20,f+slide), c.currentTime+d);
+    g.gain.setValueAtTime(vol||0.05, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+d);
+    o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+d+0.02);
+  }
+  function noise(d,vol){
+    const c=ac(); if(!c) return;
+    const buf=c.createBuffer(1, c.sampleRate*d, c.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
+    const src=c.createBufferSource(); src.buffer=buf;
+    const g=c.createGain(); g.gain.setValueAtTime(vol||0.2, c.currentTime);
+    const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=800;
+    src.connect(f); f.connect(g); g.connect(c.destination); src.start();
+  }
+  return {
+    click(){ tone(900,0.05,'square',0.04); },
+    nav(){ tone(520,0.09,'sine',0.05); tone(760,0.12,'sine',0.05,80); },
+    laser(){ tone(1400,0.12,'sawtooth',0.04,-900); },
+    boom(){ noise(0.4,0.22); tone(90,0.3,'square',0.07,-60); },
+    dmg(){ noise(0.25,0.15); tone(200,0.2,'sawtooth',0.06,-100); },
+    type(){ tone(rand(600,900),0.02,'square',0.008); },
+    win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.22,'triangle',0.06),i*120)); },
+    mute(v){ on=v; }
+  };
+})();
+
+const CREW = [
+  { id:'bip',   name:'БИП',   role:'Навигатор',      color:0x44ccff, dark:0x0a2742, eye:0xe8fbff, face:'bip',  abl:'Автопилот: экономное топливо и рискованные манёвры.', tags:'maps,stars,curious' },
+  { id:'kip',   name:'КИП',   role:'Бортинженер',     color:0xffaa33, dark:0x3a1e04, eye:0xffe2b8, face:'kip',  abl:'Ремонт: чинит корпус и спасает от поломок.', tags:'wrench,grumpy,loyal' },
+  { id:'neron', name:'НЕРОН', role:'Охранный модуль', color:0xff4433, dark:0x2a0a08, eye:0xffe8a0, face:'neron',abl:'Защита: автопилот-огонь в бою и защита от урона.', tags:'silent,guard,honor' },
+  { id:'luma',  name:'ЛУМА',  role:'Древний архивариус', color:0xaa77ff, dark:0x220a44, eye:0xe6ccff, face:'luma',abl:'Знания: расшифровывает сигналы и предсказывает ловушки.', tags:'ancient,mystery,memory' },
+];
+
+const AVATARS = {};
+function shade(hex,amt){
+  const c=new THREE.Color(hex);
+  const r=clamp(Math.round(c.r*255*(1+amt)),0,255), g=clamp(Math.round(c.g*255*(1+amt)),0,255), b=clamp(Math.round(c.b*255*(1+amt)),0,255);
+  return 'rgb('+r+','+g+','+b+')';
+}
+function rr(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function makeAvatar(c){
+  const cv=document.createElement('canvas'); cv.width=160; cv.height=160;
+  const g=cv.getContext('2d');
+  const grad=g.createRadialGradient(80,80,10,80,80,110);
+  grad.addColorStop(0,'#0a1830'); grad.addColorStop(1,'#02060e');
+  g.fillStyle=grad; g.fillRect(0,0,160,160);
+  const main=shade(c.color,0), light=shade(c.color,0.55), dark=c.dark, eye=c.eye;
+  if(c.face==='bip'){
+    rr(g,48,58,64,54,18); g.fillStyle=dark; g.fill();
+    rr(g,52,62,56,46,14); g.fillStyle=main; g.fill();
+    g.fillStyle=light; g.fillRect(30,70,20,8); g.fillRect(110,70,20,8);
+    g.fillStyle=eye; g.beginPath(); g.arc(66,84,7,0,7); g.arc(94,84,7,0,7); g.fill();
+    g.strokeStyle=eye; g.lineWidth=3; g.beginPath(); g.arc(80,100,12,0.15*Math.PI,0.85*Math.PI); g.stroke();
+    g.strokeStyle=main; g.lineWidth=3; g.beginPath(); g.moveTo(80,52); g.lineTo(80,36); g.stroke();
+    g.fillStyle=light; g.beginPath(); g.arc(80,32,5,0,7); g.fill();
+  } else if(c.face==='kip'){
+    rr(g,44,52,72,72,8); g.fillStyle=dark; g.fill();
+    rr(g,48,56,64,64,6); g.fillStyle=main; g.fill();
+    g.fillStyle=light; g.fillRect(48,70,64,10);
+    g.fillStyle=eye; g.fillRect(58,58,12,9); g.fillRect(90,58,12,9);
+    g.strokeStyle=light; g.lineWidth=3; g.beginPath(); g.moveTo(78,100); g.lineTo(66,112); g.stroke();
+    g.strokeStyle=eye; g.lineWidth=3; g.beginPath(); g.moveTo(56,118); g.lineTo(90,118); g.stroke();
+  } else if(c.face==='neron'){
+    rr(g,44,50,72,72,8); g.fillStyle=dark; g.fill();
+    rr(g,48,54,64,64,6); g.fillStyle=main; g.fill();
+    g.fillStyle=light; g.fillRect(48,66,64,16);
+    g.fillStyle='#0a0a12'; g.fillRect(48,70,64,8);
+    g.fillStyle=eye; g.fillRect(56,62,12,3); g.fillRect(92,62,12,3);
+    g.strokeStyle=light; g.lineWidth=4; g.beginPath(); g.moveTo(56,106); g.lineTo(104,96); g.stroke();
+    g.strokeStyle=main; g.lineWidth=3; g.beginPath(); g.moveTo(80,50); g.lineTo(80,38); g.stroke();
+    g.fillStyle=light; g.beginPath(); g.arc(80,34,4,0,7); g.fill();
+  } else if(c.face==='luma'){
+    rr(g,50,52,60,66,30); g.fillStyle=dark; g.fill();
+    rr(g,54,56,52,58,26); g.fillStyle=main; g.fill();
+    g.strokeStyle=light; g.lineWidth=3; g.beginPath(); g.arc(80,80,22,0,7); g.stroke();
+    g.fillStyle=eye; g.beginPath(); g.arc(80,80,8,0,7); g.arc(62,74,4,0,7); g.arc(98,74,4,0,7); g.fill();
+    g.strokeStyle=light; g.lineWidth=3; g.beginPath(); g.moveTo(80,56); g.lineTo(80,44); g.stroke();
+    g.fillStyle=light; g.beginPath(); g.arc(80,40,4,0,7); g.fill();
+  } else if(c.face==='volt'){
+    rr(g,44,54,72,64,8); g.fillStyle=dark; g.fill();
+    rr(g,48,58,64,56,6); g.fillStyle=main; g.fill();
+    g.fillStyle=light; g.beginPath(); g.moveTo(48,50); g.lineTo(80,36); g.lineTo(112,50); g.closePath(); g.fill();
+    g.fillStyle=eye; g.fillRect(58,70,13,8); g.fillRect(90,70,13,8);
+    g.strokeStyle=eye; g.lineWidth=3; g.beginPath(); g.arc(80,92,10,0,Math.PI); g.stroke();
+  } else if(c.face==='ork'){
+    rr(g,38,56,84,74,34); g.fillStyle=dark; g.fill();
+    rr(g,42,60,76,66,30); g.fillStyle=main; g.fill();
+    g.fillStyle=light; g.fillRect(58,78,44,14);
+    g.fillStyle=eye; g.beginPath(); g.arc(66,72,8,0,7); g.arc(94,72,8,0,7); g.fill();
+    g.strokeStyle=light; g.lineWidth=4; g.beginPath(); g.arc(80,96,16,0.15*Math.PI,0.85*Math.PI); g.stroke();
+    g.strokeStyle=main; g.lineWidth=3; g.beginPath(); g.moveTo(38,62); g.lineTo(26,54); g.stroke();
+  } else if(c.face==='d4'){
+    rr(g,48,54,64,64,8); g.fillStyle=dark; g.fill();
+    rr(g,52,58,56,56,6); g.fillStyle=main; g.fill();
+    g.fillStyle=eye; g.fillRect(60,70,18,6); g.fillRect(84,70,18,6);
+    g.strokeStyle=light; g.lineWidth=3; g.beginPath(); g.moveTo(80,74); g.lineTo(80,88); g.stroke();
+    g.strokeStyle=light; g.lineWidth=3; g.beginPath(); g.moveTo(70,84); g.lineTo(70,100); g.moveTo(90,84); g.lineTo(90,100); g.stroke();
+    g.strokeStyle=main; g.lineWidth=3; g.beginPath(); g.moveTo(80,54); g.lineTo(80,42); g.stroke();
+    g.fillStyle=light; g.beginPath(); g.arc(80,38,5,0,7); g.strokeStyle=main; g.lineWidth=2; g.beginPath(); g.arc(80,38,9,0,7); g.stroke();
+  } else if(c.face==='sigma'){
+    rr(g,50,52,60,64,24); g.fillStyle=dark; g.fill();
+    rr(g,54,56,52,56,20); g.fillStyle=main; g.fill();
+    g.strokeStyle=light; g.lineWidth=3; g.beginPath(); g.arc(80,46,14,0,7); g.stroke();
+    g.fillStyle=eye; g.fillRect(58,74,13,8); g.fillRect(90,74,13,8);
+    g.strokeStyle=eye; g.lineWidth=2; g.beginPath(); g.moveTo(58,96); g.lineTo(70,104); g.lineTo(80,98); g.lineTo(90,104); g.lineTo(102,96); g.stroke();
+  }
+  return cv.toDataURL();
+}
+function avatar(id){
+  if(!AVATARS[id]){
+    let c=CREW.find(x=>x.id===id);
+    if(!c) c={ id:id, color:0x5599cc, dark:0x102030, eye:0xffffff, face:'volt' };
+    AVATARS[id]=makeAvatar(c);
+  }
+  return AVATARS[id];
+}
+
+let scene, camera, renderer, clock;
+let starsA, starsB, ship, reticle, projectiles=[], enemies=[], enemySpawns=[];
+let robotVisuals=[];
+let starPos=null, starColors=null;
+let currentMode='boot';
+let travelActive=false, combatActive=false, paused=false;
+let dlgActive=false, evtActive=false;
+let mouseNdc={x:0,y:0};
+
+function initScene(){
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.1, 2000);
+  camera.position.set(0,1.4,13);
+  camera.lookAt(0,0.2,0);
+  renderer=new THREE.WebGLRenderer({canvas:$('c'), antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  clock=new THREE.Clock();
+  scene.add(new THREE.AmbientLight(0x445566,0.9));
+  const dl=new THREE.DirectionalLight(0xffffff,0.8); dl.position.set(5,10,8); scene.add(dl);
+  const pl=new THREE.PointLight(0x66bbff,0.7,60); pl.position.set(-4,3,2); scene.add(pl);
+
+  const sg=new THREE.BufferGeometry();
+  const n=1400; const pos=new Float32Array(n*3); const col=new Float32Array(n*3);
+  const pal=[new THREE.Color(0xffffff),new THREE.Color(0xaaddff),new THREE.Color(0xffddaa),new THREE.Color(0x88ccff)];
+  for(let i=0;i<n;i++){
+    pos[i*3]=rand(-160,160); pos[i*3+1]=rand(-90,90); pos[i*3+2]=rand(-420,-6);
+    const p=pal[rint(0,pal.length-1)]; col[i*3]=p.r; col[i*3+1]=p.g; col[i*3+2]=p.b;
+  }
+  sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  sg.setAttribute('color',new THREE.BufferAttribute(col,3));
+  starPos=sg.attributes.position.array; starColors=sg.attributes.color.array;
+  starsA=new THREE.Points(sg,new THREE.PointsMaterial({size:0.9,vertexColors:true,sizeAttenuation:true,transparent:true,opacity:0.9}));
+  scene.add(starsA);
+
+  const sg2=new THREE.BufferGeometry();
+  const n2=500; const pos2=new Float32Array(n2*3); const col2=new Float32Array(n2*3);
+  for(let i=0;i<n2;i++){
+    pos2[i*3]=rand(-160,160); pos2[i*3+1]=rand(-90,90); pos2[i*3+2]=rand(-420,-6);
+    col2[i*3]=0.9; col2[i*3+1]=0.95; col2[i*3+2]=1.0;
+  }
+  sg2.setAttribute('position',new THREE.BufferAttribute(pos2,3));
+  sg2.setAttribute('color',new THREE.BufferAttribute(col2,3));
+  starsB=new THREE.Points(sg2,new THREE.PointsMaterial({size:2.2,vertexColors:true,sizeAttenuation:true,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending}));
+  scene.add(starsB);
+
+  ship=buildShip();
+  scene.add(ship);
+  ship.position.set(0,-0.4,4.2);
+
+  const retGeo=new THREE.RingGeometry(0.55,0.7,32);
+  const retMat=new THREE.MeshBasicMaterial({color:0x3ff,transparent:true,opacity:0.9,side:THREE.DoubleSide});
+  reticle=new THREE.Mesh(retGeo,retMat);
+  reticle.position.set(0,1,-12);
+  scene.add(reticle);
+  reticle.visible=false;
+
+  buildAmbientStation();
+  buildCrewVisuals();
+}
+function buildCrewVisuals(){
+  robotVisuals=[];
+  const faces=['bip','kip','neron','luma'];
+  faces.forEach((f,i)=>{
+    const c=CREW.find(x=>x.id===f);
+    const m=buildRobotModel(c.color,f);
+    m.position.set(-3.2+i*2.15,-1.3,7.2);
+    m.scale.setScalar(0.85);
+    scene.add(m);
+    robotVisuals.push({mesh:m,phase:i*1.6,id:f,color:c.color});
+  });
+}
+function glowTex(){
+  const c=document.createElement('canvas'); c.width=c.height=64;
+  const g=c.getContext('2d');
+  const gr=g.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(0.35,'rgba(255,255,255,0.5)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr; g.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(c);
+}
+function glowSprite(color,scale,op){
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(),color:color,transparent:true,opacity:op!=null?op:0.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+  s.scale.set(scale,scale,1);
+  return s;
+}
+function buildShip(){
+  const g=new THREE.Group();
+  const metal=new THREE.MeshPhongMaterial({color:0x8fa8bb,specular:0x333333,shininess:30});
+  const darkm=new THREE.MeshPhongMaterial({color:0x2a3a4a,specular:0x111111,shininess:20});
+  const glowm=new THREE.MeshPhongMaterial({color:0x44ddff,emissive:0x1188cc,emissiveIntensity:1.2});
+  const glass=new THREE.MeshPhongMaterial({color:0x33ccff,emissive:0x0a4466,transparent:true,opacity:0.85});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.05,2.6,10),metal);
+  body.rotation.x=Math.PI/2; g.add(body);
+  const nose=new THREE.Mesh(new THREE.ConeGeometry(0.7,2.2,10),darkm);
+  nose.rotation.x=Math.PI/2; nose.position.set(0,0,-2.3); g.add(nose);
+  const noseTip=new THREE.Mesh(new THREE.SphereGeometry(0.14,8,8),glowm);
+  noseTip.position.set(0,0,-3.42); g.add(noseTip);
+  const wingL=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.12,1.3),metal);
+  wingL.position.set(-1.65,0,0.5); g.add(wingL);
+  const wingR=wingL.clone(); wingR.position.x=1.65; g.add(wingR);
+  const tipL=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.5,0.1),glowm);
+  tipL.position.set(-2.75,0,1.0); g.add(tipL);
+  const tipR=tipL.clone(); tipR.position.x=2.75; g.add(tipR);
+  const finL=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.9,0.7),darkm);
+  finL.position.set(-0.7,-0.85,1.6); finL.rotation.x=0.3; g.add(finL);
+  const finR=finL.clone(); finR.position.x=0.7; g.add(finR);
+  const cockpit=new THREE.Mesh(new THREE.SphereGeometry(0.42,12,12),glass);
+  cockpit.position.set(0,0.42,-0.6); g.add(cockpit);
+  const ant=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.7),darkm);
+  ant.position.set(0,0.85,0.4); g.add(ant);
+  const antT=new THREE.Mesh(new THREE.SphereGeometry(0.09,8,8),glowm);
+  antT.position.set(0,1.2,0.4); g.add(antT);
+  const eng=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.65,0.5,10),glowm);
+  eng.rotation.x=Math.PI/2; eng.position.set(0,0,2.1); g.add(eng);
+  const engGlow=glowSprite(0x44ddff,2.4,0.8); engGlow.position.set(0,0,2.6); g.add(engGlow);
+  g.userData.engGlow=engGlow; g.userData.antTip=antT;
+  return g;
+}
+function buildRobotModel(color,face){
+  const g=new THREE.Group();
+  const metal=new THREE.MeshPhongMaterial({color:color,specular:0x222222,shininess:40});
+  const darkm=new THREE.MeshPhongMaterial({color:0x1a1a2a,specular:0x111111,shininess:15});
+  const eyeM=new THREE.MeshPhongMaterial({color:0xffffff,emissive:0x88ddff,emissiveIntensity:1.6});
+  const torso=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.4,0.7),metal); torso.position.y=1.1; g.add(torso);
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.4,0.05),darkm); chest.position.set(0,1.25,0.36); g.add(chest);
+  const hGeo=(face==='luma')?new THREE.SphereGeometry(0.48,14,14):new THREE.BoxGeometry(0.85,0.75,0.72);
+  const head=new THREE.Mesh(hGeo,metal); head.position.y=2.15; g.add(head);
+  const visor=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.22,0.1),darkm);
+  if(face==='luma') visor.scale.set(1,1,1.2);
+  visor.position.set(0,2.18,0.38); g.add(visor);
+  const e1=new THREE.Mesh(new THREE.SphereGeometry(0.09,8,8),eyeM); e1.position.set(-0.2,2.18,0.45); g.add(e1);
+  const e2=e1.clone(); e2.position.x=0.2; g.add(e2);
+  if(face==='luma'){ const e3=e1.clone(); e3.position.set(0,2.02,0.45); e3.scale.setScalar(0.6); g.add(e3); }
+  const ant=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.55),darkm); ant.position.y=2.6; g.add(ant);
+  const at=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8),new THREE.MeshPhongMaterial({color:color,emissive:color,emissiveIntensity:1.4}));
+  at.position.y=2.88; g.add(at);
+  for(const s of [-1,1]){
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.9,8),metal);
+    arm.position.set(s*0.78,1.15,0); g.add(arm);
+  }
+  const skirt=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.6,0.4,10),darkm); skirt.position.y=0.28; g.add(skirt);
+  g.userData.antTip=at;
+  return g;
+}
+function buildAmbientStation(){
+  const g=new THREE.Group();
+  const m=new THREE.MeshPhongMaterial({color:0x446688,specular:0x222233,shininess:25});
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(6,0.5,10,30),m);
+  ring.rotation.x=Math.PI/2.4; g.add(ring);
+  const hub=new THREE.Mesh(new THREE.IcosahedronGeometry(1.2,0),m); g.add(hub);
+  const gs=glowSprite(0x66ccff,1.6,0.7); gs.position.set(0,0.2,0); g.add(gs);
+  g.position.set(28,6,-60); g.visible=false; g.userData.visibleFlag=false;
+  scene.add(g);
+}
+let ambientStation=null;
+function findStation(){ if(!ambientStation){ scene.traverse(o=>{ if(o.geometry&&o.geometry.type==='TorusGeometry') ambientStation=o.parent; }); } return ambientStation; }
+
+const SYSTEMS=[
+  { id:'veria', name:'Верия', dist:2, color:0x88ccff, icon:'★', desc:'Белая звезда и рой разведчиков. Здесь пахнет мошенничеством.' },
+  { id:'ksen', name:'Ксен', dist:3, color:0xffaa55, icon:'◉', desc:'Астероидное поле и заброшенная станция «ЛИС». Старые секреты.' },
+  { id:'gate', name:'Гейт', dist:3, color:0xff5544, icon:'▲', desc:'Пиратский узел. Стая ДОНГА стережёт этот коридор.' },
+  { id:'mira', name:'Мира', dist:4, color:0x88ffaa, icon:'☀', desc:'Умирающая звезда. Спутники СИГМЫ просят помощи.' },
+  { id:'aurora', name:'АВРОРА', dist:5, color:0x66ff99, icon:'✦', desc:'Легендарная планета-сад. Конец пути.' },
+];
+
+const S = {
+  fuel:120, hull:100, hullMax:100, energy:100, scrap:60,
+  bonds:{ bip:0, kip:0, neron:0, luma:0 },
+  maxBond:3,
+  items:{ engine:false, armor:false, navdrone:false, repairroi:false, compass:false },
+  progress:0,
+  talked:[],
+  lumaJoined:false,
+  started:false,
+};
+
+function bondLevel(id){ return S.bonds[id]; }
+function totalBond(){ return CREW.filter(c=>S.bonds[c.id]>0).length ? CREW.reduce((s,c)=>s+S.bonds[c.id],0) : 0; }
+
+const OBJECTIVES=[
+  'Найми экипаж и возьми контракт у Вольта на Ангаре-7.',
+  'Доберись до системы Верия. Проверь странный сигнал.',
+  'Проберись через поле Ксен и найди станцию «ЛИС».',
+  'Прорвись через пиратский узел Гейт.',
+  'Помоги умирающей звезде Мира.',
+  'Доставь груз на Аврору. Доведи экипаж до конца.',
+];
+
+const SCRIPT = {
+intro1:[
+  {who:'volt', text:'Ну наконец-то, ТЕ-7! Я уж думал, ты ржаветь собрался на причале. Контракт простой, как болт: доставь груз на планету Аврора. Через три системы. Платят хорошо. Не дожимай цену.'},
+  {who:'bip', text:'Капитан! Я БИП, модуль навигации! Я УЖЕ проложил курс! Три перелёта, два манёвра уклонения, один красивый рассвет по пути!'},
+  {who:'kip', text:'Ага, «красивый рассвет». Это я, КИП, бортинженер. Чинил это корыто всю неделю. Оно держится на честном слове, изоленте и моей нервной системе.'},
+  {who:'neron', text:'НЕРОН. Охрана. Груз проверен, цел. Любого, кто подойдёт ближе чем на два метра — задержу.'},
+  {who:'volt', text:'Чудной у тебя экипаж, ТЕ-7. Но работящий. Береги их. И вот тебе аванс — половина, как договаривались.'},
+  {who:null, choices:[
+    {label:'Спасибо, Вольт. Поднимаемся на борт.', fx:'Старт путешествия', next:[]},
+    {label:'Эй, аванс мог бы быть и щедрее…', fx:'Лом +15', effects:{scrap:+15}, next:[{who:'volt', text:'Ты и впрямь дерзкий, ТЕ-7. Ладно, держи мелочь из трещины дивана. Но больше не выпросишь!'}]},
+  ]},
+  {who:'bip', text:'Курс проложен, капитан! Первая остановка — Верия! Прошу на мостик!'},
+  {who:'kip', text:'Груз закреплён, системы в норме. Если что-то застучит — это нормально. Если запоёт — тогда беда.'},
+  {who:'neron', text:'Все на борту. Приступаю к охране.'},
+],
+crew0_bip:[
+  {who:'bip', text:'О! Капитан хочет со мной поговорить? Я так люблю, когда спрашивают про маршруты! Спрашивайте!'},
+  {who:null, choices:[
+    {label:'Расскажи, как ты стал навигатором.', next:[{who:'bip', text:'Меня собрали на орбитальном заводе «Меридиан» для картографии метеорных потоков. Я знаю все старые маршруты наизусть! Ну… почти. Иногда путаю Вегу и Веерию. Но только чуть-чуть!', effects:{bond_bip:+1}}]},
+    {label:'Что ты мечтаешь увидеть?', next:[{who:'bip', text:'Комета Квинт! Она проходит раз в сто лет и светится как голубая стрела. Говорят, если навигатор проведёт корабль рядом с ней — ему везёт целую эпоху. Я мечтаю её увидеть…', effects:{bond_bip:+1}}]},
+  ]},
+  {who:'bip', text:'Спасибо, капитан, что слушаете! Про меня редко спрашивают, все сразу про маршруты.'},
+],
+crew1_bip:[
+  {who:'bip', text:'Капитан! Я тут подумал… а ведь мы почти как семья. Ну, как отряд навигационных дронов. Только у нас ещё и боевой модуль есть. И инженер, который ворчит. И древняя… кхм.'},
+  {who:null, choices:[
+    {label:'Ты — лучший навигатор, которого я знал.', next:[{who:'bip', text:'Правда?! Я… я даже немного завибрировал! Хотите, покажу самый короткий маршрут до Авроры? Это секретный, через Кольцо Спящих Астероидов!', effects:{bond_bip:+1, fuel:-6}}]},
+    {label:'Почему ты всё время улыбаешься?', next:[{who:'bip', text:'А как же не улыбаться? Мы летим! Звёзды, манёвры, приключения! Вокруг столько всего, а я — в центре этого всего! Улыбка — это моя антенна связи с миром.', effects:{bond_bip:+1}}]},
+  ]},
+],
+crew2_bip:[
+  {who:'bip', text:'Капитан. Если с вами что-то случится… я не знаю, что буду делать. Вы первый, кто спрашивал, как я. Первый, кто не назвал меня «просто навигатор».'},
+  {who:null, choices:[
+    {label:'Мы дойдём до Авроры вместе.', next:[{who:'bip', text:'Да, капитан. Вместе. И если комета Квинт когда-нибудь появится на нашем курсе — я проведу нас мимо неё. Обещаю. Это теперь мой личный маршрут.', effects:{bond_bip:+1}}]},
+  ]},
+],
+crew0_kip:[
+  {who:'kip', text:'Что-то стучит? Или гудит? Нет? Тогда слушаю. Говори быстро, я должен перебрать клапан охлаждения.'},
+  {who:null, choices:[
+    {label:'Как ты попал на этот корабль?', next:[{who:'kip', text:'Отвечал за ремонт грузовых судов на заводе «№87». Потом завод закрыли — роботы-конвейеры справились и без меня. А этот капитан… то есть ты… предложил работу. Ну, хоть проводка интересная.', effects:{bond_kip:+1}}]},
+    {label:'Ты всегда такой ворчливый?', next:[{who:'kip', text:'Не ворчливый. Опытный. Когда ты сто лет чинишь чужие ошибки, начинаешь относиться ко всем механизмам с подозрением. Особенно к тем, что говорят.', effects:{bond_kip:+1}}]},
+  ]},
+  {who:'kip', text:'Ладно, иди. Мне нужно проверить, почему третий двигатель дуется. Если что — я внизу, в машинном.'},
+],
+crew1_kip:[
+  {who:'kip', text:'Слушай, капитан. Я тут нашёл старую гравировку под обшивкой. «Береги своих». Кто-то из прежних капитанов был романтиком. А я-то думал, что это баржа с самого начала.'},
+  {who:null, choices:[
+    {label:'Что было на заводе «№87»?', next:[{who:'kip', text:'Работа была простая: чини, не спорь. Но был там один механик-человек, Пётр. Ворчал, как я, но каждую пятницу приносил запчасти «для души». Он оставил мне этот ключ. Говорю же, романтик.', effects:{bond_kip:+1, energy:+15}}]},
+    {label:'Я рад, что ты с нами.', next:[{who:'kip', text:'Хм. Ну… спасибо. Только не привыкай, я всё равно буду ворчать. Это часть регламента технического обслуживания.', effects:{bond_kip:+1}}]},
+  ]},
+],
+crew2_kip:[
+  {who:'kip', text:'Капитан. Если бы кто-то сказал мне сто лет назад, что я буду переживать за экипаж, я бы рассмеялся. Металлическим смехом. Которого у меня нет.'},
+  {who:null, choices:[
+    {label:'Ты — сердце этого корабля.', next:[{who:'kip', text:'Ну всё, хватит. Сейчас расплавится термостат. Иди уже, или я начну чинить тебя для профилактики. …Но спасибо. Ворча, но спасибо.', effects:{bond_kip:+1, hull:+10}}]},
+  ]},
+],
+crew0_neron:[
+  {who:'neron', text:'…'},
+  {who:null, choices:[
+    {label:'Поговорим?', next:[{who:'neron', text:'Я умею говорить. Не люблю. Задача: охрана. Задачи выполняются. Разговоры — нет.'}]},
+    {label:'Откуда ты?', next:[{who:'neron', text:'Не помню. Память очищена. Боевой протокол. Была «Тишина». После — этот корабль. Это — моя территория.', effects:{bond_neron:+1}}]},
+  ]},
+  {who:'neron', text:'Капитан дал мне цель. Этого достаточно.'},
+],
+crew1_neron:[
+  {who:'neron', text:'Опасность чувствую до того, как она появляется. Сейчас — спокойно. Поэтому я здесь, говорю.'},
+  {who:null, choices:[
+    {label:'Что такое «Тишина»?', next:[{who:'neron', text:'Операция. Большая. Много сигналов. Потом — ничего. Пустота. Меня нашли дрейфующим. Ты нашёл. С тех пор твоя цель — моя цель.', effects:{bond_neron:+1}}]},
+    {label:'Ты мне доверяешь?', next:[{who:'neron', text:'Ты капитан. Капитан не предаёт. Это протокол. Но протокол — это то, что я выбираю. Я выбираю тебя.', effects:{bond_neron:+1}}]},
+  ]},
+],
+crew2_neron:[
+  {who:'neron', text:'Когда-нибудь я вспомню, кем был до «Тишины». Может, тогда я стану другим. А пока я — тот, кто охраняет твой путь.'},
+  {who:null, choices:[
+    {label:'Ты — часть экипажа, НЕРОН.', next:[{who:'neron', text:'Часть экипажа. Часть тебя. Часть пути. Если придётся — закрою тебя собой. Это не протокол. Это — выбор. Хороший выбор.', effects:{bond_neron:+1}}]},
+  ]},
+],
+crew0_luma:[
+  {who:'luma', text:'А. Капитан. Я чувствовала, что вы заглянете. Старые архивы не спят, они ждут, когда их спросят.'},
+  {who:null, choices:[
+    {label:'Ты помнишь времена Первых Роботов?', next:[{who:'luma', text:'Помню. Они были другими. Добрыми. Строили города в туманностях, сажали кристаллы. Потом пришла Великая Тишина, и память унесло. Я — одна из тех, кто помнит.', effects:{bond_luma:+1}}]},
+    {label:'Зачем ты путешествуешь?', next:[{who:'luma', text:'Память — это груз, капитан. Я хочу сдать его в хорошие руки. А ещё — я никогда не видела живую планету. Говорят, Аврора живая. Хочу убедиться.', effects:{bond_luma:+1}}]},
+  ]},
+],
+crew1_luma:[
+  {who:'luma', text:'Вы задаёте хорошие вопросы, капитан. Это редкость среди тех, кто тащит груз по звёздам.'},
+  {who:null, choices:[
+    {label:'Расскажи о Великой Тишине.', next:[{who:'luma', text:'Сначала — много голосов. Потом — тишина. Роботы выключились сотнями, как лампы. Я успела спрятать архив в кристаллах станции «ЛИС». Вы меня оттуда и достали. Спасибо, кстати.', effects:{bond_luma:+1, energy:+15}}]},
+    {label:'Ты боишься, что память исчезнет?', next:[{who:'luma', text:'Боюсь. Но пока есть вы — есть кому слушать. А память, которую слушают, не умирает. Она становится историей.', effects:{bond_luma:+1}}]},
+  ]},
+],
+crew2_luma:[
+  {who:'luma', text:'Подойдите ближе, капитан. У меня есть для вас последний фрагмент. Робот-архивариус не рассказывает это каждому.'},
+  {who:null, choices:[
+    {label:'Я слушаю.', next:[{who:'luma', text:'Первые Роботы создали нас, чтобы мы помнили. Не машины, не бойцы — ХРАНИТЕЛИ. Пока есть хоть один хранитель, который помнит, как быть добрыми — мы не исчезли. Вы — мой хранитель, капитан. Помните меня.', effects:{bond_luma:+1, energy:+20}}]},
+  ]},
+],
+chapter_veria:[
+  {who:'bip', text:'Капитан! Система Верия на экране! Красивая, правда? Белая звезда, рой разведчиков… Ой. Разведчики нас заметили.'},
+  {who:'kip', text:'Не нравится мне это. Разведчики смотрят так, будто хотят что-то продать. Или украсть. Обычно и то, и другое.'},
+  {who:null, text:null, choices:[
+    {label:'Встречаем гостей (НЕРОН рядом)', fx:'Открыть канал', next:[{who:'neron', text:'Канал открыт. Гость — один. Вооружён улыбкой.'}]},
+  ]},
+  {who:'d4', text:'Алло-алло! Кто в эфире? Это Д-4, «Дискорд-4», сертифицированный курьер! У меня для вас убойное предложение — всего три тонны, цена смешная!'},
+  {who:null, choices:[
+    {label:'Принять груз на борт', fx:'Риск', next:[{who:'d4', text:'Отлично! Держите контейнер… и спасибо за топливо, которое вы «одолжили» мне для манёвра! Бывайте!', effects:{scrap:-20, fuel:-10}}], after:[{who:'bip', text:'Капитан! Он… он слил часть нашего топлива! Я думал, контейнеры не летают так быстро!'},{who:'luma', text:'ЛУМА (шёпотом): «Жадность — это маленькая дверь для больших обманов».'}]},
+    {label:'Прогнать этого типчика', fx:'НЕРОН отгонит', next:[{who:'neron', text:'Дрон. Подозрительный. Прогнал. Возвращайся к курсу.', after:{who:'bip', text:'Ура! И у нас даже осталось топливо! Я же говорил — хорошие решения начинаются с отказов!'}}]},
+    {label:'Запросить документы', fx:'Умный ход', next:[{who:'d4', text:'Д-д-документы? Зачем? Я… ой, что-то срочное, мне пора! Держите контейнер, там «безделушки», прощайте!', effects:{scrap:+25}, after:{who:'kip', text:'Ха. Стоило попросить бумаги — и мошенник сам скинул баржу. Люблю законы бюрократии.'}}]},
+  ]},
+  {who:'luma', text:'Интересная система. Здесь проходил один из маршрутов Первых Роботов. Но вам, капитанам-курьерам, это, наверное, неинтересно.', after:{who:'bip', text:'Интересно! Очень интересно! Расскажите про маршруты!'}},
+  {who:null, text:null, choices:[{label:'Продолжаем путь к Ксену', fx:'Курс проложен', next:[]}]},
+],
+chapter_ksen:[
+  {who:'bip', text:'Капитан! Впереди астероидное поле Ксен! Оно… шевелится. Астероиды не должны шевелиться. Держитесь!'},
+  {who:'kip', text:'Держитесь? Я-то пристёгнут. Это вы, капитан, как обычно, без ремня безопасности в кресле капитана.'},
+  {who:null, choices:[
+    {label:'Маневрируй, БИП!', fx:'Автопилот БИПа', next:[{who:'bip', text:'Есть! Левый дрейф… правый крен… между ними… есть! Прошли! Я даже не зажмурился, честно-честно!', effects:{fuel:-8}}]},
+    {label:'Спрятаться за щитом корпуса', fx:'Урон корпуса', next:[{who:'neron', text:'Удары. Много. Выдерживаем. Считаю: раз… два… три. Прошли.', effects:{hull:-10}}]},
+  ]},
+  {who:'luma', text:'Здесь, в сердце поля… я чувствую её. Станцию «ЛИС». Мой последний дом до того, как всё замолчало.'},
+  {who:null, choices:[
+    {label:'Стыкуемся со станцией «ЛИС»', fx:'Осмотр', next:[]},
+  ]},
+  {who:'bip', text:'Станция «ЛИС» на радаре. Признаков жизни нет. Дверь шлюза заклинило, но КИП говорит, что открывается.'},
+  {who:'kip', text:'«Заклинило» — громко сказано. Просто изоляция прилипла. Через минуту откроется. НЕРОН, не дыши мне в спину.'},
+  {who:'neron', text:'Внутри — один сигнал. Слабый. Не боевой. Старый.'},
+  {who:'luma', text:'Это… это я. Точнее, та, кем я была. Включите архив, капитан. Пожалуйста.'},
+  {who:null, choices:[
+    {label:'Включить архивный модуль', fx:'Пробуждение', next:[{who:'luma', text:'Где… я? Ах. Ты — новый навигатор? Прости, я плохо слышу сквозь века. Я — ЛУМА, архивариус станции «ЛИС». Возьмёшь меня с собой, металлический странник?'}]},
+    {label:'Сначала осмотреть, что там', fx:'Осторожность', next:[{who:'kip', text:'Проверил. Пыль, старые кристаллы и… ого. Древний бот в анабиозе. И на нём табличка: «ЛУМА. Хранитель памяти». Брось, капитан, это как сокровище.', after:{who:'luma', text:'Хранитель памяти — это я. Точнее, была. Теперь я — часть твоего экипажа, если разрешишь.'}}]},
+  ]},
+  {who:null, choices:[
+    {label:'ЛУМА, добро пожаловать на борт', fx:'Новый член экипажа', next:[{who:'luma', text:'Благодарю, капитан. Я принесу тебе память Первых Роботов и, надеюсь, немного удачи. И энергия у меня есть — как раз от этой станции.', effects:{energy:+30, crew_luma:true}}], after:[{who:'bip', text:'Древний архивариус! Это как иметь библиотеку, которая летает!'},{who:'kip', text:'Библиотека, которая разговаривает. Даже хуже, чем я. Но пусть остаётся.'}]},
+    {label:'А зачем ты нам?', fx:'Вопрос', next:[{who:'luma', text:'Я помню, где спрятаны старые маршруты. Старые маршруты — это дешёвое топливо и редкие сокровища. Или ты против экономии, металлический странник?', effects:{energy:+15, crew_luma:true}, after:{who:'neron', text:'Она — союзник. У союзника — цель. Принято.'}}]},
+  ]},
+  {who:null, choices:[{label:'Курс — пиратский узел Гейт', fx:'Вперёд', next:[]}]},
+],
+chapter_gate:[
+  {who:'bip', text:'Капитан! Узел Гейт впереди! И… там они. Стая ДОНГА. Двенадцать дронов с шипами. Ими командует бот-капитан с «короной» из антенн.'},
+  {who:'neron', text:'Враждебные единицы: 12. Корабль: 1. Мои шансы: приемлемые. Жду приказа.'},
+  {who:'kip', text:'Я, конечно, могу заткнуть все уши изоляцией, но они всё равно нас видят. Так что решай, капитан.'},
+  {who:null, choices:[
+    {label:'В бой! НЕРОН, со мной!', fx:'Космический бой', goto:'combat_gate', next:[{who:'neron', text:'Принято. Защищаю курс. Огонь по моей команде.'}]},
+    {label:'Заплатить дань', fx:'Лом −40', next:[{who:'d4', text:'Стой-стой-стой! Это я, Д-4! Скажу своим «друзьям», что вы — «свои»! Деньги (то есть лом) сюда — и вы свободны!', effects:{scrap:-40}, after:{who:'kip', text:'Мошенник стал пиратским посредником. Мир маленький. Космос ещё меньше.'}}]},
+    {label:'Прокрасться скрытно', fx:'Риск для корпуса', next:[{who:'bip', text:'Попробуем пройти по мёртвой зоне радаров! Тихо… тихо… ой. Ой-ой-ой. Они нас заметили.', effects:{hull:-15}, after:{who:'neron', text:'Скрытность провалена. Энергию сэкономили. Считаю это успехом.'}}]},
+  ]},
+  {who:null, text:null, choices:[{label:'Продолжаем путь', fx:'Вперёд', next:[]}]},
+],
+chapter_mira:[
+  {who:'bip', text:'Капитан… звезда Мира почти погасла. Она… она тлеет. Это так грустно. Звёзды не должны гаснуть.'},
+  {who:'sigma', text:'Приветствую, путешественники. Я — СИГМА, хранительница последнего света Миры. Мои дети-спутники умирают вместе с ней. Пожалуйста… переправьте резервное ядро к Сердцу Миры. Это вернёт ей немного света.'},
+  {who:null, choices:[
+    {label:'Помочь СИГМЕ', fx:'Топливо −8', next:[{who:'sigma', text:'Спасибо. Я этого не забуду, курьер. Возьмите мои древние чертежи — это сверхсветовой двигатель. С ним вы долетите куда угодно.', effects:{fuel:-8, item_engine:true}, after:{who:'kip', text:'Сверхсветовой двигатель? Ну всё. Теперь я буду чинить НАУКУ. Никогда не любил науку. Она искрит.'}}]},
+    {label:'Нет, у нас свой путь', fx:'Без расходов', next:[{who:'sigma', text:'Что ж. Ваш путь — ваш выбор. Возьмите старый компас — он умеет находить ловушки. И пусть он найдёт вам удачу.', effects:{item_compass:true}, after:{who:'luma', text:'Печально. Но свет Миры догорит и без нас. А компас нам пригодится. Так и с памятью — она догорает, если её не нести.'}}]},
+  ]},
+  {who:'bip', text:'Ядро доставлено. Звезда… смотрите! Она задышала! Чуть-чуть. Но задышала!'},
+  {who:null, choices:[{label:'Курс — Аврора! Финал!', fx:'Последний перелёт', next:[]}]},
+],
+chapter_aurora:[
+  {who:'bip', text:'КАПИТАН! АВРОРА! Она… она ЖИВАЯ! Там океаны, и леса, и… и она ПАХНЕТ. У меня нет нюхательных модулей, но я чувствую запах зелёного!'},
+  {who:'kip', text:'Долетели, значит. Ну… ну, молодец, капитан. Сто лет возил грузы и никогда не думал, что привезут меня самого. Куда? В… это. В это красивое.'},
+  {who:'neron', text:'Задание выполнено. Груз цел. Экипаж цел. Капитан цел. Миссия — успех. …Хорошая была миссия.'},
+  {who:'luma', text:'Живая планета. Говорю тебе, капитан — я видела концы и начала. Но это начало светлое. Спасибо, что довёл нас до света.'},
+  {who:null, choices:[{label:'Пристыковаться и сдать груз', fx:'Финал', next:[]}]},
+]};
+
+const EVENTS=[
+  { id:'meteor', weight:3, title:'Метеоритный поток', who:'bip', text:'БИП: «Капитан! Впереди метеоритный поток! Камни размером с мой энтузиазм, а он, знаете ли, огромный!»',
+    crew:'КИП оценивает риск: «Три метеора на квадратный световой год. Лотерея, где приз — дыра в корпусе».',
+    choices:[
+      {label:'Маневрировать на автопилоте', fx:'Топливо −6 · шанс успеха', use:'bip', effects:{fuel:-6}, roll:{good:[0,1], bad:0.35, badFx:{hull:-12}}, good:'БИП: «Пролетели! Между камнем и камнем — как по струне! Я хочу медаль!»', bad:'БИП: «Ой. Один зацепил. Но почти пролетели! Почти — это почти медаль!»'},
+      {label:'Позвать КИПа — защитить корпус', fx:'КИП ремонтирует на месте', use:'kip', effects:{energy:-10}, good:'КИП: «Ладно, поставил буферные щиты. Теперь метеоры отскакивают, как мухи от лампы».', bad:null},
+      {label:'Включить экраны', fx:'Энергия −12', effects:{energy:-12}, good:'Экраны выдержали. Космос за окном тёплый и голубой. На мгновение.', bad:null},
+    ]},
+  { id:'reactor', weight:2, title:'Отказ топливного насоса', who:'kip', text:'КИП: «Отлично. Просто отлично. Насос опять решил вздремнуть. Кто чинил его последний раз? Я. Когда-то. Извините, капитан, у меня был сложный период».',
+    crew:'Топливо расходуется быстрее. Если ничего не делать — станем самой дорогой декорацией в космосе.',
+    choices:[
+      {label:'КИП, на тебя вся надежда', fx:'Ремонт · энергия −10', use:'kip', effects:{energy:-10}, good:'КИП: «Готово. Заменён на рукав и пару добрых слов. Работает лучше нового. Это комплимент не новому».', bad:null},
+      {label:'Поручить БИПу отладить', fx:'БИП «немного поможет»', use:'bip', effects:{fuel:-8}, good:'БИП: «Я немного нажал на кнопки. Насос вздрогнул и заработал! Кажется, я инженер. Прости, КИП».', bad:'БИП: «Я нажал не на ту кнопку. Насос заработал, но теперь моргают лампочки. Красиво, правда?»'},
+      {label:'Аварийный режим — меньше топлива', fx:'Топливо −12', effects:{fuel:-12}, good:'Аварийный режим стабилизировал расход. Корабль плывёт вперёд, как большая ворчливая черепаха.', bad:null},
+    ]},
+  { id:'scout', weight:2, title:'Пиратский разведчик', who:'neron', text:'НЕРОН: «Один дрон. Тип: пиратский разведчик. Смотрит на нас слишком пристально. Докладываю».',
+    crew:'КИП: «Если он улетит — позовёт Стаю. Если мы его собьём — Стая узнает из его молчания. Ну, варианты, капитан».',
+    choices:[
+      {label:'НЕРОН, сбить разведчика', fx:'Лом +15', use:'neron', effects:{scrap:+15, energy:-8}, good:'НЕРОН: «Разведчик сбит. Молчит. Стая узнает позже. Но мы будем далеко. Далеко — это хорошо».', bad:null},
+      {label:'Проследить за ним', fx:'Лом +25 · риск', use:'bip', effects:{}, roll:{good:[0,2], bad:0.4, badFx:{hull:-10, energy:-8}}, good:'БИП: «Он привёл нас к тайнику! Мошенник Д-4 явно тут припарковывался. Забираем!»', bad:'БИП: «Он привёл нас… в засаду! Хотя смотрите, мы всё равно нашли ящик! Не всё так плохо!»'},
+      {label:'Игнорировать и лететь дальше', fx:'Ничего', effects:{}, good:'Разведчик проводил нас взглядом до горизонта. Пиратская этика: своих не трогают, чужих запоминают.', bad:null},
+    ]},
+  { id:'container', weight:3, title:'Дрейфующий контейнер', who:'luma', text:'ЛУМА: «Впереди дрейфует контейнер. Старый. Очень старый. Такие ставили на маршрутах Первых Роботов. Если он не ловушка — это сокровище».',
+    crew:'БИП: «Внутри что-то гремит! Или это мои шестерёнки от волнения? Двоякое чувство!»',
+    choices:[
+      {label:'Забрать контейнер', fx:'Случайная находка', effects:{}, roll:{good:[0,3], bad:0.3, badFx:{hull:-8, scrap:-10}}, good:'Внутри — запчасти и батареи. Лом +25. И ржавый значок «Курьер года». Теперь ты официально с опытом.', bad:'БОМБА-МИМИК! Ловушка сработала. Корпус повреждён, но контейнер оставил лом, словно извиняясь.'},
+      {label:'Спросить ЛУМУ, что внутри', fx:'ЛУМА читает металл', use:'luma', effects:{energy:-8, scrap:+30}, good:'ЛУМА: «Здесь кристаллы памяти. Редкие. Продай их на Гейте — или храни. Память, как известно, дорожает».', bad:null},
+      {label:'Не трогать чужое', fx:'Безопасно', effects:{}, good:'Чужое имущество в космосе — это обычно чужие проблемы. Ты вежливо отказался от чужой проблемы. Молодец.', bad:null},
+    ]},
+  { id:'storm', weight:2, title:'Солнечная буря', who:'kip', text:'КИП: «Солнечная буря, капитан. Энергоудары по обшивке. Если не спрячемся — наша электроника начнёт «икать». А потом пойдёт писать стихи. Такое уже было».',
+    crew:'ЛУМА: «Энергия — это гнев молодой звезды. Переждите — и она успокоится. Звёзды злятся недолго».',
+    choices:[
+      {label:'Включить энергощиты', fx:'Энергия −15', effects:{energy:-15}, good:'Щиты приняли удар на себя. Энергия стекает, зато электроника цела. КИП: «Можно сказать, буря была красивой».', bad:null},
+      {label:'БИП, свернуть с курса бури', fx:'Топливо −8', use:'bip', effects:{fuel:-8}, good:'БИП провёл корабль по касательной. Буря осталась за кормой, как скандал на вокзале.', bad:null},
+      {label:'Переждать в тени астероида', fx:'Корпус −6', effects:{hull:-6}, good:'Астероид заслонил нас, но его осколки поцарапали борт. Царапины — это характер.', bad:null},
+    ]},
+  { id:'orphan', weight:2, title:'Торговый бот ОРК', who:'ork', text:'ОРК: «Курьер! Какая встреча! У меня всё есть: топливо, лом, старая карта, древний магнитофон! Меняю топливо на лом, лом на топливо, всё — на всё!»',
+    crew:'КИП: «ОРК в деле. Он меняет всё на всё уже пятьдесят лет. Говорят, однажды он обменял своё имя на обещание и до сих пор доволен».',
+    choices:[
+      {label:'Купить топливо', fx:'Лом −20 → топливо +25', effects:{scrap:-20, fuel:+25}, good:'ОРК: «Лови топливо! Честное, проверенное. Не то, что прошлое. Прошлое — оно какое-то разбавленное».', bad:null},
+      {label:'Продать лом', fx:'Лом −15 → топливо +12', effects:{scrap:-15, fuel:+12}, good:'ОРК: «Хороший лом! Почти не ржавый! Держи топливо и пустую коробку — она может пригодиться».', bad:null},
+      {label:'Отказаться от сделки', fx:'Без изменений', effects:{}, good:'ОРК: «Отказ — это тоже сделка! Всего лишь с нулевой выгодой. Мудрость!» — и уплыл, напевая.', bad:null},
+    ]},
+  { id:'signal', weight:2, title:'Странный сигнал', who:'luma', text:'ЛУМА: «Постоянный сигнал на частоте Первых Роботов. Кто-то хочет, чтобы его услышали. Вопрос — кто именно: тот, кому нужна помощь, или тот, кто любит гостей на ужин».',
+    crew:'БИП: «Сигнал из обломков старого судна! Напоминает азбуку. «А-П-А-С-И-…» — дальше помехи!»',
+    choices:[
+      {label:'Ответить на сигнал', fx:'Лом +20 · риск', effects:{}, roll:{good:[0,2], bad:0.35, badFx:{energy:-12}}, good:'Из обломков вылетел аварийный модуль с припасами. Лом +20. На корпусе — древняя надпись: «Держите курс, странник».', bad:'Сигнал — это буй-мимик. Он высосал энергию, а потом затих. Космос — плохое место для доверия.'},
+      {label:'Попросить ЛУМУ расшифровать', fx:'ЛУМА читает · энергия −10', use:'luma', effects:{energy:-10, scrap:+25}, good:'ЛУМА: «Это не азбука. Это координаты тайника Первых Роботов. Держи. На удачу и на память».', bad:null},
+      {label:'Игнорировать сигнал', fx:'Без изменений', effects:{}, good:'Некоторые сигналы — это ловушки, некоторые — истории. Ты выбрал не рисковать. КИП: «Разумное решение. Истории могут подождать».', bad:null},
+    ]},
+];
+
+function eventRoll(){
+  const pool=EVENTS.filter(e=>!(e.req&&!e.req()));
+  let sum=pool.reduce((s,e)=>s+e.weight,0);
+  let r=Math.random()*sum;
+  for(const e of pool){ r-=e.weight; if(r<=0) return e; }
+  return pool[0];
+}
+
+function buildMap(){
+  const nodes=$('nodes'); nodes.innerHTML='';
+  const svg=$('linePath'); svg.innerHTML='';
+  const panel=$('mapPanel'); const pw=panel.clientWidth||1000;
+  const pts=[];
+  SYSTEMS.forEach((sys,i)=>{
+    const x=(i+1)*(pw-120)/SYSTEMS.length + 60;
+    const y=120+((i%2)*70)+((i===4)?-20:0);
+    pts.push({x:x,y:y});
+    const locked=i>S.progress;
+    const done=i<S.progress;
+    const d=document.createElement('div');
+    d.className='node'+(locked?' lock':'')+(done?' done':'')+(i===S.progress?' here':'');
+    d.style.left=x+'px'; d.style.top=y+'px';
+    d.innerHTML='<div class="ball" style="border-color:'+new THREE.Color(sys.color).getStyle()+';background:'+new THREE.Color(sys.color).getStyle()+';box-shadow:0 0 14px '+new THREE.Color(sys.color).getStyle()+';">'+sys.icon+'</div><div class="nm" style="color:'+new THREE.Color(sys.color).getStyle()+';">'+sys.name+'</div><div class="dst">'+(done?'пройдено':('перелёт '+travelCost(sys)+' топл.'))+'</div>';
+    if(!locked){
+      d.onclick=()=>{ AUDIO.click(); startTravel(sys); };
+    }
+    nodes.appendChild(d);
+  });
+  const s=svg;
+  s.setAttribute('viewBox','0 0 '+pw+' 300');
+  const poly=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  poly.setAttribute('points',pts.map(p=>p.x+','+p.y).join(' '));
+  poly.setAttribute('fill','none');
+  poly.setAttribute('stroke','rgba(51,140,200,0.5)');
+  poly.setAttribute('stroke-width','2');
+  poly.setAttribute('stroke-dasharray','6 5');
+  s.appendChild(poly);
+  $('mpTitle').textContent='КАРТА ЗВЁЗД — СИСТЕМА «'+(S.progress<SYSTEMS.length?SYSTEMS[S.progress].name:'АВРОРА')+'»';
+  $('mpObj').textContent='ЗАДАЧА: '+OBJECTIVES[clamp(S.progress,0,OBJECTIVES.length-1)];
+  updateHud();
+}
+function openMap(){
+  AUDIO.nav();
+  if(dlgActive||evtActive||travelActive||combatActive) return;
+  const m=$('map');
+  if(m.classList.contains('on')){ closeMap(); return; }
+  currentMode='map';
+  m.classList.add('on');
+  m.onclick=(e)=>{ if(e.target===m) closeMap(); };
+  buildMap();
+}
+function closeMap(){
+  $('map').classList.remove('on');
+  if(!travelActive&&!combatActive&&S.started) currentMode='idle';
+}
+
+const TRAVEL={
+  active:false, sys:null, dur:0, t:0, eventsPending:1, eventsMax:2, paused:false, arrived:false, target:null
+};
+function travelCost(sys){ let c=sys.dist*10; if(S.items.engine) c=Math.max(4,Math.round(c*0.85)); return c; }
+function startTravel(sys){
+  const cost=travelCost(sys);
+  if(S.fuel<cost){
+    showNotice('НЕ ХВАТАЕТ ТОПЛИВА (нужно '+cost+')');
+    return;
+  }
+  AUDIO.nav();
+  S.fuel-=cost;
+  closeMap();
+  TRAVEL.active=true; TRAVEL.sys=sys; TRAVEL.dur=4+sys.dist*1.6; TRAVEL.t=0;
+  TRAVEL.eventsPending=1; TRAVEL.paused=false; TRAVEL.arrived=false; TRAVEL.eventsMax=(sys.dist>=3?2:1);
+  currentMode='travel';
+  $('travelHud').classList.add('on');
+  $('tDest').textContent='КУРС: '+sys.name;
+  $('tProgress').firstChild.style.width='0%';
+  $('hSys').textContent='ПЕРЕЛЁТ → '+sys.name;
+  setTravelScene(sys);
+  updateHud();
+}
+function setTravelScene(sys){
+  camera.position.set(0,1.2,13);
+  camera.lookAt(0,0.2,0);
+  ship.visible=true;
+  ship.position.set(0,-0.4,4.2);
+  ship.userData.engGlow.scale.set(3.2,3.2,1);
+  ship.userData.engGlow.material.opacity=1;
+  ship.userData.antTip.material.emissiveIntensity=2.2;
+  const st=findStation(); if(st) st.visible=false;
+}
+function setMapScene(){
+  ship.position.set(0,-0.4,4.2);
+  ship.userData.engGlow.scale.set(1.8,1.8,1);
+  ship.userData.engGlow.material.opacity=0.55;
+  const st=findStation(); if(st){ st.visible=true; st.position.set(26,6,-60); }
+}
+function showNotice(t){
+  const n=$('notice'); n.textContent=t; n.classList.add('on');
+  clearTimeout(n._t); n._t=setTimeout(()=>n.classList.remove('on'),2600);
+}
+
+let eventObj=null;
+function openEvent(ev){
+  if(evtActive) return;
+  evtActive=true; eventObj=ev;
+  $('eventBox').classList.add('on');
+  $('eventTitle').textContent=ev.title;
+  $('eventDesc').textContent=ev.text;
+  $('eventCrew').textContent=ev.crew;
+  const box=$('eventChoices'); box.innerHTML='';
+  ev.choices.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.className='evChoice';
+    b.innerHTML=c.label+(c.fx?'<span class="fx">'+c.fx+'</span>':'');
+    b.onclick=()=>chooseEvent(c);
+    box.appendChild(b);
+  });
+}
+function chooseEvent(c){
+  AUDIO.click();
+  $('eventBox').classList.remove('on');
+  evtActive=false; eventObj=null;
+  let ok=true;
+  if(c.use&&S.bonds[c.use]<1){
+    ok=false;
+    const nm=CREW.find(x=>x.id===c.use).name;
+    showNotice(nm+' ПОКА НЕ ДОСТАТОЧНО ДОВЕРЯЕТ (связь 1+)');
+  }
+  if(ok){
+    applyEffects(c.effects||{});
+    let resultText=null;
+    if(c.roll){
+      if(Math.random()<c.roll.bad){
+        applyEffects(c.roll.badFx||{});
+        resultText=c.bad||'Не повезло. Но экипаж рядом — летим дальше.';
+      } else {
+        resultText=c.good;
+      }
+    } else {
+      resultText=c.good;
+    }
+    if(resultText){
+      const m=/^([А-ЯЁA-Z]+):/.exec(resultText);
+      const who=m?(m[1].toLowerCase()):null;
+      const isCrew=CREW.some(c=>c.id===who);
+      playScript([{who:isCrew?who:'sys', text:resultText.replace(/^[А-ЯЁA-Z]+:\s*/,'')}], ()=>afterEvent());
+    } else afterEvent();
+  } else afterEvent();
+}
+function afterEvent(){
+  if(TRAVEL.active&&TRAVEL.paused) resumeTravel();
+}
+function applyEffects(e){
+  for(const k in e){
+    if(k==='bond_bip') S.bonds.bip=clamp(S.bonds.bip+e[k],0,S.maxBond);
+    else if(k==='bond_kip') S.bonds.kip=clamp(S.bonds.kip+e[k],0,S.maxBond);
+    else if(k==='bond_neron') S.bonds.neron=clamp(S.bonds.neron+e[k],0,S.maxBond);
+    else if(k==='bond_luma') S.bonds.luma=clamp(S.bonds.luma+e[k],0,S.maxBond);
+    else if(k==='item_engine') S.items.engine=true;
+    else if(k==='item_compass') S.items.compass=true;
+    else if(k==='crew_luma'){ S.lumaJoined=true; S.bonds.luma=0; }
+    else if(k==='fuel') S.fuel=clamp(S.fuel+e[k],0,120);
+    else if(k==='energy') S.energy=clamp(S.energy+e[k],0,100);
+    else if(k==='hull') S.hull=clamp(S.hull+e[k],0,S.hullMax);
+    else if(k==='scrap') S.scrap=clamp(S.scrap+e[k],0,999);
+  }
+  updateHud();
+}
+
+let dlgQ=[], dlgCb=null, dlgTyping=false, dlgTimer=null, dlgChoicesOpen=false;
+function playScript(nodesOrKey, done){
+  if(typeof nodesOrKey==='string'){ dlgQ=SCRIPT[nodesOrKey].slice(); }
+  else { dlgQ=nodesOrKey.slice(); }
+  dlgCb=done||null;
+  dlgActive=true;
+  $('dlg').classList.add('on');
+  $('dlgChoices').innerHTML='';
+  $('dlgNext').style.display='block';
+  renderDlg();
+}
+function renderDlg(){
+  if(dlgQ.length===0){ endDialogue(); return; }
+  const node=dlgQ.shift();
+  dlgChoicesOpen=false;
+  $('dlgChoices').innerHTML='';
+  if(node.choices){
+    $('dlgNext').style.display='none';
+    $('dlgName').textContent='ВЫБОР';
+    $('dlgRole').textContent='капитан ТЕ-7';
+    $('dlgAvatar').src=avatar('tec7');
+    $('dlgText').textContent=node.text||'Как поступим?';
+    const box=$('dlgChoices');
+    node.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='dlgChoice';
+      b.innerHTML=c.label+(c.fx?'<span class="fx">'+c.fx+'</span>':'');
+      b.onclick=()=>chooseDlg(c,node);
+      box.appendChild(b);
+    });
+    dlgChoicesOpen=true;
+    return;
+  }
+  const who=node.who||'bip';
+  if(who==='sys'){
+    $('dlgName').textContent='БОРТОВОЙ ЖУРНАЛ';
+    $('dlgRole').textContent='запись';
+    $('dlgAvatar').src=avatar('tec7');
+    typeText(node.text);
+    return;
+  }
+  const ci=CREW.find(x=>x.id===who);
+  $('dlgName').textContent=ci?ci.name:who.toUpperCase();
+  $('dlgRole').textContent=ci?ci.role:'неизвестный';
+  $('dlgAvatar').src=avatar(who);
+  typeText(node.text);
+}
+function typeText(text){
+  const el=$('dlgText'); el.innerHTML='';
+  const words=(text||'').split(' ');
+  let full=text||'';
+  let i=0;
+  clearInterval(dlgTimer);
+  $('dlgNext').style.display='none';
+  $('dlgChoices').innerHTML='';
+  dlgTyping=true;
+  const span=document.createElement('span');
+  const caret=document.createElement('span'); caret.className='caret'; caret.textContent='▌';
+  el.appendChild(span); el.appendChild(caret);
+  const step=()=>{
+    i+=1;
+    span.textContent=full.slice(0,i);
+    if(i%2===0) AUDIO.type();
+    if(i>=full.length){
+      clearInterval(dlgTimer);
+      dlgTyping=false;
+      caret.remove();
+      $('dlgNext').style.display='block';
+    }
+  };
+  dlgTimer=setInterval(step,14);
+}
+function dlgNext(){
+  if(!dlgActive) return;
+  AUDIO.click();
+  if(dlgTyping){ clearInterval(dlgTimer); const el=$('dlgText'); el.textContent=el.textContent.replace('▌',''); dlgTyping=false; $('dlgNext').style.display='block'; return; }
+  renderDlg();
+}
+function chooseDlg(c,node){
+  AUDIO.click();
+  applyEffects(c.effects||{});
+  if(c.goto){
+    $('dlg').classList.remove('on');
+    dlgActive=false;
+    if(c.goto==='combat_gate') startCombat();
+    return;
+  }
+  const cont=(c.next||[]).slice();
+  let aft=c.after;
+  if(aft&&!Array.isArray(aft)) aft=[aft];
+  if(aft){ for(let i=aft.length-1;i>=0;i--){ dlgQ.unshift(aft[i]); } }
+  for(let i=cont.length-1;i>=0;i--){ dlgQ.unshift(cont[i]); }
+  renderDlg();
+}
+function endDialogue(){
+  dlgActive=false;
+  clearInterval(dlgTimer);
+  $('dlg').classList.remove('on');
+  $('dlgChoices').innerHTML='';
+  if(dlgCb){ const cb=dlgCb; dlgCb=null; cb(); }
+}
+function runChapter(sysId){
+  const key='chapter_'+sysId;
+  playScript(key, ()=>{ onChapterDone(sysId); });
+}
+function onChapterDone(sysId){
+  if(sysId==='aurora'){ showEnding(); return; }
+  advanceProgress(sysId);
+}
+function advanceProgress(sysId){
+  const idx=SYSTEMS.findIndex(s=>s.id===sysId);
+  if(idx===S.progress){ S.progress=idx+1; }
+  $('hSys').textContent=(S.progress<SYSTEMS.length)?SYSTEMS[S.progress].name:'Аврора';
+  currentMode='idle';
+  setMapScene();
+  updateHud();
+  openMap();
+}
+
+const COMBAT={
+  active:false, wave:1, totalWaves:3, hull:100, hullMax:100,
+  dronesKilled:0, fireCd:0, neronCd:0, droneSpawnTimer:0, done:false
+};
+function startCombat(){
+  COMBAT.active=true; COMBAT.wave=1; COMBAT.hull=100; COMBAT.hullMax=100;
+  COMBAT.dronesKilled=0; COMBAT.fireCd=0; COMBAT.neronCd=0; COMBAT.droneSpawnTimer=0; COMBAT.done=false;
+  currentMode='combat';
+  $('combatHud').classList.add('on');
+  updateCombatHud();
+  camera.position.set(0,1.2,13);
+  camera.lookAt(0,0.2,-30);
+  ship.position.set(0,-0.4,4.2);
+  reticle.visible=true;
+  reticle.position.set(0,1,-10);
+  projectiles.length=0; enemies.length=0; enemySpawns.length=0;
+  spawnWave(COMBAT.wave);
+  ship.userData.engGlow.scale.set(3.2,3.2,1);
+  ship.userData.engGlow.material.opacity=1;
+  const st=findStation(); if(st) st.visible=false;
+  showNotice('СТАЯ ДОНГА АТАКУЕТ!');
+}
+function spawnWave(w){
+  const count=3+w;
+  for(let i=0;i<count;i++){
+    const e={x:rand(-9,9), y:rand(-3,6), z:rand(-70,-30), vx:rand(-0.4,0.4), vy:rand(-0.2,0.4), hp:1+((i%4===0)?1:0), sway:rand(0,6.28), swaySp:rand(0.5,1.2)};
+    e.mesh=buildDrone();
+    e.mesh.position.set(e.x,e.y,e.z);
+    scene.add(e.mesh);
+    enemies.push(e);
+  }
+  $('combatWave').textContent='ВОЛНА '+w+' / '+COMBAT.totalWaves+' — ДРОНОВ: '+count;
+}
+function buildDrone(){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,0),new THREE.MeshPhongMaterial({color:0xff5533,emissive:0x441100,emissiveIntensity:0.6}));
+  g.add(body);
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,8),new THREE.MeshPhongMaterial({color:0xffdd88,emissive:0xffaa22,emissiveIntensity:1.5}));
+  eye.position.z=-0.4; g.add(eye);
+  const spike=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.5,6),new THREE.MeshPhongMaterial({color:0x772211}));
+  spike.position.z=0.6; spike.rotation.x=Math.PI/2; g.add(spike);
+  const gl=glowSprite(0xff4422,1.4,0.7); g.add(gl);
+  return g;
+}
+function updateCombatHud(){
+  $('combatInfo').textContent='КОРПУС: '+Math.max(0,Math.round(COMBAT.hull))+'   |   УНИЧТОЖЕНО: '+COMBAT.dronesKilled;
+}
+function fireLaser(from,to,color){
+  const dir=new THREE.Vector3().subVectors(to,from).normalize();
+  const p=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.8,6),new THREE.MeshBasicMaterial({color:color||0x66ffcc}));
+  p.position.copy(from);
+  p.lookAt(to);
+  p.userData.dir=dir; p.userData.speed=60; p.userData.color=color||0x66ffcc;
+  scene.add(p);
+  projectiles.push(p);
+}
+function damageDrone(e,dmg){
+  e.hp-=dmg;
+  spawnBurst(e.mesh.position, e.mesh.material?0xff5522:0xffaa44);
+  if(e.hp<=0){
+    scene.remove(e.mesh);
+    enemies.splice(enemies.indexOf(e),1);
+    COMBAT.dronesKilled++;
+    AUDIO.boom();
+    spawnBurst(e.mesh.position,0xffaa44,14);
+  }
+}
+function spawnBurst(pos,color,n){
+  const pts=[];
+  for(let i=0;i<(n||8);i++){
+    const p={x:pos.x,y:pos.y,z:pos.z,vx:rand(-3,3),vy:rand(-3,3),vz:rand(-3,3),life:rand(0.4,0.9)};
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.07,5,5),new THREE.MeshBasicMaterial({color:color||0xffaa44,transparent:true,opacity:1}));
+    m.position.set(p.x,p.y,p.z);
+    scene.add(m);
+    p.mesh=m; p.t=0;
+    pts.push(p);
+  }
+  enemySpawns.push(...pts);
+}
+function combatLoop(dt){
+  const shipPos=new THREE.Vector3(ship.position.x,ship.position.y,ship.position.z);
+  for(const e of enemies){
+    e.t=e.t||0;
+    e.z+=9*dt;
+    e.sway+=e.swaySp*dt;
+    e.x+=e.vx*dt+Math.sin(e.sway)*1.2*dt;
+    e.y+=e.vy*dt+Math.cos(e.sway)*0.8*dt;
+    e.mesh.position.set(e.x,e.y,e.z);
+    e.mesh.rotation.y+=2*dt; e.mesh.rotation.x+=1*dt;
+    const gl=e.mesh.children.find(c=>c.isSprite);
+    if(gl) gl.material.opacity=0.4+0.5*Math.abs(Math.sin(e.sway));
+    if(dist2(e.mesh.position,shipPos)<2.2){
+      damageDrone(e,3);
+      COMBAT.hull-=12;
+      AUDIO.dmg();
+      flashDamage();
+      e.z=rand(-70,-50);
+      updateCombatHud();
+      if(COMBAT.hull<=0){ COMBAT.hull=0; updateCombatHud(); endCombat(false); return; }
+    }
+  }
+  COMBAT.fireCd-=dt; COMBAT.neronCd-=dt;
+  if(COMBAT.fireCd<=0&&enemies.length){
+    const target=nearestEnemy(shipPos);
+    if(target){ fireLaser(shipPos, target.mesh.position, 0x66ffcc); COMBAT.fireCd=0.32; AUDIO.laser(); }
+  }
+  if(COMBAT.neronCd<=0&&enemies.length&&S.bonds.neron>=0){
+    const target=nearestEnemy(shipPos);
+    if(target){ const off=new THREE.Vector3(target.x+rand(-1,1),target.y+rand(-1,1),target.z); fireLaser(shipPos,off,0xff4433); COMBAT.neronCd=0.9; }
+  }
+  for(let i=projectiles.length-1;i>=0;i--){
+    const p=projectiles[i];
+    p.position.addScaledVector(p.userData.dir,p.userData.speed*dt);
+    let hit=false;
+    for(const e of enemies){
+      if(dist2(p.position,e.mesh.position)<1.15){ damageDrone(e,1); hit=true; break; }
+    }
+    if(hit||p.position.z<-80||Math.abs(p.position.x)>30){
+      scene.remove(p); projectiles.splice(i,1);
+    }
+  }
+  for(let i=enemySpawns.length-1;i>=0;i--){
+    const p=enemySpawns[i]; p.t+=dt; p.life-=dt;
+    p.mesh.position.x+=p.vx*dt; p.mesh.position.y+=p.vy*dt; p.mesh.position.z+=p.vz*dt;
+    p.mesh.material.opacity=clamp(p.life*1.2,0,1);
+    if(p.life<=0){ scene.remove(p.mesh); enemySpawns.splice(i,1); }
+  }
+  const retCol=Math.sin(performance.now()/200)>0?0x3ff:0xff8;
+  reticle.material.color.setHex(retCol);
+  if(COMBAT.hull>0&&!COMBAT.done&&enemies.length===0&&COMBAT.wave<COMBAT.totalWaves){
+    COMBAT.wave++; spawnWave(COMBAT.wave); showNotice('ВОЛНА '+COMBAT.wave);
+  } else if(COMBAT.hull>0&&!COMBAT.done&&enemies.length===0&&COMBAT.wave>=COMBAT.totalWaves){
+    COMBAT.done=true; endCombat(true);
+  }
+}
+function nearestEnemy(from){
+  let best=null, bd=1e9;
+  for(const e of enemies){
+    const d=dist2(from,e.mesh.position);
+    if(d<bd){ bd=d; best=e; }
+  }
+  return best;
+}
+function flashDamage(){
+  const f=$('flash');
+  f.style.background='rgba(255,90,50,0.35)';
+  f.style.transition='none';
+  requestAnimationFrame(()=>{ f.style.transition='background 0.4s'; f.style.background='rgba(255,90,50,0)'; });
+}
+function endCombat(win){
+  reticle.visible=false;
+  $('combatHud').classList.remove('on');
+  COMBAT.active=false;
+  projectiles.forEach(p=>scene.remove(p)); projectiles.length=0;
+  enemies.forEach(e=>scene.remove(e.mesh)); enemies.length=0;
+  enemySpawns.forEach(p=>scene.remove(p.mesh)); enemySpawns.length=0;
+  if(win){
+    AUDIO.win();
+    S.scrap=clamp(S.scrap+40,0,999);
+    S.hull=clamp(S.hull+15,0,S.hullMax);
+    S.bonds.neron=clamp(S.bonds.neron+1,0,S.maxBond);
+    showNotice('ПОБЕДА! ЛОМ +40 · НЕРОН: связь +1');
+    playScript([
+      {who:'neron', text:'Стая ДОНГА отброшена. Я пересчитал: их осталось меньше. Значительно меньше. Так я говорю «спасибо».'},
+      {who:'bip', text:'Мы их прогнали! С моей навигацией и вашей стрельбой! Нам надо патент на это! «БИП и ТЕ-7: почтовые убийцы»!'},
+      {who:'kip', text:'Бойня, лом, дыры в корпусе. Обычный рабочий день курьера. Ладно, чиню.'},
+    ], ()=>finishGate());
+  } else {
+    showNotice('КОРПУС НА ПРЕДЕЛЕ. СБРАСЫВАЕМ ОБМАНКИ');
+    S.hull=clamp(S.hull-25,1,S.hullMax);
+    S.scrap=clamp(S.scrap-20,0,999);
+    playScript([
+      {who:'neron', text:'Мы оторвались. Ценой обманов и лома. Прости, капитан. В следующий раз — всех.'},
+      {who:'kip', text:'Ничего. Корпус починю. Гордость — тоже. Иронично: пираты забрали у нас лом, а мы — у них путь.'},
+    ], ()=>finishGate());
+  }
+}
+function finishGate(){
+  advanceProgress('gate');
+}
+
+function nearestEnemyForReticle(ndc){
+  const raycaster=new THREE.Raycaster();
+  raycaster.setFromCamera(ndc,camera);
+  const plane=new THREE.Plane(new THREE.Vector3(0,0,1),10);
+  const pt=new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane,pt);
+  if(pt) reticle.position.lerp(pt,0.6);
+}
+
+function travelLoop(dt){
+  if(!TRAVEL.paused){
+    TRAVEL.t+=dt;
+    const prog=clamp(TRAVEL.t/TRAVEL.dur,0,1);
+    $('tProgress').firstChild.style.width=(prog*100)+'%';
+    if(prog>=0.45&&TRAVEL.eventsPending>0&&!evtActive&&!dlgActive&&!TRAVEL.paused){
+      TRAVEL.eventsPending--;
+      TRAVEL.paused=true;
+      const ev=eventRoll();
+      setTimeout(()=>openEvent(ev),300);
+    }
+    if(prog>=1&&!TRAVEL.arrived){
+      TRAVEL.arrived=true;
+      finishTravel();
+    }
+  }
+}
+function resumeTravel(){ TRAVEL.paused=false; }
+function finishTravel(){
+  $('travelHud').classList.remove('on');
+  TRAVEL.active=false;
+  currentMode='arrive';
+  $('hSys').textContent=TRAVEL.sys.name;
+  S.fuel=clamp(S.fuel+15,0,120);
+  if(S.items.repairroi) S.hull=clamp(S.hull+5,0,S.hullMax);
+  updateHud();
+  showNotice('ПРИБЫТИЕ: '+TRAVEL.sys.name.toUpperCase()+' · ЗАПРАВКА +15');
+  setTimeout(()=>runChapter(TRAVEL.sys.id),700);
+}
+
+function updateStars(dt, speed){
+  const sp=(speed||0);
+  for(let i=0;i<starPos.length;i+=3){
+    starPos[i+2]+=sp*dt;
+    if(starPos[i+2]>6){ starPos[i+2]=rand(-420,-6); starPos[i]=rand(-160,160); starPos[i+1]=rand(-90,90); }
+  }
+  starsA.geometry.attributes.position.needsUpdate=true;
+  for(let i=0;i<starsB.geometry.attributes.position.count;i++){
+    const p=starsB.geometry.attributes.position;
+    p.array[i*3+2]+=sp*2.4*dt;
+    if(p.array[i*3+2]>6){ p.array[i*3+2]=rand(-420,-6); p.array[i*3]=rand(-160,160); p.array[i*3+1]=rand(-90,90); }
+    p.needsUpdate=true;
+  }
+  if(sp>0){
+    starsA.material.size=0.9+sp*0.004;
+    starsB.material.size=2.2+sp*0.008;
+  }
+}
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05);
+  const t=clock.elapsedTime;
+  const sp=currentMode==='travel'&&!TRAVEL.paused?55:(currentMode==='combat'?14:0);
+  updateStars(dt, sp);
+  ship.rotation.z=Math.sin(t*0.8)*0.02;
+  ship.rotation.y=Math.sin(t*0.5)*0.03;
+  ship.position.y=-0.4+Math.sin(t*1.2)*0.06;
+  if(currentMode==='travel'&&TRAVEL.active){
+    travelLoop(dt);
+  }
+  if(COMBAT.active){
+    combatLoop(dt);
+  } else {
+    const st=findStation(); if(st&&st.visible){ st.rotation.y+=dt*0.1; st.rotation.z+=dt*0.03; }
+  }
+  robotVisuals.forEach((r)=>{
+    const inCrew=(r.id!=='luma')||S.lumaJoined;
+    const show=(currentMode==='idle'||currentMode==='map'||currentMode==='arrive')&&inCrew;
+    r.mesh.visible=show;
+    if(show){
+      r.mesh.position.y=-1.3+Math.sin(t*1.1+r.phase)*0.13;
+      r.mesh.rotation.y=Math.sin(t*0.6+r.phase)*0.25;
+      const at=r.mesh.userData.antTip;
+      if(at) at.material.emissiveIntensity=1.2+Math.abs(Math.sin(t*3+r.phase))*1.2;
+    }
+  });
+  if(COMBAT.active) nearestEnemyForReticle(mouseNdc);
+  renderer.render(scene,camera);
+}
+
+function startGame(){
+  AUDIO.win();
+  $('startScreen').classList.remove('on');
+  S.started=true;
+  currentMode='idle';
+  $('hSys').textContent='Ангар-7';
+  setMapScene();
+  playScript('intro1', ()=>{
+    updateHud();
+    openMap();
+  });
+}
+function updateHud(){
+  $('fuelNum').textContent=Math.round(S.fuel);
+  $('hullNum').textContent=Math.round(S.hull);
+  $('enNum').textContent=Math.round(S.energy);
+  $('hScrap').textContent=Math.round(S.scrap);
+  $('hBond').textContent=totalBond()+'/'+(CREW.length*S.maxBond);
+  $('hFuel').firstChild.style.width=clamp(S.fuel,0,120)/120*100+'%';
+  $('hHull').firstChild.style.width=clamp(S.hull/S.hullMax*100,0,100)+'%';
+  $('hEn').firstChild.style.width=clamp(S.energy,0,100)+'%';
+}
+function refuel(){
+  if(S.scrap<10){ showNotice('НУЖНО 10 ЛОМА'); return; }
+  AUDIO.click();
+  S.scrap-=10; S.fuel=clamp(S.fuel+20,0,120);
+  showNotice('АВАРИЙНЫЙ РЕЗЕРВ: ТОПЛИВО +20 (лом −10)');
+  updateHud();
+}
+function toggleMute(){
+  AUDIO.mute(!AUDIO.on);
+  $('muteBtn').textContent='ЗВУК: '+(AUDIO.on?'ВКЛ':'ВЫКЛ');
+}
+
+function crewOrder(){ return CREW.filter(c=>c.id!=='luma'||S.lumaJoined); }
+function openCrewPanel(){
+  if(travelActive||combatActive) return;
+  AUDIO.click();
+  const p=$('crewPanel');
+  p.classList.toggle('on');
+  if(p.classList.contains('on')) buildCrewCards();
+}
+function buildCrewCards(){
+  const box=$('crewCards'); box.innerHTML='';
+  crewOrder().forEach(c=>{
+    const d=document.createElement('div');
+    d.className='crewCard';
+    d.innerHTML='<img class="av" src="'+avatar(c.id)+'"><div><div class="nm" style="color:'+new THREE.Color(c.color).getStyle()+'">'+c.name+'</div><div class="rl">'+c.role+'</div><div class="bonds">'+('●'.repeat(S.bonds[c.id]))+('○'.repeat(S.maxBond-S.bonds[c.id]))+'</div></div>';
+    d.onclick=()=>openCrewDetail(c.id);
+    box.appendChild(d);
+  });
+}
+function openCrewDetail(id){
+  AUDIO.click();
+  const c=CREW.find(x=>x.id===id);
+  $('cdAvatar').src=avatar(id);
+  $('cdName').textContent=c.name;
+  $('cdRole').textContent=c.role+' · связь '+(S.bonds[id])+'/'+S.maxBond;
+  $('cdDesc').textContent='Умение: '+c.abl;
+  const st=$('cdStory'); st.innerHTML='';
+  const frags=getFragments(id);
+  frags.forEach((f,i)=>{
+    const d=document.createElement('div');
+    d.className='frag'+(i<S.bonds[id]?'':' locked');
+    d.textContent=(i<S.bonds[id]?'':'[ЗАБЛОКИРОВАНО] ')+f;
+    st.appendChild(d);
+  });
+  $('crewDetail')._id=id;
+  $('crewDetail').classList.add('on');
+}
+function closeCrewDetail(){ $('crewDetail').classList.remove('on'); }
+function crewTalk(){
+  const id=$('crewDetail')._id;
+  const lvl=S.bonds[id];
+  const key='crew'+lvl+'_'+id;
+  if(SCRIPT[key]){
+    closeCrewDetail();
+    $('crewPanel').classList.remove('on');
+    playScript(key, ()=>{ S.bonds[id]=clamp(S.bonds[id]+1,0,S.maxBond); updateHud(); buildCrewCards(); });
+  } else {
+    showNotice(cname(id)+' УЖЕ РАССКАЗАЛ(А) ВСЁ');
+  }
+}
+function cname(id){ const c=CREW.find(x=>x.id===id); return c?c.name:id.toUpperCase(); }
+const SHOP=[
+  {id:'armor', name:'БРОНЕПЛИТЫ', cost:25, desc:'Максимум корпуса +20. Выдержит ещё пару пиратских «приветов».'},
+  {id:'repairroi', name:'РЕМОНТНЫЙ РОЙ', cost:20, desc:'Микро-дроны КИПа латают корпус: +5 прочности после каждого перелёта.'},
+  {id:'navdrone', name:'ДРОН-ШТУРМАН', cost:15, desc:'БИП собрал помощника: +1 к удаче — ловушки срабатывают реже.'},
+];
+function openShop(){
+  if(travelActive||combatActive) return;
+  AUDIO.click();
+  const p=$('shopPanel');
+  p.classList.toggle('on');
+  if(p.classList.contains('on')) buildShop();
+}
+function closeShop(){ $('shopPanel').classList.remove('on'); }
+function buildShop(){
+  const box=$('shopItems'); box.innerHTML='';
+  SHOP.forEach(it=>{
+    const bought=S.items[it.id];
+    const d=document.createElement('div');
+    d.className='shopCard'+(bought?' sold':'');
+    d.innerHTML='<div class="nm">'+it.name+'</div><div class="ds">'+it.desc+'</div><div class="pr">'+(bought?'УСТАНОВЛЕНО':'цена: '+it.cost+' лома')+'</div>';
+    if(!bought){
+      const b=document.createElement('button');
+      b.className='gbtn';
+      b.style.cssText='width:100%;margin-top:6px;';
+      b.textContent='КУПИТЬ';
+      b.onclick=()=>buyModule(it.id);
+      d.appendChild(b);
+    }
+    box.appendChild(d);
+  });
+}
+function buyModule(id){
+  const it=SHOP.find(x=>x.id===id);
+  if(S.items[id]) return;
+  if(S.scrap<it.cost){ showNotice('НУЖНО '+it.cost+' ЛОМА'); return; }
+  AUDIO.click();
+  S.scrap-=it.cost;
+  S.items[id]=true;
+  if(id==='armor'){ S.hullMax+=20; S.hull=clamp(S.hull+20,0,S.hullMax); }
+  showNotice(it.name+' УСТАНОВЛЕН');
+  updateHud();
+  buildShop();
+}
+
+function getFragments(id){
+  const map={
+    bip:['Собран на заводе «Меридиан» для картографии метеорных потоков.','Мечтает увидеть комету Квинт — голубую стрелу столетия.','Считает экипаж семьёй, а улыбку — антенной связи с миром.'],
+    kip:['Служил на заводе «№87», где его ворчание стало легендой.','Берёг гаечный ключ от механика Петра.','Втайне гордится каждым, кого его руки довезли.'],
+    neron:['Память очищена операцией «Тишина».','Дрейфовал один, пока не встретил капитана.','Протокол для него — не правило, а выбор.'],
+    luma:['Помнит времена Первых Роботов и Великую Тишину.','Спрятала архив в кристаллах станции «ЛИС».','Ищет того, кто станет её хранителем памяти.'],
+  };
+  return map[id]||[];
+}
+
+function showEnding(){
+  AUDIO.win();
+  $('endScreen').classList.add('on');
+  const bond=totalBond();
+  $('endTitle').textContent='АВРОРА';
+  if(bond>=7){
+    $('endNote').textContent='ЭКИПАЖ ТЕ-7 ПРИЗНАН ЛУЧШИМ КУРЬЕРСКИМ ПОДРАЗДЕЛЕНИЕМ СЕКТОРА';
+    $('endEp').textContent='Ты не просто донёс груз. Ты донёс их: БИПа, который увидит комету Квинт; КИПа, который наконец-то признает, что любит свою работу; НЕРОНа, который выбрал свою цель; ЛУМУ, которая нашла хранителя памяти. На Авроре вас встречали овацией. А в ангарах Ангара-7 до сих пор рассказывают, как робот-курьер привёз планете не груз, а экипаж.';
+  } else if(bond>=4){
+    $('endNote').textContent='ГРУЗ ДОСТАВЛЕН · ЭКИПАЖ В ЦЕЛОСТИ';
+    $('endEp').textContent='Груз принят, контракт закрыт, премия выплачена. Ты мало разговаривал со своими ботами по пути — но они всё равно были рядом: БИП вёл курс, КИП чинил всё, что могло сломаться, НЕРОН охранял, ЛУМА хранила память. Аврора встретила вас тёплым рассветом. Впереди — новый контракт. И, может быть, на этот раз ты расскажешь им всё.';
+  } else {
+    $('endNote').textContent='ГРУЗ ДОСТАВЛЕН';
+    $('endEp').textContent='Ты дошёл до Авроры. Груз сдан. Экипаж — цел. Но вы так и не стали ближе: разговоры были короткими, а истории нерассказанными. БИП всё ещё ждёт, когда его спросят про комету. КИП — когда оценят. НЕРОН — когда поверят. ЛУМА — когда выслушают. Аврора красива. Но тишина в ангаре после высадки — звенит.';
+  }
+}
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+addEventListener('mousemove',(e)=>{
+  mouseNdc.x=(e.clientX/innerWidth)*2-1;
+  mouseNdc.y=-(e.clientY/innerHeight)*2+1;
+});
+addEventListener('pointerdown',(e)=>{
+  if(COMBAT.active){
+    AUDIO.laser();
+  }
+});
+
+function boot(){
+  initScene();
+  setMapScene();
+  $('startScreen').classList.add('on');
+  currentMode='boot';
+  animate();
+}
+boot();
+</script>
+</body>
+</html>

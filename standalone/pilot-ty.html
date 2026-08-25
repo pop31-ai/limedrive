@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>フィンテイル — 第一幕</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Noto+Serif+JP:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  background:#2d2d3f;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:40px 20px;
+  font-family:'Noto Serif JP',serif;
+}
+
+.book{
+  max-width:148mm;
+  width:100%;
+  background:#faf8f0;
+  box-shadow:0 10px 60px rgba(0,0,0,.6),0 0 0 1px rgba(0,0,0,.1);
+  border-radius:4px;
+  padding:0;
+  position:relative;
+}
+
+/* --- SPINE STRIPE --- */
+.book::before{
+  content:'';
+  position:absolute;
+  left:12px;top:0;bottom:0;
+  width:1px;
+  background:rgba(0,0,0,.06);
+}
+
+/* --- PAGE LAYOUT --- */
+.page{
+  padding:45px 35px 40px 40px;
+  min-height:210mm;
+  position:relative;
+  page-break-after:always;
+  border-bottom:1px solid rgba(0,0,0,.04);
+}
+.page:last-child{border-bottom:none}
+
+/* --- TITLE PAGE --- */
+.title-page{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  min-height:210mm;
+  background:linear-gradient(180deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  color:#fff;
+  padding:40px 30px;
+}
+.title-page .deco{font-size:40px;letter-spacing:20px;color:#ffd32a;margin-bottom:10px;opacity:.6}
+.title-page h1{font-family:'Noto Serif JP',serif;font-size:42px;letter-spacing:8px;margin-bottom:8px;text-shadow:2px 2px 0 rgba(0,0,0,.3)}
+.title-page .sub{font-size:16px;color:#0abde3;letter-spacing:6px;margin-bottom:30px}
+.title-page .byline{font-size:12px;color:rgba(255,255,255,.4);letter-spacing:2px;margin-top:40px}
+.title-page .vol{display:inline-block;border:2px solid #ffd32a;color:#ffd32a;padding:6px 24px;font-size:14px;letter-spacing:4px;margin-bottom:15px}
+
+/* --- CHAPTER HEADER --- */
+.chapter-header{
+  text-align:center;
+  margin:20px 0 25px;
+  padding-bottom:15px;
+  border-bottom:2px solid #1a1a2e;
+}
+.chapter-header .num{font-size:12px;color:#0abde3;letter-spacing:4px}
+.chapter-header h2{font-size:22px;letter-spacing:4px;margin-top:4px}
+.chapter-header .subtitle{font-size:12px;color:#888;letter-spacing:2px;margin-top:2px}
+
+/* --- BODY TEXT --- */
+.body-text{font-size:11px;line-height:2;color:#333;text-align:justify;margin-bottom:15px}
+.body-text .drop{font-size:28px;float:left;line-height:1;margin-right:6px;margin-top:4px;color:#0abde3;font-weight:700}
+
+/* --- ILLUSTRATION --- */
+.illus{
+  margin:20px auto;
+  text-align:center;
+  max-width:260px;
+}
+.illus svg{width:100%;height:auto;display:block}
+.illus .cap{font-size:9px;color:#999;letter-spacing:2px;margin-top:4px}
+
+/* --- TWO-COLUMN SPREAD --- */
+.spread{display:grid;grid-template-columns:1fr 1fr;gap:25px}
+.spread .col{}
+
+/* --- CHARACTER CARD IN BOOK STYLE --- */
+.char-book{
+  background:#fff;
+  border:1px solid #eee;
+  padding:15px;
+  margin-bottom:15px;
+  display:grid;
+  grid-template-columns:80px 1fr;
+  gap:12px;
+  align-items:center;
+}
+.char-book svg{width:100%;height:auto;max-height:100px}
+.char-book .info h4{font-size:13px;letter-spacing:2px}
+.char-book .info .role{font-size:9px;color:#0abde3;letter-spacing:2px}
+.char-book .info p{font-size:9px;color:#666;line-height:1.6;margin-top:3px}
+
+/* --- PAGE NUMBER --- */
+.page-num{
+  position:absolute;
+  bottom:12px;
+  right:30px;
+  font-size:10px;
+  color:#bbb;
+  letter-spacing:1px;
+}
+
+/* --- COLOPHON --- */
+.colophon{
+  text-align:center;
+  font-size:9px;
+  color:#999;
+  line-height:2;
+  padding:30px 0 10px;
+}
+
+@media print{
+  body{background:none;padding:0}
+  .book{max-width:100%;box-shadow:none;border-radius:0}
+  .page{page-break-after:always;border-bottom:none}
+}
+@media(max-width:500px){
+  .page{padding:30px 18px 30px 20px}
+  .spread{grid-template-columns:1fr}
+  .title-page h1{font-size:30px}
+  .char-book{grid-template-columns:60px 1fr}
+}
+</style>
+</head>
+<body>
+<div class="book">
+
+  <!-- TITLE PAGE -->
+  <div class="page title-page">
+    <div class="deco">〜〜〜</div>
+    <div class="vol">第一幕</div>
+    <h1>フィンテイル</h1>
+    <div class="sub">— アクアニメ文庫 —</div>
+    <div style="margin:30px 0;max-width:180px">
+      <svg viewBox="0 0 100 100" style="width:100%">
+        <path d="M20 80 Q10 60 15 45 Q10 35 18 25 Q25 18 35 20 L40 15 Q45 10 50 12 Q55 10 60 15 L65 20 Q75 18 82 25 Q90 35 85 45 Q90 60 80 80 L70 85 L65 75 Q60 80 55 80 Q50 82 45 80 Q40 80 35 75 L30 85 Z" fill="#ffd32a" opacity=".8"/>
+        <path d="M65 40 L78 35 L73 48 Z" fill="#fff" opacity=".4"/>
+        <path d="M35 40 L22 35 L27 48 Z" fill="#fff" opacity=".4"/>
+        <circle cx="50" cy="28" r="5" fill="#fff" opacity=".6"/>
+      </svg>
+    </div>
+    <div class="byline">著 / アクアニメ編集部　イラスト / シルエット・スタジオ</div>
+  </div>
+
+  <!-- PAGE 2: PROLOGUE -->
+  <div class="page">
+    <div class="chapter-header">
+      <div class="num">— 序章 —</div>
+      <h2>プロローグ</h2>
+      <div class="subtitle">PROLOGUE</div>
+    </div>
+    <p class="body-text"><span class="drop">深</span>海の底、光も届かぬ暗闇の中で、一匹の魚が目を覚ました。名前はサーモンブレード。彼の背中には、一振りの刀が静かに輝いている。</p>
+    <p class="body-text">「俺は…誰だ？」記憶はない。ただ、流れに逆らって泳ぐ使命だけが胸の奥で燃えていた。</p>
+    <div class="illus">
+      <svg viewBox="0 0 160 100">
+        <path d="M40 85 Q30 70 35 58 Q28 48 33 38 Q38 28 48 26 L52 20 Q55 14 60 12 Q65 10 68 16 L73 22 Q78 26 82 34 Q86 44 80 52 Q84 62 78 72 Q76 85 70 88 L62 85 L58 72 L52 70 L48 72 L44 85 Z" fill="#1a1a2e"/>
+        <path d="M68 48 L82 42 L79 54 Z" fill="#1a1a2e"/>
+        <path d="M52 48 L38 42 L41 54 Z" fill="#1a1a2e"/>
+        <circle cx="60" cy="32" r="4" fill="#ffd32a" opacity=".6"/>
+        <path d="M20 90 Q80 70 140 90" stroke="#0abde3" stroke-width="1" fill="none" opacity=".3"/>
+        <circle cx="30" cy="20" r="1.5" fill="#fff" opacity=".2"/>
+        <circle cx="120" cy="30" r="1" fill="#fff" opacity=".2"/>
+        <circle cx="100" cy="15" r="1.5" fill="#fff" opacity=".2"/>
+        <circle cx="145" cy="60" r="1" fill="#fff" opacity=".2"/>
+      </svg>
+      <div class="cap">▲ 深海にて — サーモンブレード、覚醒</div>
+    </div>
+    <p class="body-text">流れのままに泳ぐこと三千里。彼が出会ったのは、黄金に輝く一匹の金魚だった。名はゴールディ。空気をまとい、海面すらも軽々と越える不思議な力を持つ。</p>
+    <p class="body-text">「ねえ、あんた、人間になる方法知らない？」ゴールディはそう言って、無邪気に笑った。</p>
+    <div class="page-num">2</div>
+  </div>
+
+  <!-- PAGE 3: MEETING -->
+  <div class="page">
+    <div class="chapter-header">
+      <div class="num">— 第一話 —</div>
+      <h2>邂逅</h2>
+      <div class="subtitle">ENCOUNTER</div>
+    </div>
+    <div class="spread">
+      <div class="col">
+        <p class="body-text">サーモンブレードとゴールディは、珊瑚の森で暮らす老賢者・マスターフィンのもとを訪れた。ひげを長く伸ばしたタイの老人は、静かに目を閉じたまま言った。</p>
+        <p class="body-text">「お前たちには、『フィンテイル』という運命が刻まれている。この世界の果てにある《アクアエンド》を目指せ。そこに全ての答えがある。」</p>
+        <p class="body-text">しかし、その言葉を闇から聞く者がいた。鮫の海賊・シャークロウ。彼の眼差しは既に、黄金の輝きを狙っていた。</p>
+      </div>
+      <div class="col">
+        <div class="illus" style="margin-top:0">
+          <svg viewBox="0 0 130 120">
+            <path d="M35 100 Q28 80 32 68 Q25 58 30 48 Q35 38 45 36 L48 30 Q50 24 55 22 Q60 20 63 26 L68 32 Q72 36 76 44 Q80 54 74 62 Q78 72 72 82 Q70 96 64 100 L58 96 L54 84 L48 82 L44 84 L40 96 Z" fill="#1a1a2e"/>
+            <path d="M40 60 Q48 55 55 60 Q48 63 40 60 Z" fill="#fff" opacity=".4"/>
+            <ellipse cx="48" cy="50" rx="3" ry="4" fill="#ffd32a" opacity=".5"/>
+            <ellipse cx="62" cy="50" rx="3" ry="4" fill="#ffd32a" opacity=".5"/>
+            <path d="M48 68 Q55 74 62 68 Z" fill="#fff" opacity=".3"/>
+            <!-- goldie effects -->
+            <circle cx="80" cy="40" r="8" fill="#ffd32a" opacity=".15"/>
+            <circle cx="85" cy="35" r="4" fill="#ffd32a" opacity=".1"/>
+            <circle cx="75" cy="45" r="5" fill="#ffd32a" opacity=".12"/>
+          </svg>
+          <div class="cap">▲ ゴールディ、光をまとう</div>
+        </div>
+      </div>
+    </div>
+    <p class="body-text">その夜、一行の宿営に影が忍び寄る。ピピン — 小さなクラゲのような生き物が、不安そうにサーモンブレードの袖を引いた。「し、しゃちょー… なんか来てる…」</p>
+    <div class="page-num">3</div>
+  </div>
+
+  <!-- PAGE 4: CHARACTER PROFILES -->
+  <div class="page">
+    <div class="chapter-header">
+      <div class="num">— 登場人物 —</div>
+      <h2>キャラクター紹介</h2>
+      <div class="subtitle">CHARACTER PROFILES</div>
+    </div>
+
+    <div class="char-book">
+      <svg viewBox="0 0 80 100">
+        <path d="M25 88 Q18 72 22 60 Q16 50 20 40 Q24 30 32 28 L36 22 Q38 14 42 12 Q46 10 48 16 L52 22 Q56 26 60 32 Q64 40 58 48 Q62 56 56 64 Q54 78 50 88 L44 86 L42 74 L38 72 L36 74 L32 86 Z" fill="#1a1a2e"/>
+        <path d="M52 44 L62 40 L60 50 Z" fill="#1a1a2e"/>
+        <path d="M28 44 L18 40 L20 50 Z" fill="#1a1a2e"/>
+        <circle cx="42" cy="30" r="4" fill="#ffd32a" opacity=".6"/>
+      </svg>
+      <div class="info">
+        <h4>サーモンブレード</h4>
+        <div class="role">主人公 / 流浪の魚剣士</div>
+        <p>記憶を失ったサケの青年。背に刀を背負い、流れに逆らって泳ぐ。無口だが義理堅い。好物はプランクトン。</p>
+      </div>
+    </div>
+
+    <div class="char-book">
+      <svg viewBox="0 0 80 100">
+        <path d="M30 88 Q25 70 28 60 Q22 52 26 42 Q30 32 38 30 L40 24 Q42 18 46 16 Q50 14 52 18 L55 24 Q58 28 60 34 Q62 42 58 48 Q60 56 56 62 Q54 76 52 88 L46 88 L44 76 L40 76 L38 88 Z" fill="#1a1a2e"/>
+        <circle cx="46" cy="30" r="7" fill="#ffd32a" opacity=".4"/>
+        <path d="M38 34 Q46 28 54 34 Q48 36 46 34 Q44 36 38 34 Z" fill="#ffd32a" opacity=".5"/>
+      </svg>
+      <div class="info">
+        <h4>ゴールディ</h4>
+        <div class="role">ヒロイン / 金魚の魔法少女</div>
+        <p>黄金に輝く金魚。人間に憧れる天真爛漫な性格。「〜っス」が口癖。魔法の泡であらゆるものを包み込む。</p>
+      </div>
+    </div>
+
+    <div class="char-book">
+      <svg viewBox="0 0 80 100">
+        <path d="M22 88 Q18 74 24 62 Q20 54 26 46 Q32 38 40 36 L44 32 Q48 30 52 34 Q56 38 58 44 Q60 50 56 58 Q62 68 60 80 Q58 86 54 88 L48 86 L46 76 L42 74 L38 76 L36 86 Z" fill="#1a1a2e"/>
+        <ellipse cx="44" cy="40" rx="4" ry="6" fill="#ffd32a" opacity=".5"/>
+        <path d="M58 50 L72 48 L68 56 Z" fill="#1a1a2e"/>
+      </svg>
+      <div class="info">
+        <h4>マスターフィン</h4>
+        <div class="role">師匠 / 深海の賢者</div>
+        <p>珊瑚の森に住む老タイ。数百年の知識を持ち、フィンテイルの運命を知る唯一の存在。よく居眠りする。</p>
+      </div>
+    </div>
+
+    <div class="char-book">
+      <svg viewBox="0 0 80 100">
+        <path d="M30 88 Q28 76 32 68 Q28 60 32 52 Q36 46 42 44 L44 40 Q46 36 48 36 Q50 36 52 40 L54 44 Q60 46 64 52 Q68 60 64 68 Q68 76 66 88 L60 90 L58 80 L52 78 L48 86 L44 78 L40 80 L36 90 Z" fill="#1a1a2e"/>
+        <circle cx="44" cy="48" r="2.5" fill="#ffd32a" opacity=".6"/>
+        <circle cx="52" cy="48" r="2.5" fill="#ffd32a" opacity=".6"/>
+        <path d="M56 52 Q60 54 62 52 Q60 56 56 55 Z" fill="#fff" opacity=".3"/>
+      </svg>
+      <div class="info">
+        <h4>ピピン</h4>
+        <div class="role">マスコット / ぷにぷに仲間</div>
+        <p>正体不明の小型クラゲ生命体。「しゃちょー」と呼んでサーモンブレードに懐く。震えると危険を知らせる。</p>
+      </div>
+    </div>
+
+    <div class="char-book">
+      <svg viewBox="0 0 80 100">
+        <path d="M22 88 Q16 68 20 54 Q14 40 20 32 Q28 24 36 22 L40 16 Q42 10 46 8 Q50 6 52 12 L56 18 Q60 22 66 28 Q72 36 66 46 Q70 56 64 68 Q62 80 56 88 L50 86 L48 76 L44 74 L40 76 L38 86 Z" fill="#1a1a2e"/>
+        <path d="M62 36 L74 32 L72 42 Z" fill="#1a1a2e"/>
+        <path d="M18 36 L6 32 L8 42 Z" fill="#1a1a2e"/>
+        <circle cx="46" cy="26" r="3" fill="#ffd32a" opacity=".5"/>
+        <circle cx="38" cy="30" r="2" fill="#ffd32a" opacity=".4"/>
+        <circle cx="54" cy="30" r="2" fill="#ffd32a" opacity=".4"/>
+      </svg>
+      <div class="info">
+        <h4>シャークロウ</h4>
+        <div class="role">ヴィラン / 暗黒の海賊</div>
+        <p>七つの海を支配せんとする鮫の海賊。黄金の輝きを喰らい、力を増す。笑い声は「ガハハ」。手下にエイの暗殺者。</p>
+      </div>
+    </div>
+
+    <div class="page-num">4</div>
+  </div>
+
+  <!-- PAGE 5: NEXT EPISODE -->
+  <div class="page">
+    <div class="chapter-header">
+      <div class="num">— 次号予告 —</div>
+      <h2>第二幕へ</h2>
+      <div class="subtitle">NEXT EPISODE</div>
+    </div>
+
+    <p class="body-text">シャークロウの追撃をかわし、一行はようやく《アクアエンド》への手がかりを掴む。次号「潮流の彼方」では、新たな仲間・マンタの忍者が登場。そして明かされるサーモンブレードの過去——</p>
+
+    <div class="illus">
+      <svg viewBox="0 0 160 70">
+        <path d="M50 55 Q45 42 50 32 Q46 24 52 18 Q58 14 64 18 Q68 14 74 18 Q80 24 76 32 Q81 42 76 55 Q72 58 68 55 Q64 60 60 55 Q56 58 52 55 Q48 58 44 55 Z" fill="#1a1a2e" opacity=".6"/>
+        <path d="M30 60 L70 30 L110 60" stroke="#ffd32a" stroke-width="1" fill="none" opacity=".4"/>
+        <circle cx="90" cy="20" r="3" fill="#0abde3" opacity=".5"/>
+        <circle cx="110" cy="35" r="2" fill="#0abde3" opacity=".4"/>
+        <circle cx="30" cy="25" r="2" fill="#0abde3" opacity=".4"/>
+      </svg>
+      <div class="cap">▲ 次号予告イラスト</div>
+    </div>
+
+    <p class="body-text" style="text-align:center;margin-top:25px;color:#888;font-size:11px">アクアニメ文庫「フィンテイル」第一幕　ここまで。</p>
+    <p class="body-text" style="text-align:center;color:#bbb;font-size:10px">続きは第二幕でお楽しみください。</p>
+
+    <div class="colophon">
+      アクアニメ文庫 001<br>
+      発行 / アクアニメ編集部<br>
+      装画 / シルエット・スタジオ<br>
+      本文デザイン / Pilot Edition<br>
+      © AQUANIME / FINTAIL PROJECT
+    </div>
+
+    <div class="page-num">5</div>
+  </div>
+
+</div>
+</body>
+</html>

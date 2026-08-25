@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Осколки Памяти</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap');
+
+body {
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'Comfortaa', 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+#game {
+  position: relative;
+  width: 900px;
+  height: 640px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(100, 100, 255, 0.3);
+}
+
+#bgCanvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  transition: opacity 0.8s;
+}
+
+#charCanvas {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 350px;
+  height: 400px;
+  image-rendering: auto;
+  transition: opacity 0.5s;
+}
+
+#dialogBox {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-height: 140px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  border-top: 2px solid rgba(255, 255, 255, 0.15);
+  padding: 20px 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+#charName {
+  color: #ffd700;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+#dialogText {
+  color: #f0eef6;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 60px;
+}
+
+#dialogText .typing-cursor {
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+#choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.choice-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 25px;
+  padding: 8px 20px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.choice-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: #ffd700;
+  transform: scale(1.05);
+}
+
+#nextBtn {
+  position: absolute;
+  right: 25px;
+  bottom: 25px;
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#nextBtn:hover {
+  background: rgba(255, 215, 0, 0.3);
+  transform: scale(1.1);
+}
+
+/* Title screen */
+#titleScreen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  z-index: 10;
+}
+
+#titleScreen h1 {
+  font-size: 52px;
+  color: #ffd700;
+  text-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+  margin-bottom: 10px;
+  letter-spacing: 4px;
+}
+
+#titleScreen .subtitle {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 50px;
+  letter-spacing: 6px;
+}
+
+#startBtn {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 30px;
+  padding: 14px 50px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+#startBtn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+}
+
+#chapterTitle {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  transition: opacity 0.8s;
+}
+
+#chapterTitle.show {
+  opacity: 1;
+}
+
+/* particles on title */
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 215, 0, 0.6);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: float linear infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
+}
+
+#memoryCounter {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  z-index: 3;
+  text-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+@media (max-width: 920px) {
+  #game { width: 100vw; height: 100vh; border-radius: 0; }
+  #charCanvas { width: 280px; height: 340px; bottom: 130px; }
+  #titleScreen h1 { font-size: 36px; }
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+  <canvas id="bgCanvas"></canvas>
+  <canvas id="charCanvas"></canvas>
+  <div id="chapterTitle"></div>
+  <div id="memoryCounter"></div>
+  <div id="dialogBox">
+    <div id="charName"></div>
+    <div id="dialogText"></div>
+    <div id="choices"></div>
+    <button id="nextBtn">&#9654;</button>
+  </div>
+  <div id="titleScreen">
+    <h1>ОСКОЛКИ ПАМЯТИ</h1>
+    <div class="subtitle">～ воспоминания из другого мира ～</div>
+    <button id="startBtn">Начать игру</button>
+  </div>
+</div>
+
+<script>
+// ========== CHARACTER DEFINITIONS ==========
+const CHARS = {
+  hana: {
+    name: 'Хана',
+    hair: '#8B6F47',
+    hairLight: '#A88B5E',
+    eyeColor: '#4A90D9',
+    skin: '#FDE8D0',
+    blush: '#FFB6C1',
+    outfit: '#F0F0FF',
+    hairStyle: 'long',
+    access: 'ribbon'
+  },
+  yuki: {
+    name: 'Юки',
+    hair: '#C0C0D0',
+    hairLight: '#E0E0F0',
+    eyeColor: '#9B59B6',
+    skin: '#FCE8D8',
+    blush: '#FFB6C1',
+    outfit: '#4A6FA5',
+    hairStyle: 'medium',
+    access: null
+  },
+  akira: {
+    name: 'Акира',
+    hair: '#2C2C3A',
+    hairLight: '#4A4A5A',
+    eyeColor: '#2ECC71',
+    skin: '#F0E0D0',
+    blush: '#E8B4B4',
+    outfit: '#FFFFFF',
+    hairStyle: 'short',
+    access: 'glasses'
+  },
+  miko: {
+    name: 'Мико',
+    hair: '#E87A3A',
+    hairLight: '#F5A060',
+    eyeColor: '#27AE60',
+    skin: '#FDE8D0',
+    blush: '#FFB6C1',
+    outfit: '#E87A3A',
+    hairStyle: 'twintails',
+    access: 'bow'
+  }
+};
+
+const EXPRESSIONS = ['neutral', 'happy', 'sad', 'surprised', 'angry', 'worried'];
+
+// ========== PORTRAIT DRAWING ==========
+function drawPortrait(canvas, charId, expression, flip) {
+  const c = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  c.clearRect(0, 0, w, h);
+
+  const ch = CHARS[charId];
+  if (!ch) return;
+
+  const cx = w / 2;
+  const bodyY = h * 0.72;
+  const faceR = 88;
+  const faceY = h * 0.40;
+
+  // ----- BODY / SHOULDERS -----
+  c.save();
+  // Body
+  c.beginPath();
+  c.moveTo(cx - 90, bodyY + 80);
+  c.quadraticCurveTo(cx - 100, bodyY + 20, cx - 55, bodyY - 10);
+  c.quadraticCurveTo(cx, bodyY + 10, cx + 55, bodyY - 10);
+  c.quadraticCurveTo(cx + 100, bodyY + 20, cx + 90, bodyY + 80);
+  c.closePath();
+  c.fillStyle = ch.outfit;
+  c.fill();
+  c.strokeStyle = 'rgba(0,0,0,0.1)';
+  c.lineWidth = 1;
+  c.stroke();
+
+  // Collar / neck
+  c.fillStyle = ch.skin;
+  c.beginPath();
+  c.rect(cx - 14, bodyY - 25, 28, 40);
+  c.fill();
+  c.restore();
+
+  // ----- NECK -----
+  c.fillStyle = ch.skin;
+  c.beginPath();
+  c.rect(cx - 14, faceY + faceR * 0.7 - 10, 28, 30);
+  c.fill();
+
+  // ----- FACE -----
+  c.save();
+  c.beginPath();
+  c.ellipse(cx, faceY, faceR, faceR * 1.12, 0, 0, Math.PI * 2);
+  c.fillStyle = ch.skin;
+  c.fill();
+  c.strokeStyle = 'rgba(0,0,0,0.08)';
+  c.lineWidth = 1;
+  c.stroke();
+  c.restore();
+
+  // ----- HAIR (BACK) -----
+  c.save();
+  c.beginPath();
+  const hairW = faceR * 1.15;
+  const hairH = faceR * 1.35;
+
+  if (ch.hairStyle === 'long') {
+    c.ellipse(cx, faceY + 5, hairW, hairH, 0, 0, Math.PI * 2);
+    // long strands at sides
+    c.fillStyle = ch.hair;
+    c.beginPath();
+    c.ellipse(cx - faceR * 0.85, faceY + faceR * 0.4, 22, 80, -0.15, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.ellipse(cx + faceR * 0.85, faceY + faceR * 0.4, 22, 80, 0.15, 0, Math.PI * 2);
+    c.fill();
+  } else if (ch.hairStyle === 'twintails') {
+    c.ellipse(cx, faceY + 5, hairW, hairH * 0.85, 0, 0, Math.PI * 2);
+    // twintails
+    c.fillStyle = ch.hair;
+    c.beginPath();
+    c.ellipse(cx - faceR * 0.7, faceY + faceR * 0.5, 30, 65, -0.3, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.ellipse(cx + faceR * 0.7, faceY + faceR * 0.5, 30, 65, 0.3, 0, Math.PI * 2);
+    c.fill();
+  } else {
+    c.ellipse(cx, faceY + 5, hairW, hairH * 0.9, 0, 0, Math.PI * 2);
+  }
+  c.fillStyle = ch.hair;
+  c.fill();
+  c.restore();
+
+  // ----- HAIR BANGS (FRONT) -----
+  c.save();
+  c.beginPath();
+  const bY = faceY - faceR * 0.85;
+  if (ch.hairStyle === 'short') {
+    c.ellipse(cx, bY + 15, faceR * 1.05, 42, 0, Math.PI, Math.PI * 2);
+    // side part
+    c.beginPath();
+    c.ellipse(cx - 30, bY + 20, 18, 20, 0.2, Math.PI, Math.PI * 2, false);
+    c.fillStyle = ch.hair;
+    c.fill();
+  } else {
+    c.ellipse(cx, bY + 12, faceR * 1.08, 40, 0, Math.PI, Math.PI * 2);
+    // bangs pieces
+    c.beginPath();
+    c.ellipse(cx - 25, bY + 8, 18, 25, -0.1, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.ellipse(cx + 20, bY + 5, 16, 22, 0.1, 0, Math.PI * 2);
+    c.fill();
+  }
+  c.fillStyle = ch.hairLight || ch.hair;
+  c.fill();
+
+  // Highlight shine on bangs
+  c.beginPath();
+  c.ellipse(cx - 10, bY + 5, 30, 8, 0.1, 0, Math.PI, false);
+  c.fillStyle = 'rgba(255,255,255,0.15)';
+  c.fill();
+  c.restore();
+
+  // ----- EYES -----
+  const eyeY = faceY + 5;
+  const eyeSpacing = 32;
+  const eyeW = 22;
+  const eyeH = 14;
+
+  for (let side = -1; side <= 1; side += 2) {
+    const ex = cx + side * eyeSpacing;
+    const ey = eyeY;
+
+    // White
+    c.beginPath();
+    c.ellipse(ex, ey, eyeW, eyeH, 0, 0, Math.PI * 2);
+    c.fillStyle = '#FFFFFF';
+    c.fill();
+
+    // Expression modifiers
+    let openAmount = 1;
+    let browOffset = 0;
+    let browAngle = 0;
+
+    switch (expression) {
+      case 'happy': browOffset = -2; browAngle = -0.05; break;
+      case 'sad': openAmount = 0.7; browOffset = 3; browAngle = 0.08; break;
+      case 'surprised': openAmount = 1.3; browOffset = -5; browAngle = 0; break;
+      case 'angry': openAmount = 0.8; browOffset = -3; browAngle = 0.15; break;
+      case 'worried': openAmount = 0.8; browOffset = 2; browAngle = 0.1; break;
+    }
+
+    if (openAmount < 1) {
+      // Partially closed eye
+      c.beginPath();
+      c.rect(ex - eyeW - 2, ey - eyeH * 0.3, eyeW * 2 + 4, eyeH * 1.2 * (1 - openAmount));
+      c.fillStyle = ch.skin;
+      c.fill();
+    }
+
+    // Iris
+    const irW = eyeW * 0.65;
+    const irH = eyeH * 0.85 * openAmount;
+    c.beginPath();
+    c.ellipse(ex, ey + 1, irW, irH, 0, 0, Math.PI * 2);
+    c.fillStyle = ch.eyeColor;
+    c.fill();
+
+    // Pupil
+    c.beginPath();
+    c.ellipse(ex, ey + 1, irW * 0.5, irH * 0.6, 0, 0, Math.PI * 2);
+    c.fillStyle = '#1a1a2e';
+    c.fill();
+
+    // Highlight
+    c.beginPath();
+    c.ellipse(ex - 4, ey - 3, 5, 5 * openAmount, 0, 0, Math.PI * 2);
+    c.fillStyle = 'rgba(255,255,255,0.8)';
+    c.fill();
+    c.beginPath();
+    c.ellipse(ex + 5, ey - 1, 3, 3 * openAmount, 0, 0, Math.PI * 2);
+    c.fillStyle = 'rgba(255,255,255,0.5)';
+    c.fill();
+
+    // Eyelashes (top)
+    c.strokeStyle = '#2C2C3A';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.ellipse(ex, ey - eyeH * 0.5 * openAmount, eyeW * 0.9, 4 * openAmount, 0, 0, Math.PI * 2);
+    c.stroke();
+
+    // Eyebrow
+    c.strokeStyle = ch.hair;
+    c.lineWidth = 2.5;
+    c.beginPath();
+    const browY = ey - eyeH - 8 + browOffset;
+    c.ellipse(ex, browY, 18, 4, browAngle, 0.3, Math.PI - 0.3);
+    c.stroke();
+  }
+
+  // ----- MOUTH -----
+  const mouthY = faceY + faceR * 0.4;
+
+  switch (expression) {
+    case 'happy':
+      c.beginPath();
+      c.arc(cx, mouthY - 2, 10, 0.15, Math.PI - 0.15);
+      c.strokeStyle = '#C97B7B';
+      c.lineWidth = 2;
+      c.stroke();
+      // Open smile
+      c.beginPath();
+      c.arc(cx, mouthY + 2, 8, 0, Math.PI);
+      c.fillStyle = '#D4726A';
+      c.fill();
+      break;
+    case 'sad':
+      c.beginPath();
+      c.arc(cx, mouthY + 8, 9, Math.PI + 0.2, 2 * Math.PI - 0.2);
+      c.strokeStyle = '#C97B7B';
+      c.lineWidth = 2;
+      c.stroke();
+      break;
+    case 'surprised':
+      c.beginPath();
+      c.ellipse(cx, mouthY + 2, 7, 9, 0, 0, Math.PI * 2);
+      c.fillStyle = '#2C2C3A';
+      c.fill();
+      c.beginPath();
+      c.ellipse(cx, mouthY + 2, 4, 6, 0, 0, Math.PI * 2);
+      c.fillStyle = '#D4726A';
+      c.fill();
+      break;
+    case 'angry':
+      c.beginPath();
+      c.moveTo(cx - 12, mouthY);
+      c.lineTo(cx, mouthY - 3);
+      c.lineTo(cx + 12, mouthY);
+      c.strokeStyle = '#C97B7B';
+      c.lineWidth = 2;
+      c.stroke();
+      break;
+    default: // neutral / worried
+      c.beginPath();
+      c.arc(cx, mouthY + 3, 7, 0.1, Math.PI - 0.1);
+      c.strokeStyle = '#C97B7B';
+      c.lineWidth = 2;
+      c.stroke();
+  }
+
+  // ----- BLUSH -----
+  if (expression === 'happy' || expression === 'worried') {
+    for (let side = -1; side <= 1; side += 2) {
+      c.beginPath();
+      c.ellipse(cx + side * 45, faceY + faceR * 0.3, 16, 9, 0, 0, Math.PI * 2);
+      c.fillStyle = ch.blush;
+      c.fill();
+    }
+  }
+
+  // ----- ACCESSORIES -----
+  if (ch.access === 'glasses') {
+    c.strokeStyle = 'rgba(50,50,70,0.5)';
+    c.lineWidth = 1.5;
+    for (let side = -1; side <= 1; side += 2) {
+      c.beginPath();
+      c.ellipse(cx + side * eyeSpacing, eyeY, eyeW + 6, eyeH + 6, 0, 0, Math.PI * 2);
+      c.stroke();
+    }
+    c.beginPath();
+    c.moveTo(cx - eyeSpacing + eyeW + 4, eyeY - 4);
+    c.lineTo(cx + eyeSpacing - eyeW - 4, eyeY - 4);
+    c.stroke();
+  }
+
+  if (ch.access === 'ribbon') {
+    c.beginPath();
+    c.moveTo(cx - 12, faceY - faceR * 0.9);
+    c.quadraticCurveTo(cx - 25, faceY - faceR * 1.15, cx - 8, faceY - faceR * 1.0);
+    c.quadraticCurveTo(cx, faceY - faceR * 1.2, cx + 8, faceY - faceR * 1.0);
+    c.quadraticCurveTo(cx + 25, faceY - faceR * 1.15, cx + 12, faceY - faceR * 0.9);
+    c.fillStyle = '#FF6B6B';
+    c.fill();
+    c.beginPath();
+    c.arc(cx, faceY - faceR * 0.95, 5, 0, Math.PI * 2);
+    c.fillStyle = '#FF4444';
+    c.fill();
+  }
+
+  if (ch.access === 'bow') {
+    const bx = cx + faceR * 0.75;
+    const by = faceY + 10;
+    c.beginPath();
+    c.ellipse(bx - 10, by - 3, 12, 6, -0.3, 0, Math.PI * 2);
+    c.fillStyle = '#FF4444';
+    c.fill();
+    c.beginPath();
+    c.ellipse(bx + 10, by - 3, 12, 6, 0.3, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(bx, by, 4, 0, Math.PI * 2);
+    c.fillStyle = '#CC2222';
+    c.fill();
+  }
+
+  // ----- HAIR ACCESSORY RIBBON (for Yuki) -----
+  if (charId === 'yuki') {
+    const hx = cx + faceR * 0.35;
+    const hy = faceY - faceR * 0.65;
+    c.beginPath();
+    c.moveTo(hx - 5, hy);
+    c.lineTo(hx + 5, hy - 8);
+    c.lineTo(hx + 12, hy + 2);
+    c.closePath();
+    c.fillStyle = '#6C5CE7';
+    c.fill();
+  }
+
+  // Flip if needed
+  if (flip) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w;
+    tempCanvas.height = h;
+    const tc = tempCanvas.getContext('2d');
+    tc.save();
+    tc.scale(-1, 1);
+    tc.translate(-w, 0);
+    tc.drawImage(canvas, 0, 0);
+    tc.restore();
+    c.clearRect(0, 0, w, h);
+    c.drawImage(tempCanvas, 0, 0);
+  }
+}
+
+// ========== BACKGROUND DRAWING ==========
+const BG_COLORS = [
+  ['#0f0c29', '#302b63', '#24243e'], // 0 - title / default
+  ['#1a1a2e', '#16213e', '#0f3460'], // 1 - awakening
+  ['#2d6a4f', '#40916c', '#52b788'], // 2 - garden
+  ['#1b4332', '#2d6a4f', '#40916c'], // 3 - forest
+  ['#6c2d82', '#8e44ad', '#bb8fce'], // 4 - festival
+  ['#2c3e50', '#34495e', '#4a6fa5'], // 5 - storm
+  ['#4a235a', '#6c3483', '#8e44ad'], // 6 - mirror
+  ['#7B5E3B', '#A67C52', '#D4A76A'], // 7 - acceptance
+  ['#0d47a1', '#1565c0', '#1976d2'], // 8 - melody
+  ['#263238', '#37474f', '#455a64'], // 9 - lab
+  ['#e67e22', '#f39c12', '#f1c40f'], // 10 - bond
+  ['#c0392b', '#e74c3c', '#ff6b6b'], // 11 - final
+];
+
+function drawBackground(canvas, index) {
+  const c = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const colors = BG_COLORS[index] || BG_COLORS[0];
+  const grad = c.createLinearGradient(0, 0, w, h);
+  colors.forEach((col, i) => grad.addColorStop(i / (colors.length - 1), col));
+  c.fillStyle = grad;
+  c.fillRect(0, 0, w, h);
+
+  // Decorative floating particles
+  for (let i = 0; i < 12; i++) {
+    const x = (i * 97 + 33) % w;
+    const y = (i * 143 + 57) % h;
+    const r = 1.5 + (i % 3);
+    const alpha = 0.1 + (i % 5) * 0.04;
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    c.fillStyle = `rgba(255,255,255,${alpha})`;
+    c.fill();
+  }
+}
+
+// ========== STORY DATA ==========
+const STORY = [
+  // Chapter 0: Awakening
+  {
+    title: 'Глава 1: Пробуждение',
+    subtitle: '～ начало пути ～',
+    scenes: [
+      { char: 'hana', exp: 'surprised', text: 'Где... я? Вокруг только белый свет... Я ничего не помню.' },
+      { char: 'hana', exp: 'worried', text: 'Голова гудит... Последнее, что помню — это странную вспышку.' },
+      { char: 'yuki', exp: 'neutral', text: 'Ты очнулась. Хорошо. Я уже начала волноваться.' },
+      { char: 'hana', exp: 'surprised', text: 'Ты... кто? Мы знакомы?' },
+      { char: 'yuki', exp: 'sad', text: 'Меня зовут Юки. Я... твой проводник. Ты — Хранительница Памяти.' },
+      { char: 'yuki', exp: 'neutral', text: 'Этот мир разрушается. Только ты можешь восстановить воспоминания, что хранятся в этих кристаллах.' },
+      { char: 'hana', exp: 'worried', text: 'Я ничего не помню... Как я могу помочь?' },
+      { char: 'yuki', exp: 'happy', text: 'Всё получится. Я буду рядом. Начнём с первого воспоминания.' },
+    ]
+  },
+  // Chapter 1: Childhood
+  {
+    title: 'Глава 2: Детство',
+    subtitle: '～ первый кристалл ～',
+    scenes: [
+      { char: 'hana', exp: 'neutral', text: 'Этот сад... Он кажется таким знакомым...' },
+      { char: 'hana', exp: 'happy', text: 'Ах! Это то место, где я играла в детстве. Я помню эти цветы!' },
+      { char: 'miko', exp: 'happy', text: 'Хана! Ты опять здесь! Я тебя обыскалась!' },
+      { char: 'hana', exp: 'happy', text: 'Мико... Я помню тебя. Мы вместе играли в этом саду каждый день.' },
+      { char: 'miko', exp: 'happy', text: 'Конечно! Мы же лучшие подруги! Помнишь, как мы построили тот шалаш?' },
+      { char: 'hana', exp: 'neutral', text: 'Шалаш... Точно! У старого дуба. Мы сидели там и смотрели на звёзды.' },
+      { char: 'miko', exp: 'sad', text: 'Времена были простые... Хорошие. Мне тебя очень не хватало, Хана.' },
+      { char: 'hana', exp: 'happy', text: 'Я вернулась. И я всё вспомню. Спасибо, Мико.' },
+      { char: 'hana', exp: 'neutral', text: 'Первый кристалл засиял в моих руках. Одно воспоминание сохранено.' },
+    ]
+  },
+  // Chapter 2: Promise
+  {
+    title: 'Глава 3: Обещание',
+    subtitle: '～ звёздная ночь ～',
+    scenes: [
+      { char: 'hana', exp: 'neutral', text: 'Звёздное небо... Оно всегда завораживало меня.' },
+      { char: 'yuki', exp: 'neutral', text: 'Это воспоминание о ночи, когда ты дала обещание.' },
+      { char: 'yuki', exp: 'sad', text: 'Обещание, которое определило твою судьбу.' },
+      { char: 'hana', exp: 'worried', text: 'Что за обещание? Я... не уверена, что хочу знать.' },
+      { char: 'hana', exp: 'surprised', text: 'Подожди... Я вижу его. Того мальчика...' },
+      { char: 'hana', exp: 'sad', text: 'Мы стояли под этим самым небом. Он сказал, что уезжает.' },
+      { char: 'hana', exp: 'sad', text: '"Я вернусь", — сказал он. — "Обязательно вернусь к тебе".' },
+      { char: 'hana', exp: 'neutral', text: 'Я ждала. Долгие годы. Но он так и не вернулся...' },
+      { char: 'yuki', exp: 'neutral', text: 'Это обещание связано с тем, почему ты здесь. Почему ты стала Хранительницей.' },
+    ]
+  },
+  // Chapter 3: Festival
+  {
+    title: 'Глава 4: Фестиваль Света',
+    subtitle: '～ радость в темноте ～',
+    scenes: [
+      { char: 'hana', exp: 'happy', text: 'Фонарики... Музыка... Это фестиваль!' },
+      { char: 'miko', exp: 'happy', text: 'Лучший фестиваль в году! Помнишь, как мы украли сладкую вату?' },
+      { char: 'hana', exp: 'happy', text: 'Нас тогда чуть не поймали! Мы спрятались за храмом и всё съели.' },
+      { char: 'hana', exp: 'neutral', text: 'В этом воспоминании так тепло... Почему я хочу плакать?' },
+      { char: 'miko', exp: 'sad', text: 'Потому что это был последний счастливый день. После него всё изменилось.' },
+      { char: 'hana', exp: 'sad', text: 'Что случилось? Что произошло после фестиваля?' },
+      { char: 'miko', exp: 'worried', text: 'Ты ещё не готова узнать. Продолжай собирать кристаллы.' },
+    ]
+  },
+  // Chapter 4: Loss
+  {
+    title: 'Глава 5: Потеря',
+    subtitle: '～ боль утраты ～',
+    scenes: [
+      { char: 'hana', exp: 'worried', text: 'Это место... такое холодное. Небо серое.' },
+      { char: 'hana', exp: 'sad', text: 'Я помню... Дождь. Много дождя. И запах больницы.' },
+      { char: 'akira', exp: 'neutral', text: 'Прости, Хана. Я сделал всё, что мог.' },
+      { char: 'hana', exp: 'surprised', text: 'Доктор Акира? Что случилось? Кто...' },
+      { char: 'akira', exp: 'sad', text: 'Твоя мама. Её не стало в тот день. Ты сидела в коридоре и ждала.' },
+      { char: 'hana', exp: 'sad', text: 'Мама... Я помню её руки. Тёплые. Она всегда улыбалась.' },
+      { char: 'akira', exp: 'neutral', text: 'После этого ты замкнулась в себе. Перестала разговаривать.' },
+      { char: 'hana', exp: 'sad', text: 'Но... как это связано со всем остальным? С кристаллами?' },
+    ]
+  },
+  // Chapter 5: Discovery
+  {
+    title: 'Глава 6: Открытие',
+    subtitle: '～ тайна кристаллов ～',
+    scenes: [
+      { char: 'akira', exp: 'neutral', text: 'Я покажу тебе лабораторию. Здесь всё началось.' },
+      { char: 'hana', exp: 'neutral', text: 'Столько оборудования... И кристаллы. Повсюду кристаллы.' },
+      { char: 'akira', exp: 'neutral', text: 'Твоя мама была учёным. Она открыла способ сохранять воспоминания.' },
+      { char: 'hana', exp: 'surprised', text: 'Что? Мама? Но она же была... обычной учительницей.' },
+      { char: 'akira', exp: 'sad', text: 'Это было прикрытие. На самом деле она работала над проектом "Память Мира".' },
+      { char: 'akira', exp: 'neutral', text: 'Когда она поняла, что мир обречён, она создала кристаллы.' },
+      { char: 'hana', exp: 'worried', text: 'Что значит "мир обречён"? О чём ты говоришь?' },
+      { char: 'akira', exp: 'sad', text: 'Ты заслуживаешь правды. Но не от меня. Ты должна увидеть сама.' },
+    ]
+  },
+  // Chapter 6: Fear
+  {
+    title: 'Глава 7: Страх',
+    subtitle: '～ тень правды ～',
+    scenes: [
+      { char: 'hana', exp: 'worried', text: 'Это воспоминание... оно дрожит. Я чувствую страх.' },
+      { char: 'hana', exp: 'sad', text: 'Люди кричат. Всё рушится. Что это за кошмар?' },
+      { char: 'yuki', exp: 'sad', text: 'Это день, когда мир начал умирать. Катастрофа.' },
+      { char: 'hana', exp: 'surprised', text: 'Я вижу маму... Она пытается кого-то спасти... меня?' },
+      { char: 'yuki', exp: 'neutral', text: 'Она спасла тебя. Отдала свою жизнь, чтобы ты выжила.' },
+      { char: 'hana', exp: 'sad', text: 'Нет... Нет! Я не хочу это видеть!' },
+      { char: 'yuki', exp: 'sad', text: 'Но ты должна. Чтобы понять. Чтобы закончить то, что она начала.' },
+      { char: 'hana', exp: 'sad', text: 'Я... я поняла. Я умерла в тот день, да? И мама... создала этот мир для меня.' },
+      { char: 'yuki', exp: 'neutral', text: 'Ты всегда была проницательной, Хана. Да. Этот мир — твоё последнее воспоминание.' },
+    ]
+  },
+  // Chapter 7: Acceptance
+  {
+    title: 'Глава 8: Принятие',
+    subtitle: '～ путь к себе ～',
+    scenes: [
+      { char: 'hana', exp: 'sad', text: 'Если этот мир — лишь моё воспоминание... то что есть я?' },
+      { char: 'yuki', exp: 'neutral', text: 'Ты — это не только воспоминания. Ты — чувства. Выбор. Любовь.' },
+      { char: 'hana', exp: 'neutral', text: 'Но я не могу отличить реальность от сна. Где грань?' },
+      { char: 'miko', exp: 'happy', text: 'А какая разница? Если ты чувствуешь — значит, это реально!' },
+      { char: 'hana', exp: 'surprised', text: 'Мико? Ты... ты права. Мои чувства настоящие.' },
+      { char: 'akira', exp: 'neutral', text: 'Твоя мама хотела, чтобы ты жила. По-настоящему. Даже в этом мире.' },
+      { char: 'hana', exp: 'happy', text: 'Я принимаю это. Этот мир — часть меня. И я благодарна.' },
+      { char: 'hana', exp: 'neutral', text: 'Теплый свет наполнил кристалл. Ещё одно воспоминание сохранено.' },
+    ]
+  },
+  // Chapter 8: Hope
+  {
+    title: 'Глава 9: Надежда',
+    subtitle: '～ свет во тьме ～',
+    scenes: [
+      { char: 'hana', exp: 'neutral', text: 'Если этот мир — моё воспоминание... то кто ты, Юки?' },
+      { char: 'yuki', exp: 'happy', text: 'Я — часть тебя. Твоя надежда. Твоя воля жить.' },
+      { char: 'hana', exp: 'neutral', text: 'Часть меня? Значит, весь этот путь... я прошла его одна?' },
+      { char: 'miko', exp: 'neutral', text: 'Не совсем. Мы — отражения людей, которых ты любила.' },
+      { char: 'akira', exp: 'neutral', text: 'Мы — их воспоминания внутри тебя. Но мы настоящие.' },
+      { char: 'hana', exp: 'happy', text: 'Вы все — часть меня. Моя сила. Моя семья.' },
+      { char: 'hana', exp: 'happy', text: 'Я знаю, что делать. Я соберу все кристаллы. Ради мамы. Ради всех.' },
+    ]
+  },
+  // Chapter 9: Truth
+  {
+    title: 'Глава 10: Правда',
+    subtitle: '～ последний кристалл ～',
+    scenes: [
+      { char: 'hana', exp: 'neutral', text: 'Последний кристалл. В нём — вся правда.' },
+      { char: 'hana', exp: 'surprised', text: 'Мама... ты здесь. Я наконец вижу тебя.' },
+      { char: 'hana', exp: 'sad', text: 'Ты говоришь мне... что я должна выбрать?' },
+      { char: 'hana', exp: 'neutral', text: 'Остаться в этом мире воспоминаний... или отпустить всё и позволить миру уйти.' },
+      { char: 'hana', exp: 'sad', text: 'Но если я отпущу, я потеряю вас всех навсегда.' },
+      { char: 'hana', exp: 'neutral', text: 'А если останусь — я никогда не узнаю, что такое настоящая жизнь.' },
+      {
+        char: 'hana', exp: 'worried',
+        text: 'Что мне выбрать?',
+        choices: [
+          { text: 'Остаться в мире воспоминаний', next: 'stay' },
+          { text: 'Отпустить и начать сначала', next: 'leave' }
+        ]
+      }
+    ]
+  },
+];
+
+// Ending scenes
+const ENDINGS = {
+  stay: {
+    title: 'Финал: Вечная Память',
+    scenes: [
+      { char: 'hana', exp: 'happy', text: 'Я остаюсь. Этот мир — мой дом. Вы — моя семья.' },
+      { char: 'yuki', exp: 'happy', text: 'Я рада. Мы будем вместе навсегда.' },
+      { char: 'miko', exp: 'happy', text: 'Ура! Мы ещё столько всего не сделали!' },
+      { char: 'akira', exp: 'happy', text: 'Мудрый выбор, Хана. Мир воспоминаний будет жить.' },
+      { char: 'hana', exp: 'happy', text: 'Спасибо вам. Спасибо, что были со мной. Я люблю вас.' },
+      { char: 'hana', exp: 'neutral', text: 'Кристаллы засияли ярче, и мир вокруг расцвёл новыми красками...' },
+    ],
+    finalText: 'Спасибо за игру. Финал: Вечная Память.'
+  },
+  leave: {
+    title: 'Финал: Новая Заря',
+    scenes: [
+      { char: 'hana', exp: 'sad', text: 'Я должна отпустить. Мама хотела, чтобы я жила настоящей жизнью.' },
+      { char: 'yuki', exp: 'happy', text: 'Я всегда буду с тобой. В твоём сердце.' },
+      { char: 'miko', exp: 'happy', text: 'Не забывай нас! И будь счастлива!' },
+      { char: 'akira', exp: 'happy', text: 'Ты сделала правильный выбор, Хана. Живи.' },
+      { char: 'hana', exp: 'sad', text: 'Прощайте... Я вас никогда не забуду.' },
+      { char: 'hana', exp: 'neutral', text: 'Мир воспоминаний начал таять, превращаясь в тёплый свет...' },
+    ],
+    finalText: 'Спасибо за игру. Финал: Новая Заря.'
+  }
+};
+
+// ========== GAME ENGINE ==========
+const bgCanvas = document.getElementById('bgCanvas');
+const charCanvas = document.getElementById('charCanvas');
+const dialogBox = document.getElementById('dialogBox');
+const charName = document.getElementById('charName');
+const dialogText = document.getElementById('dialogText');
+const choicesDiv = document.getElementById('choices');
+const nextBtn = document.getElementById('nextBtn');
+const titleScreen = document.getElementById('titleScreen');
+const startBtn = document.getElementById('startBtn');
+const chapterTitle = document.getElementById('chapterTitle');
+const memoryCounter = document.getElementById('memoryCounter');
+
+// Set canvas sizes
+function resizeCanvases() {
+  bgCanvas.width = bgCanvas.clientWidth;
+  bgCanvas.height = bgCanvas.clientHeight;
+  charCanvas.width = charCanvas.clientWidth || 350;
+  charCanvas.height = charCanvas.clientHeight || 400;
+}
+resizeCanvases();
+window.addEventListener('resize', resizeCanvases);
+
+let currentChapter = 0;
+let currentScene = 0;
+let currentCharFlip = false;
+let isTyping = false;
+let typeTimer = null;
+let ending = null;
+
+function getStory() {
+  return ending ? ENDINGS[ending].scenes : STORY[currentChapter].scenes;
+}
+
+function showChapterTitle(chapterIndex) {
+  const ch = STORY[chapterIndex];
+  chapterTitle.innerHTML = `${ch.title}<br><span style="font-size:18px;opacity:0.7">${ch.subtitle}</span>`;
+  chapterTitle.classList.add('show');
+  chapterTitle.style.opacity = '1';
+  setTimeout(() => {
+    chapterTitle.style.opacity = '0';
+    setTimeout(() => chapterTitle.classList.remove('show'), 800);
+  }, 2000);
+}
+
+function updateMemoryCounter() {
+  if (currentChapter < STORY.length) {
+    memoryCounter.textContent = `💠 ${currentChapter + 1} / ${STORY.length}`;
+  } else {
+    memoryCounter.textContent = '💠 Финал';
+  }
+}
+
+function showScene() {
+  const story = getStory();
+  const scene = story[currentScene];
+  if (!scene) return;
+
+  // Background
+  if (!ending) {
+    drawBackground(bgCanvas, currentChapter);
+  } else {
+    drawBackground(bgCanvas, 0);
+  }
+
+  // Character portrait
+  if (scene.char) {
+    drawPortrait(charCanvas, scene.char, scene.exp, currentCharFlip);
+    charCanvas.style.opacity = '1';
+  } else {
+    charCanvas.style.opacity = '0';
+  }
+
+  // Name
+  charName.textContent = scene.char ? CHARS[scene.char]?.name || '' : '';
+
+  // Type text
+  typeText(scene.text);
+
+  // Choices
+  choicesDiv.innerHTML = '';
+  nextBtn.style.display = scene.choices ? 'none' : 'flex';
+
+  if (scene.choices) {
+    scene.choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = choice.text;
+      btn.addEventListener('click', () => handleChoice(choice.next));
+      choicesDiv.appendChild(btn);
+    });
+  }
+}
+
+function typeText(text) {
+  if (typeTimer) { clearInterval(typeTimer); typeTimer = null; }
+  isTyping = true;
+  dialogText.textContent = '';
+  let i = 0;
+  typeTimer = setInterval(() => {
+    if (i < text.length) {
+      dialogText.textContent += text[i];
+      i++;
+    } else {
+      clearInterval(typeTimer);
+      typeTimer = null;
+      isTyping = false;
+    }
+  }, 30);
+}
+
+function handleChoice(choice) {
+  if (choice === 'stay' || choice === 'leave') {
+    ending = choice;
+    currentScene = 0;
+    memoryCounter.textContent = '💠 Финал';
+    drawBackground(bgCanvas, 10 + (choice === 'stay' ? 0 : 1));
+    setTimeout(() => {
+      chapterTitle.innerHTML = ENDINGS[choice].title;
+      chapterTitle.classList.add('show');
+      chapterTitle.style.opacity = '1';
+      setTimeout(() => {
+        chapterTitle.style.opacity = '0';
+        setTimeout(() => {
+          chapterTitle.classList.remove('show');
+          showScene();
+        }, 800);
+      }, 2000);
+    }, 500);
+  }
+}
+
+function nextScene() {
+  if (isTyping) {
+    if (typeTimer) { clearInterval(typeTimer); typeTimer = null; }
+    const story = getStory();
+    dialogText.textContent = story[currentScene].text;
+    isTyping = false;
+    return;
+  }
+
+  const story = getStory();
+  if (currentScene < story.length - 1) {
+    currentScene++;
+    showScene();
+  } else if (ending) {
+    // Show ending screen
+    showEndingScreen();
+  } else if (currentChapter < STORY.length - 1) {
+    currentChapter++;
+    currentScene = 0;
+    updateMemoryCounter();
+    showChapterTitle(currentChapter);
+    setTimeout(showScene, 2800);
+  } else {
+    // Last chapter - trigger ending
+    currentScene++;
+    if (currentScene >= getStory().length) {
+      // Shouldn't reach here if choices work
+    }
+  }
+}
+
+function showEndingScreen() {
+  dialogText.textContent = '';
+  charName.textContent = '';
+  choicesDiv.innerHTML = '';
+  nextBtn.style.display = 'none';
+  charCanvas.style.opacity = '0';
+
+  const finalText = ENDINGS[ending].finalText;
+  dialogText.textContent = finalText;
+  chapterTitle.innerHTML = ENDINGS[ending].title;
+  chapterTitle.classList.add('show');
+  chapterTitle.style.opacity = '1';
+
+  // Restart button
+  const restartBtn = document.createElement('button');
+  restartBtn.className = 'choice-btn';
+  restartBtn.textContent = 'Начать заново';
+  restartBtn.style.marginTop = '20px';
+  restartBtn.addEventListener('click', () => {
+    currentChapter = 0;
+    currentScene = 0;
+    ending = null;
+    updateMemoryCounter();
+    chapterTitle.classList.remove('show');
+    showChapterTitle(0);
+    setTimeout(showScene, 2800);
+  });
+  choicesDiv.appendChild(restartBtn);
+}
+
+// ========== PARTICLES ON TITLE ==========
+function createParticles() {
+  const container = titleScreen;
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.width = (2 + Math.random() * 4) + 'px';
+    p.style.height = p.style.width;
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.background = `rgba(255, 215, 0, ${0.2 + Math.random() * 0.4})`;
+    container.appendChild(p);
+  }
+}
+createParticles();
+
+// ========== START GAME ==========
+startBtn.addEventListener('click', () => {
+  titleScreen.style.display = 'none';
+  updateMemoryCounter();
+  showChapterTitle(0);
+  setTimeout(showScene, 2800);
+});
+
+nextBtn.addEventListener('click', nextScene);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    if (titleScreen.style.display !== 'none') return;
+    if (nextBtn.style.display !== 'none') nextScene();
+  }
+});
+
+// Initial background
+drawBackground(bgCanvas, 0);
+drawPortrait(charCanvas, 'hana', 'neutral');
+</script>
+</body>
+</html>

@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Чемпионат по настольному теннису 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#000;font-family:'Segoe UI',sans-serif;cursor:crosshair}
+canvas{display:block}
+#hud{position:absolute;top:0;left:0;width:100%;pointer-events:none}
+#settings{position:absolute;top:110px;right:20px;display:flex;flex-direction:column;gap:8px;pointer-events:auto;font-size:12px}
+#settings .grp{background:rgba(0,0,0,.6);border-radius:8px;padding:8px 10px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1)}
+#settings .grp-label{color:#aaa;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+#settings .row{display:flex;gap:4px}
+#settings .btn{padding:4px 10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#ccc;border-radius:4px;cursor:pointer;font-size:11px;transition:.2s;font-family:inherit}
+#settings .btn:hover{border-color:#ffd700;color:#ffd700}
+#settings .btn.active{background:#ffd70022;border-color:#ffd700;color:#ffd700;font-weight:700}
+#score{position:absolute;top:30px;left:50%;transform:translateX(-50%);display:flex;gap:80px;align-items:center;font-weight:700;text-shadow:0 0 20px rgba(0,0,0,.8)}
+#score .p{font-size:42px;color:#fff;letter-spacing:2px}
+#score .s{font-size:72px;color:#ffd700;min-width:80px;text-align:center}
+#score .sep{font-size:48px;color:#888}
+#info{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);color:#fff8;font-size:16px;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none;opacity:.8;transition:.3s;background:rgba(0,0,0,.5);padding:10px 24px;border-radius:20px;backdrop-filter:blur(4px)}
+#info.hidden{opacity:0}
+#winner-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);opacity:0;pointer-events:none;transition:.8s}
+#winner-overlay.show{opacity:1;pointer-events:auto}
+#winner-overlay h1{font-size:72px;color:#ffd700;text-shadow:0 0 40px rgba(255,215,0,.5);margin-bottom:20px}
+#winner-overlay p{color:#fff;font-size:24px;opacity:.8}
+#winner-overlay .restart{pointer-events:auto;margin-top:30px;padding:14px 40px;font-size:20px;border:2px solid #ffd700;background:transparent;color:#ffd700;border-radius:8px;cursor:pointer;transition:.3s}
+#winner-overlay .restart:hover{background:#ffd700;color:#000}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div id="score">
+    <span class="s" id="scPlayer">0</span>
+    <span class="sep">:</span>
+    <span class="s" id="scAI">0</span>
+  </div>
+</div>
+<div id="info">🏓 <b>Мышь</b> — ракетка • <b>Клик</b> — смеш • <b>Колёсико</b> — зум • <b>ПКМ+тащить</b> — камера</div>
+<div id="settings">
+  <div class="grp">
+    <div class="grp-label">🎯 Уровень AI</div>
+    <div class="row">
+      <button class="btn" data-ai="easy">Лёгкий</button>
+      <button class="btn active" data-ai="medium">Средний</button>
+      <button class="btn" data-ai="hard">Профи</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="grp-label">🏓 Ракетка</div>
+    <div class="row">
+      <button class="btn" data-paddle="soft">Мягкая</button>
+      <button class="btn active" data-paddle="medium">Средняя</button>
+      <button class="btn" data-paddle="hard">Твёрдая</button>
+    </div>
+  </div>
+</div>
+<div id="winner-overlay">
+  <h1 id="winTitle">🏆 Чемпион!</h1>
+  <p id="winSub">Вы выиграли!</p>
+  <button class="restart" onclick="location.reload()">🔄 Играть снова</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ─── Setup ───────────────────────────────────────────────
+const W = window.innerWidth, H = window.innerHeight;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a3e);
+scene.fog = new THREE.Fog(0x1a1a3e, 40, 80);
+
+const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 200);
+camera.position.set(12, 10, 16);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.prepend(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.8, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 6;
+controls.maxDistance = 35;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.update();
+
+// ─── Audio (procedural crowd) ────────────────────────────
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function playApplause(duration = 3) {
+  if (!audioCtx) return;
+  const sr = audioCtx.sampleRate;
+  const len = sr * duration;
+  const buf = audioCtx.createBuffer(1, len, sr);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    const env = Math.min(1, t * 3) * Math.max(0, 1 - t / duration);
+    const noise = (Math.random() * 2 - 1);
+    const clap = Math.sin(t * 400) * 0.3 + Math.sin(t * 800) * 0.2;
+    const mod = 0.5 + 0.5 * Math.sin(t * 2.5);
+    ch[i] = (noise * 0.6 + clap * 0.4) * env * mod * 0.5;
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+  src.connect(gain).connect(audioCtx.destination);
+  src.start();
+}
+function playHit() {
+  if (!audioCtx) return;
+  const sr = audioCtx.sampleRate;
+  const len = sr * 0.1;
+  const buf = audioCtx.createBuffer(1, len, sr);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    const env = Math.max(0, 1 - t / 0.1);
+    ch[i] = (Math.random() * 2 - 1) * env * 0.3 + Math.sin(t * 2000) * env * 0.3;
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+  src.connect(gain).connect(audioCtx.destination);
+  src.start();
+}
+function playBounce() {
+  if (!audioCtx) return;
+  const sr = audioCtx.sampleRate;
+  const len = sr * 0.07;
+  const buf = audioCtx.createBuffer(1, len, sr);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    const env = Math.max(0, 1 - t / 0.07) * Math.min(1, t * 2000);
+    const f1 = Math.sin(t * 2800 * (1 - t * 8)) * 0.5;
+    const f2 = Math.sin(t * 5600 * (1 - t * 6)) * 0.25;
+    const f3 = Math.sin(t * 11200 * (1 - t * 4)) * 0.12;
+    const noise = (Math.random() * 2 - 1) * Math.max(0, 1 - t / 0.01) * 0.15;
+    ch[i] = (f1 + f2 + f3 + noise) * env * 0.35;
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const gain = audioCtx.createGain();
+  gain.connect(audioCtx.destination);
+  src.start();
+}
+
+// ─── Lights ──────────────────────────────────────────────
+const ambient = new THREE.AmbientLight(0x404070, 0.5);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+dirLight.position.set(10, 20, 5);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.near = 1;
+dirLight.shadow.camera.far = 40;
+dirLight.shadow.camera.left = -15;
+dirLight.shadow.camera.right = 15;
+dirLight.shadow.camera.top = 15;
+dirLight.shadow.camera.bottom = -15;
+scene.add(dirLight);
+
+const fill = new THREE.DirectionalLight(0x4488ff, 0.6);
+fill.position.set(-8, 6, -10);
+scene.add(fill);
+
+const spot1 = new THREE.SpotLight(0xffffff, 80, 30, Math.PI/6, 0.6, 1);
+spot1.position.set(0, 12, 5);
+spot1.target.position.set(0, 0, 0);
+scene.add(spot1); scene.add(spot1.target);
+
+const spot2 = new THREE.SpotLight(0xffffff, 80, 30, Math.PI/6, 0.6, 1);
+spot2.position.set(0, 12, -5);
+spot2.target.position.set(0, 0, 0);
+scene.add(spot2); scene.add(spot2.target);
+
+const hemi = new THREE.HemisphereLight(0x4488ff, 0x002244, 0.4);
+scene.add(hemi);
+
+// ─── Arena ───────────────────────────────────────────────
+const arenaFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 30),
+  new THREE.MeshStandardMaterial({color:0x1a1a3e,roughness:.8,metalness:.1})
+);
+arenaFloor.rotation.x = -Math.PI/2;
+arenaFloor.position.y = -0.05;
+arenaFloor.receiveShadow = true;
+scene.add(arenaFloor);
+
+// Circular arena border
+const borderRing = new THREE.Mesh(
+  new THREE.RingGeometry(14.5, 15.5, 64),
+  new THREE.MeshStandardMaterial({color:0x4444aa,roughness:.3,metalness:.5,side:THREE.DoubleSide})
+);
+borderRing.rotation.x = -Math.PI/2;
+borderRing.position.y = 0.01;
+scene.add(borderRing);
+
+// Seating tiers
+function createSeatRow(radius, y, count, color) {
+  const mat = new THREE.MeshStandardMaterial({color, roughness:.7, metalness:.1});
+  for (let i = 0; i < count; i++) {
+    const ang = (i / count) * Math.PI * 2;
+    const x = Math.cos(ang) * radius;
+    const z = Math.sin(ang) * radius;
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.5), mat);
+    seat.position.set(x, y, z);
+    seat.rotation.y = -ang + Math.PI/2;
+    seat.castShadow = true;
+    seat.receiveShadow = true;
+    scene.add(seat);
+    seats.push({mesh:seat, ang, radius, y});
+  }
+}
+const seats = [];
+const tierColors = [0x3333aa, 0x4444bb, 0x5555cc, 0x6666dd, 0x7777ee];
+for (let t = 0; t < 5; t++) {
+  const rad = 7 + t * 1.6;
+  const cnt = Math.floor(20 + t * 8);
+  createSeatRow(rad, 0.1 + t * 0.8, cnt, tierColors[t]);
+}
+
+// ─── Table ───────────────────────────────────────────────
+const TABLE_LEN = 2.74, TABLE_WID = 1.525, TABLE_H = 0.76, TABLE_T = 0.08;
+const tableGroup = new THREE.Group();
+
+const tableTop = new THREE.Mesh(
+  new THREE.BoxGeometry(TABLE_WID, TABLE_T, TABLE_LEN),
+  new THREE.MeshStandardMaterial({color:0x1a6b3c,roughness:.6,metalness:.1})
+);
+tableTop.position.y = TABLE_H;
+tableTop.castShadow = true;
+tableTop.receiveShadow = true;
+tableGroup.add(tableTop);
+
+// White lines
+const lineMat = new THREE.MeshStandardMaterial({color:0xffffff, emissive:0xffffff, emissiveIntensity:0.1});
+const lw = 0.015, lh = 0.002;
+// center line (along length)
+const cl = new THREE.Mesh(new THREE.BoxGeometry(lw, lh, TABLE_LEN - 0.04), lineMat);
+cl.position.set(0, TABLE_H + TABLE_T/2 + 0.001, 0);
+tableGroup.add(cl);
+// sidelines (along length, at width edges)
+const sl1 = new THREE.Mesh(new THREE.BoxGeometry(lw, lh, TABLE_LEN - 0.04), lineMat);
+sl1.position.set(-TABLE_WID/2 + 0.02, TABLE_H + TABLE_T/2 + 0.001, 0);
+tableGroup.add(sl1);
+const sl2 = new THREE.Mesh(new THREE.BoxGeometry(lw, lh, TABLE_LEN - 0.04), lineMat);
+sl2.position.set(TABLE_WID/2 - 0.02, TABLE_H + TABLE_T/2 + 0.001, 0);
+tableGroup.add(sl2);
+// end lines (across width, at length ends)
+const el1 = new THREE.Mesh(new THREE.BoxGeometry(TABLE_WID - 0.04, lh, lw), lineMat);
+el1.position.set(0, TABLE_H + TABLE_T/2 + 0.001, -TABLE_LEN/2 + 0.02);
+tableGroup.add(el1);
+const el2 = new THREE.Mesh(new THREE.BoxGeometry(TABLE_WID - 0.04, lh, lw), lineMat);
+el2.position.set(0, TABLE_H + TABLE_T/2 + 0.001, TABLE_LEN/2 - 0.02);
+tableGroup.add(el2);
+
+// Legs
+const legMat = new THREE.MeshStandardMaterial({color:0x555555,roughness:.4,metalness:.6});
+for (let x of [-1, 1]) for (let z of [-1, 1]) {
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, TABLE_H - TABLE_T/2, 8), legMat);
+  leg.position.set(x * (TABLE_WID/2 - 0.25), TABLE_H/2, z * (TABLE_LEN/2 - 0.2));
+  leg.castShadow = true;
+  tableGroup.add(leg);
+}
+
+// Net
+const netMat = new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.8,metalness:.1,transparent:true,opacity:0.7,side:THREE.DoubleSide});
+const net = new THREE.Mesh(new THREE.PlaneGeometry(TABLE_WID - 0.1, 0.1525), netMat);
+net.position.set(0, TABLE_H + 0.07625, 0);
+tableGroup.add(net);
+
+// Net posts
+const postMat = new THREE.MeshStandardMaterial({color:0x888888,roughness:.4,metalness:.7});
+for (let x of [-1, 1]) {
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.18, 8), postMat);
+  post.position.set(x * (TABLE_WID/2 + 0.02), TABLE_H + 0.09, 0);
+  tableGroup.add(post);
+}
+
+scene.add(tableGroup);
+
+// ─── Player Paddle ───────────────────────────────────────
+function makePaddle(color) {
+  const g = new THREE.Group();
+  const hMat = new THREE.MeshStandardMaterial({color:0x8B4513,roughness:.8});
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.16, 8), hMat);
+  handle.position.z = -0.08;
+  handle.rotation.x = Math.PI/2;
+  g.add(handle);
+
+  const bMat = new THREE.MeshStandardMaterial({color, roughness:.4, metalness:.15});
+  const blade = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), bMat);
+  blade.position.z = 0.04;
+  blade.scale.set(1, 1, 0.35);
+  g.add(blade);
+
+  const rMat = new THREE.MeshStandardMaterial({color:0xcc3333, roughness:.9, metalness:0});
+  const rubber = new THREE.Mesh(new THREE.CircleGeometry(0.085, 20), rMat);
+  rubber.position.z = 0.071;
+  g.add(rubber);
+
+  const rMat2 = new THREE.MeshStandardMaterial({color, roughness:.9, metalness:0});
+  const rubber2 = new THREE.Mesh(new THREE.CircleGeometry(0.085, 20), rMat2);
+  rubber2.position.z = 0.009;
+  rubber2.rotation.y = Math.PI;
+  g.add(rubber2);
+
+  return g;
+}
+
+const playerPaddle = makePaddle(0x2255cc);
+playerPaddle.position.set(0, TABLE_H + 0.15, TABLE_LEN/2 - 0.4);
+playerPaddle.rotation.y = Math.PI;
+scene.add(playerPaddle);
+
+const aiPaddle = makePaddle(0xcc2222);
+aiPaddle.position.set(0, TABLE_H + 0.15, -TABLE_LEN/2 + 0.4);
+scene.add(aiPaddle);
+
+// ─── Ball ────────────────────────────────────────────────
+const ball = new THREE.Mesh(
+  new THREE.SphereGeometry(0.02, 16, 16),
+  new THREE.MeshPhysicalMaterial({color:0xffffff, roughness:.2, metalness:.0, clearcoat:0.3, emissive:0xffffff, emissiveIntensity:0.05})
+);
+ball.position.set(0, TABLE_H + 0.3, 0.5);
+ball.castShadow = true;
+// Spin indicator ring
+const ballRing = new THREE.Mesh(
+  new THREE.TorusGeometry(0.023, 0.003, 8, 24),
+  new THREE.MeshBasicMaterial({color:0xff4444})
+);
+ballRing.rotation.x = Math.PI / 2;
+ball.add(ballRing);
+// Second perpendicular ring for better spin visibility
+const ballRing2 = new THREE.Mesh(
+  new THREE.TorusGeometry(0.023, 0.003, 8, 24),
+  new THREE.MeshBasicMaterial({color:0x44ff44})
+);
+ballRing2.rotation.z = Math.PI / 2;
+ball.add(ballRing2);
+scene.add(ball);
+
+// Ball trail
+const trailPositions = [];
+const trailMat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.3});
+const trailMeshes = [];
+for (let i = 0; i < 8; i++) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), trailMat.clone());
+  m.visible = false;
+  scene.add(m);
+  trailMeshes.push(m);
+}
+
+// ─── Audience (spectators) ──────────────────────────────
+const audience = [];
+const specColors = [0xcc4444,0x44cc44,0x4444cc,0xcccc44,0xcc44cc,0x44cccc,0xff8844,0x88ff44,0x4488ff,0xff4488,0x88aaff,0xaaff88];
+
+function createSpectator(x, y, z, color) {
+  const g = new THREE.Group();
+  // Body
+  const bodyMat = new THREE.MeshStandardMaterial({color, roughness:.8});
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.25, 6), bodyMat);
+  body.position.y = 0.125;
+  body.castShadow = true;
+  g.add(body);
+  // Head
+  const headMat = new THREE.MeshStandardMaterial({color:0xffcc99, roughness:.7});
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), headMat);
+  head.position.y = 0.28;
+  head.castShadow = true;
+  g.add(head);
+  // Left arm
+  const armMat = new THREE.MeshStandardMaterial({color, roughness:.8});
+  const la = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.018, 0.14, 6), armMat);
+  la.position.set(-0.1, 0.2, 0);
+  la.rotation.z = 0.3;
+  la.castShadow = true;
+  g.add(la);
+  // Right arm
+  const ra = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.018, 0.14, 6), armMat);
+  ra.position.set(0.1, 0.2, 0);
+  ra.rotation.z = -0.3;
+  ra.castShadow = true;
+  g.add(ra);
+
+  g.position.set(x, y, z);
+  // Random rotation
+  g.rotation.y = Math.random() * Math.PI * 2;
+
+  // Store arm refs for animation
+  const info = {
+    group: g,
+    body, la, ra,
+    baseY: y,
+    cheerAmp: 0,
+    cheerPhase: Math.random() * Math.PI * 2,
+    armRaise: 0,
+    color,
+    speed: 0.8 + Math.random() * 0.4
+  };
+  return info;
+}
+
+// Place spectators in stands
+for (const seat of seats) {
+  const ang = seat.ang + (Math.random() - 0.5) * 0.3;
+  const rad = seat.radius + (Math.random() - 0.5) * 0.3;
+  const x = Math.cos(ang) * rad;
+  const z = Math.sin(ang) * rad;
+  const col = specColors[Math.floor(Math.random() * specColors.length)];
+  const spec = createSpectator(x, seat.y, z, col);
+  scene.add(spec.group);
+  audience.push(spec);
+}
+
+// ─── Flags ──────────────────────────────────────────────
+const flags = [];
+const flagColors = [0xff3333,0x33ff33,0x3333ff,0xffff33,0xff33ff,0x33ffff,0xff8833,0x88ff33];
+
+function createFlag(x, y, z, color) {
+  const g = new THREE.Group();
+  const poleMat = new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.3,metalness:.7});
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 1.8, 8), poleMat);
+  pole.position.y = 0.9;
+  pole.castShadow = true;
+  g.add(pole);
+
+  const flagMat = new THREE.MeshPhysicalMaterial({
+    color, roughness:.9, metalness:0, side:THREE.DoubleSide,
+    transparent:true, opacity:0.85
+  });
+  const flagGeo = new THREE.PlaneGeometry(0.6, 0.35, 12, 6);
+  const flag = new THREE.Mesh(flagGeo, flagMat);
+  flag.position.set(0.3, 1.7, 0);
+  flag.castShadow = true;
+  g.add(flag);
+
+  g.position.set(x, y, z);
+  const ang = Math.atan2(x, z);
+  g.rotation.y = -ang + Math.PI/2;
+
+  // Store for animation
+  const info = {
+    group: g, flag, pole,
+    basePos: new THREE.Vector3(x, y, z),
+    geo: flagGeo,
+    time: Math.random() * 100
+  };
+  return info;
+}
+
+// Place flags around the arena
+const flagPositions = [];
+for (let i = 0; i < 16; i++) {
+  const ang = (i / 16) * Math.PI * 2;
+  const rad = 6.5;
+  flagPositions.push({
+    x: Math.cos(ang) * rad,
+    z: Math.sin(ang) * rad
+  });
+}
+for (const fp of flagPositions) {
+  const col = flagColors[Math.floor(Math.random() * flagColors.length)];
+  const fl = createFlag(fp.x, 0, fp.z, col);
+  scene.add(fl.group);
+  flags.push(fl);
+}
+
+// ─── Particles (confetti) ──────────────────────────────
+const particleCount = 300;
+const particles = [];
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(particleCount * 3);
+const pCol = new Float32Array(particleCount * 3);
+const pVel = [];
+const pLife = [];
+const pMaxLife = [];
+
+for (let i = 0; i < particleCount; i++) {
+  pPos[i*3] = (Math.random() - 0.5) * 30;
+  pPos[i*3+1] = Math.random() * 15 + 5;
+  pPos[i*3+2] = (Math.random() - 0.5) * 30;
+  const c = new THREE.Color().setHSL(Math.random(), 0.8, 0.6);
+  pCol[i*3] = c.r; pCol[i*3+1] = c.g; pCol[i*3+2] = c.b;
+  pVel.push({
+    x: (Math.random() - 0.5) * 2,
+    y: Math.random() * 3 + 1,
+    z: (Math.random() - 0.5) * 2
+  });
+  pLife.push(Math.random() * 5);
+  pMaxLife.push(5 + Math.random() * 3);
+}
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+const pMat = new THREE.PointsMaterial({
+  size: 0.08,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false
+});
+const pMesh = new THREE.Points(pGeo, pMat);
+scene.add(pMesh);
+let confettiActive = false;
+
+function triggerConfetti() {
+  confettiActive = true;
+  pMat.opacity = 1;
+  for (let i = 0; i < particleCount; i++) {
+    pPos[i*3] = (Math.random() - 0.5) * 10;
+    pPos[i*3+1] = Math.random() * 3 + 2;
+    pPos[i*3+2] = (Math.random() - 0.5) * 10;
+    pVel[i] = {
+      x: (Math.random() - 0.5) * 6,
+      y: Math.random() * 5 + 3,
+      z: (Math.random() - 0.5) * 6
+    };
+    pLife[i] = 0;
+    pMaxLife[i] = 3 + Math.random() * 3;
+  }
+}
+
+// ─── Game State ──────────────────────────────────────────
+const STATE = { IDLE:0, SERVING:1, PLAYING:2, SCORED:3, GAME_OVER:4 };
+let state = STATE.IDLE;
+let playerScore = 0, aiScore = 0;
+const WIN_SCORE = 11;
+const TABLE_Y = TABLE_H;
+const TABLE_HALF_WID = TABLE_WID / 2;
+const TABLE_HALF_LEN = TABLE_LEN / 2;
+
+let ballVel = {x:0, y:0, z:0};
+const GRAVITY = -9.8;
+const BOUNCE = 0.8;
+const FRICTION = 0.998;
+const BALL_R = 0.02;
+const PADDLE_R = 0.09;
+const PADDLE_HIT = 0.12;
+
+let serveTimer = 0;
+let scoredTimer = 0;
+let celebrationTimer = 0;
+let celebrationSide = 0;
+let playerPaddleVel = {x:0, z:0};
+let aiPaddleVel = {x:0, z:0};
+
+const mouse = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+
+// ─── Settings ────────────────────────────────────────────
+let aiLevel = 'medium'; // 'easy', 'medium', 'hard'
+let paddleType = 'medium'; // 'soft', 'medium', 'hard'
+
+document.querySelectorAll('#settings .btn[data-ai]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#settings .btn[data-ai]').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    aiLevel = b.dataset.ai;
+  });
+});
+document.querySelectorAll('#settings .btn[data-paddle]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#settings .btn[data-paddle]').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    paddleType = b.dataset.paddle;
+  });
+});
+
+// ─── Input ───────────────────────────────────────────────
+renderer.domElement.addEventListener('mousemove', (e) => {
+  mouse.x = (e.clientX / W) * 2 - 1;
+  mouse.y = -(e.clientY / H) * 2 + 1;
+});
+
+renderer.domElement.addEventListener('click', () => {
+  initAudio();
+  if (state === STATE.PLAYING) {
+    powerHit = true;
+    document.getElementById('info').textContent = '💥 СМЕШ!';
+  }
+});
+
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+
+// ─── Game Functions ──────────────────────────────────────
+function startServe() {
+  state = STATE.SERVING;
+  serveTimer = 1.0;
+  playerPaddle.rotation.y = Math.PI;
+  aiPaddle.rotation.y = 0;
+  playerPaddle.rotation.z = 0;
+  aiPaddle.rotation.z = 0;
+  celebrationTimer = 0;
+  // Ball in front of paddle face for the serve hit
+  ball.position.set(
+    (Math.random() - 0.5) * 0.08,
+    TABLE_H + 0.15 + 0.06,
+    TABLE_LEN/2 - 0.4 - 0.1
+  );
+  ballVel = {x:0, y:0, z:0};
+  // Paddle starts in backswing position
+  playerPaddle.rotation.x = -0.5;
+  document.getElementById('info').textContent = '🏓 Подача...';
+}
+
+function serveBall() {
+  state = STATE.PLAYING;
+  const dir = Math.random() > 0.5 ? 1 : -1;
+  ballVel = {
+    x: dir * (0.3 + Math.random() * 0.5),
+    y: 2.5 + Math.random() * 0.6,
+    z: -2.5 - Math.random() * 0.6
+  };
+  playerPaddle.rotation.x = 0.35; // follow-through
+  playHit();
+  document.getElementById('info').textContent = '🏓 Клик — смеш!';
+}
+
+function scorePoint(scorer) {
+  if (state === STATE.SCORED || state === STATE.GAME_OVER) return;
+  powerHitActive = false;
+  state = STATE.SCORED;
+  scoredTimer = 0;
+  if (scorer === 1) {
+    playerScore++;
+  } else {
+    aiScore++;
+  }
+  document.getElementById('scPlayer').textContent = playerScore;
+  document.getElementById('scAI').textContent = aiScore;
+
+  celebrationTimer = 1.2;
+  celebrationSide = scorer;
+
+  playApplause(2);
+  triggerConfetti();
+
+  for (const spec of audience) {
+    spec.cheerAmp = 0.8 + Math.random() * 0.4;
+  }
+
+  document.getElementById('info').textContent = scorer === 1 ? '⚡ ОЧКО! 👏' : '⚡ Пропустил 👏';
+
+  if (playerScore >= WIN_SCORE || aiScore >= WIN_SCORE) {
+    state = STATE.GAME_OVER;
+    const win = playerScore >= WIN_SCORE;
+    document.getElementById('winTitle').textContent = win ? '🏆 Вы чемпион!' : '🏆 Победа соперника';
+    document.getElementById('winSub').textContent = win ? 'Поздравляем с победой!' : 'Повезёт в следующий раз!';
+    document.getElementById('winner-overlay').classList.add('show');
+    document.getElementById('info').textContent = win ? '🏆 Чемпион! Победа!' : '🏆 Поражение';
+    playApplause(5);
+    triggerConfetti();
+  }
+}
+
+// ─── Physics ─────────────────────────────────────────────
+function updatePhysics(dt) {
+  if (state !== STATE.PLAYING && state !== STATE.SERVING) return;
+  dt = Math.min(dt, 0.033);
+
+  // Gravity
+  ballVel.y += GRAVITY * dt;
+
+  // Apply
+  ball.position.x += ballVel.x * dt;
+  ball.position.y += ballVel.y * dt;
+  ball.position.z += ballVel.z * dt;
+
+  // Friction + gentle centering
+  ballVel.x *= FRICTION;
+  ballVel.x += -ball.position.x * 0.02;
+  ballVel.z *= FRICTION;
+
+  // Table collision (top)
+  const tx = ball.position.x, tz = ball.position.z;
+  if (ball.position.y <= TABLE_Y + BALL_R + TABLE_T/2 &&
+      ballVel.y < 0 &&
+      Math.abs(tx) < TABLE_HALF_WID - BALL_R &&
+      Math.abs(tz) < TABLE_HALF_LEN - BALL_R) {
+    ball.position.y = TABLE_Y + BALL_R + TABLE_T/2;
+    ballVel.y = -ballVel.y * BOUNCE;
+    ballVel.x *= 0.95;
+    ballVel.x -= ball.position.x * 0.05;
+    ballVel.z *= 0.95;
+    playBounce();
+  }
+
+  // Floor collision
+  if (ball.position.y < -0.5) {
+    // Who scored?
+    if (ball.position.z > 0) {
+      scorePoint(-1); // AI scores (ball fell on player side)
+    } else {
+      scorePoint(1); // Player scores
+    }
+    return;
+  }
+
+  // Scored past AI back line (power hit break)
+  if (ball.position.z < -TABLE_HALF_LEN - 0.3 && ballVel.z < 0) {
+    scorePoint(1);
+    return;
+  }
+  // Scored past player back line (AI power hits not implemented, but for safety)
+  if (ball.position.z > TABLE_HALF_LEN + 0.3 && ballVel.z > 0) {
+    scorePoint(-1);
+    return;
+  }
+
+  // Walls (arena bounds)
+  const bound = 5;
+  if (Math.abs(ball.position.x) > bound) {
+    ball.position.x = Math.sign(ball.position.x) * bound;
+    ballVel.x *= -0.5;
+  }
+  if (Math.abs(ball.position.z) > bound) {
+    ball.position.z = Math.sign(ball.position.z) * bound;
+    ballVel.z *= -0.5;
+  }
+
+  // Net collision
+  const netHalf = 0.1525;
+  if (Math.abs(ball.position.x) < TABLE_HALF_WID &&
+      Math.abs(ball.position.z) < 0.04 &&
+      ball.position.y < TABLE_Y + netHalf) {
+    ball.position.z = 0.1 * Math.sign(ball.position.z || 1);
+    ballVel.z *= -0.7;
+    if (Math.abs(ballVel.z) < 0.5) ballVel.z = -Math.sign(ball.position.z || 1) * 0.8;
+  }
+
+  // Ball rotation visualization (topspin/backspin/sidespin)
+  ball.rotation.x += ballVel.z * dt * 30;
+  ball.rotation.z += ballVel.x * dt * 30;
+  ball.rotation.y += (ballVel.x + ballVel.z) * dt * 10;
+
+  // Auto-assist: gentle pull toward ball when it's on player's side
+  if (ball.position.z > 0 && state === STATE.PLAYING) {
+    const pullX = (ball.position.x - playerPaddle.position.x) * 0.03;
+    playerPaddle.position.x += pullX;
+  }
+
+  // Paddle collision (player) — manual hit with mouse positioning
+  const pp = playerPaddle.position;
+  const dxp = ball.position.x - pp.x;
+  const dzp = ball.position.z - pp.z;
+  const distP = Math.sqrt(dxp*dxp + dzp*dzp);
+  if (distP < PADDLE_HIT * 1.5 &&
+      ball.position.y < pp.y + 0.18 &&
+      ball.position.y > pp.y - 0.18 &&
+      state === STATE.PLAYING &&
+      ballVel.z > 0) {
+    const pwr = powerHit ? 4.0 : 1.0;
+    powerHit = false;
+    powerHitActive = pwr > 1;
+    const paddleSpeed = paddleType === 'soft' ? 0.5 : paddleType === 'medium' ? 0.6 : 0.75;
+    const paddleControl = paddleType === 'soft' ? 0.15 : paddleType === 'medium' ? 0.3 : 0.45;
+    ballVel.x = (-ballVel.x * paddleControl + (Math.random() - 0.5) * 0.4) * (pwr > 1 ? 2.0 : 1.0);
+    ballVel.z = -ballVel.z * paddleSpeed * (pwr > 1 ? 8.0 : 1.0);
+    ballVel.y = (2.2 + Math.random() * 0.6) * Math.min(pwr, 1.3);
+    playHit();
+    document.getElementById('info').textContent = pwr > 1 ? '💥 СМЕШ!' : '🏓 Приём';
+  }
+
+  // AI return (подкапот) — automatic when ball reaches AI zone
+  if (state === STATE.PLAYING && ball.position.z < -0.15 && ballVel.z < 0 && !powerHitActive) {
+    const aiReturnSpd = aiLevel === 'easy' ? 0.35 : aiLevel === 'medium' ? 0.5 : 0.65;
+    const aiReturnRnd = aiLevel === 'easy' ? 0.3 : aiLevel === 'medium' ? 0.18 : 0.08;
+    const aiReturnH = aiLevel === 'easy' ? 1.5 : aiLevel === 'medium' ? 1.8 : 2.2;
+    ballVel.x = -ballVel.x * 0.3 + (Math.random() - 0.5) * aiReturnRnd;
+    ballVel.z = -ballVel.z * aiReturnSpd;
+    ballVel.y = aiReturnH + Math.random() * 0.4;
+    powerHitActive = false;
+    playHit();
+  }
+}
+
+let powerHit = false;
+let powerHitActive = false; // prevents AI auto-return during smash
+
+function updatePaddles(dt) {
+  const planeY = TABLE_H + 0.15;
+
+  // Player paddle follows mouse, projected to table plane
+  raycaster.setFromCamera(mouse, camera);
+  const planeAt = new THREE.Plane(new THREE.Vector3(0,1,0), -planeY);
+  const intersect = new THREE.Vector3();
+  raycaster.ray.intersectPlane(planeAt, intersect);
+  if (intersect) {
+    const oldX = playerPaddle.position.x;
+    const oldZ = playerPaddle.position.z;
+    const targetX = THREE.MathUtils.clamp(intersect.x, -TABLE_HALF_WID + 0.2, TABLE_HALF_WID - 0.2);
+    const targetZ = THREE.MathUtils.clamp(intersect.z, 0.2, TABLE_LEN/2 + 0.5);
+    playerPaddle.position.x += (targetX - playerPaddle.position.x) * 0.15;
+    playerPaddle.position.z += (targetZ - playerPaddle.position.z) * 0.15;
+    playerPaddle.position.y = planeY;
+    playerPaddleVel.x = (playerPaddle.position.x - oldX) / dt;
+    playerPaddleVel.z = (playerPaddle.position.z - oldZ) / dt;
+  }
+
+  // AI paddle — difficulty-based tracking
+  if (state === STATE.PLAYING || state === STATE.SERVING) {
+    const aiSpeed = aiLevel === 'easy' ? 5 : aiLevel === 'medium' ? 10 : 18;
+    const aiClamp = aiLevel === 'easy' ? 0.25 : aiLevel === 'medium' ? 0.15 : 0.05;
+    const aiMissChance = aiLevel === 'easy' ? 0.15 : aiLevel === 'medium' ? 0.05 : 0;
+    const targetX = THREE.MathUtils.clamp(ball.position.x, -TABLE_HALF_WID + aiClamp, TABLE_HALF_WID - aiClamp);
+    const targetZ = THREE.MathUtils.clamp(ball.position.z - 0.15, -TABLE_LEN/2 + 0.2, -0.1);
+    const oldX = aiPaddle.position.x;
+    const oldZ = aiPaddle.position.z;
+    const dx = targetX - aiPaddle.position.x;
+    const dz = targetZ - aiPaddle.position.z;
+    const d = Math.sqrt(dx*dx + dz*dz);
+    if (d > 0.01 && Math.random() > aiMissChance) {
+      const move = Math.min(d, aiSpeed * dt);
+      aiPaddle.position.x += (dx/d) * move;
+      aiPaddle.position.z += (dz/d) * move;
+    }
+    if (state === STATE.IDLE || state === STATE.SCORED) {
+      aiPaddle.position.x += (0 - aiPaddle.position.x) * 0.05;
+      aiPaddle.position.z += (-TABLE_LEN/2 + 0.4 - aiPaddle.position.z) * 0.05;
+    }
+    aiPaddleVel.x = (aiPaddle.position.x - oldX) / dt;
+    aiPaddleVel.z = (aiPaddle.position.z - oldZ) / dt;
+    aiPaddle.position.y = planeY;
+    aiPaddle.rotation.z = THREE.MathUtils.lerp(aiPaddle.rotation.z, -dx * 0.5, 0.05);
+  }
+}
+
+function updateAudience(dt, time) {
+  const cheering = state === STATE.SCORED || state === STATE.GAME_OVER;
+  for (const spec of audience) {
+    if (cheering) {
+      spec.cheerAmp *= 0.995;
+      if (spec.cheerAmp < 0.05) spec.cheerAmp = 0.05;
+    } else {
+      spec.cheerAmp *= 0.97;
+    }
+    const amp = spec.cheerAmp;
+    // Jump
+    const jump = Math.sin(time * 6 * spec.speed + spec.cheerPhase) * 0.04 * amp;
+    spec.group.position.y = spec.baseY + Math.max(0, jump);
+    // Arm raise
+    const armAngle = 0.3 + amp * 1.2;
+    spec.la.rotation.z = -armAngle;
+    spec.ra.rotation.z = armAngle;
+    // Sway
+    const sway = Math.sin(time * 0.8 + spec.cheerPhase) * 0.02 * (0.2 + amp * 0.8);
+    spec.group.rotation.z = sway;
+    // Head look
+    spec.la.rotation.x = Math.sin(time + spec.cheerPhase) * 0.1 * amp;
+    spec.ra.rotation.x = Math.sin(time + spec.cheerPhase + 1) * 0.1 * amp;
+  }
+}
+
+function updateFlags(dt, time) {
+  for (const fl of flags) {
+    fl.time += dt;
+    const geo = fl.geo;
+    const pos = geo.attributes.position;
+    const array = pos.array;
+    const w = 0.6, h = 0.35;
+    const cols = geo.parameters.widthSegments || 12;
+    const rows = geo.parameters.heightSegments || 6;
+    for (let j = 0; j <= rows; j++) {
+      for (let i = 0; i <= cols; i++) {
+        const idx = (j * (cols + 1) + i) * 3;
+        const u = i / cols;
+        const v = j / rows;
+        const wave = Math.sin(fl.time * 3 + u * 4 + v * 2) * 0.04 * u
+                   + Math.sin(fl.time * 2 + u * 2) * 0.02 * u;
+        array[idx] = u * w;
+        array[idx+1] = v * h;
+        array[idx+2] = wave;
+      }
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    // Pole sway
+    const sway = Math.sin(fl.time * 0.8) * 0.003;
+    fl.pole.rotation.z = sway;
+  }
+}
+
+function updateTrail() {
+  trailPositions.unshift(ball.position.clone());
+  if (trailPositions.length > 8) trailPositions.pop();
+  for (let i = 0; i < trailMeshes.length; i++) {
+    if (i < trailPositions.length && state === STATE.PLAYING) {
+      trailMeshes[i].position.copy(trailPositions[i]);
+      trailMeshes[i].visible = true;
+      trailMeshes[i].material.opacity = 0.3 * (1 - i / trailMeshes.length);
+      const s = 1 - i / trailMeshes.length;
+      trailMeshes[i].scale.setScalar(s);
+    } else {
+      trailMeshes[i].visible = false;
+    }
+  }
+}
+
+function updateConfetti(dt) {
+  if (!confettiActive) return;
+  const pos = pMesh.geometry.attributes.position.array;
+  let allDead = true;
+  for (let i = 0; i < particleCount; i++) {
+    pLife[i] += dt;
+    if (pLife[i] < pMaxLife[i]) {
+      allDead = false;
+      pVel[i].y -= 2.5 * dt;
+      pos[i*3] += pVel[i].x * dt;
+      pos[i*3+1] += pVel[i].y * dt;
+      pos[i*3+2] += pVel[i].z * dt;
+      // Wind
+      pVel[i].x += Math.sin(pLife[i]) * 0.5 * dt;
+    } else {
+      pos[i*3+1] = -10;
+    }
+  }
+  pMesh.geometry.attributes.position.needsUpdate = true;
+  if (allDead) {
+    confettiActive = false;
+    pMat.opacity = 0;
+  } else {
+    pMat.opacity = Math.min(1, pMat.opacity + dt);
+  }
+}
+
+// ─── Main Loop ───────────────────────────────────────────
+let prevTime = performance.now() / 1000;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now() / 1000;
+  let dt = now - prevTime;
+  prevTime = now;
+  dt = Math.min(dt, 0.05);
+
+  // Game state machine
+  if (state === STATE.SERVING) {
+    serveTimer -= dt;
+    // Ball floats in place waiting for the hit
+    ball.position.y = TABLE_H + 0.15 + 0.06 + Math.sin(serveTimer * 8) * 0.02;
+    ball.position.x += (0 - ball.position.x) * 0.01;
+    ball.position.z += (TABLE_LEN/2 - 0.4 - 0.1 - ball.position.z) * 0.01;
+    // Paddle swing animation: backswing → forward → impact
+    const prog = 1 - serveTimer; // 0 → 1 over 1 second
+    if (serveTimer > 0.1) {
+      // Smooth swing from -0.5 (back) to 0.0 (impact)
+      const t = Math.min(prog / 0.9, 1);
+      const smooth = t * t * (3 - 2 * t); // smoothstep
+      playerPaddle.rotation.x = -0.5 + smooth * 0.5;
+    } else {
+      // Follow-through after impact
+      playerPaddle.rotation.x = 0.35;
+    }
+    if (serveTimer <= 0) {
+      serveBall();
+    }
+  }
+
+  if (state === STATE.SCORED) {
+    scoredTimer += dt;
+    if (scoredTimer > 1.8) {
+      state = STATE.IDLE;
+      ball.position.set(0, TABLE_H + 0.4, TABLE_LEN/2 - 0.05);
+      ballVel = {x:0, y:0, z:0};
+      playerPaddle.position.set(0, TABLE_H + 0.15, TABLE_LEN/2 - 0.3);
+      aiPaddle.position.set(0, TABLE_H + 0.15, -TABLE_LEN/2 + 0.3);
+      playerPaddle.rotation.x = 0;
+      document.getElementById('info').textContent = '🏓 Подача...';
+      setTimeout(startServe, 400);
+    }
+  }
+
+  // Paddle tricks (twirl when idle)
+  if (state === STATE.IDLE || state === STATE.SCORED) {
+    const spin = dt * 2.5;
+    playerPaddle.rotation.y += spin;
+    aiPaddle.rotation.y += spin;
+    playerPaddle.rotation.z = Math.sin(now * 2) * 0.05;
+    aiPaddle.rotation.z = Math.sin(now * 2 + 1) * 0.05;
+  }
+
+  // Celebration animation (paddle raise)
+  if (celebrationTimer > 0) {
+    celebrationTimer -= dt;
+    const t = celebrationTimer;
+    const targetPaddle = celebrationSide === 1 ? playerPaddle : aiPaddle;
+    const raise = Math.sin(t * 8) * 0.3 * Math.max(0, t);
+    targetPaddle.position.y = TABLE_H + 0.15 + raise;
+    targetPaddle.rotation.x = -0.3 + Math.sin(t * 12) * 0.1;
+    if (t < 0) {
+      targetPaddle.position.y = TABLE_H + 0.15;
+      celebrationTimer = 0;
+    }
+  }
+
+  updatePaddles(dt);
+  updatePhysics(dt);
+  // Paddle follow-through decay
+  if (state !== STATE.SERVING && playerPaddle.rotation.x !== 0) {
+    playerPaddle.rotation.x *= 0.96;
+    if (Math.abs(playerPaddle.rotation.x) < 0.01) playerPaddle.rotation.x = 0;
+  }
+  if (state !== STATE.IDLE && state !== STATE.SCORED) {
+    playerPaddle.rotation.z = THREE.MathUtils.lerp(playerPaddle.rotation.z, -playerPaddleVel.x * 0.3, 0.05);
+  }
+  updateAudience(dt, now);
+  updateFlags(dt, now);
+  updateTrail();
+  updateConfetti(dt);
+
+  // Ball glow
+  const ballGlow = 0.05 + Math.abs(ballVel.y) * 0.02;
+  ball.material.emissiveIntensity = Math.min(ballGlow, 0.4);
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ─── Resize ──────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+// ─── Start ───────────────────────────────────────────────
+document.getElementById('info').textContent = '🏓 Подача...';
+state = STATE.IDLE;
+animate();
+setTimeout(startServe, 600);
+
+</script>
+</body>
+</html>

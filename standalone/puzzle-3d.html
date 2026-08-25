@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>15 Puzzle 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;overflow:hidden;user-select:none}
+.header{text-align:center;margin-bottom:16px}
+.header h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,#58a6ff,#bc8cff,#f778ba);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.header .sub{font-size:13px;color:#8b949e}
+.stats{display:flex;gap:24px;margin-bottom:16px}
+.stat{text-align:center}
+.stat .val{font-size:24px;font-weight:700;color:#58a6ff}
+.stat .lbl{font-size:11px;color:#8b949e;text-transform:uppercase}
+.canvas-wrap{perspective:800px;position:relative}
+canvas{display:block;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.controls{display:flex;gap:10px;margin-top:16px}
+.controls button{padding:10px 24px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#c9d1d9;font-size:14px;cursor:pointer;transition:all .15s}
+.controls button:hover{background:#58a6ff;color:#0d1117;border-color:#58a6ff}
+.controls button:active{transform:scale(.97)}
+.win-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;flex-direction:column}
+.win-overlay.show{display:flex}
+.win-overlay h2{font-size:48px;background:linear-gradient(135deg,#3fb950,#58a6ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+.win-overlay p{color:#8b949e;margin-bottom:20px;font-size:16px}
+.win-overlay button{padding:12px 32px;border-radius:8px;border:none;background:#3fb950;color:#0d1117;font-size:16px;font-weight:600;cursor:pointer}
+.controls .size-btn.active{background:#58a6ff;color:#0d1117;border-color:#58a6ff}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>15 Puzzle 3D</h1>
+  <div class="sub">Click tiles to slide them into the empty space</div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="val" id="moves">0</div><div class="lbl">Moves</div></div>
+  <div class="stat"><div class="val" id="timer">0:00</div><div class="lbl">Time</div></div>
+  <div class="stat"><div class="val" id="best">-</div><div class="lbl">Best</div></div>
+</div>
+<div class="canvas-wrap">
+  <canvas id="c"></canvas>
+</div>
+<div class="controls">
+  <button onclick="setSize(3)" class="size-btn" id="s3">3x3</button>
+  <button onclick="setSize(4)" class="size-btn active" id="s4">4x4</button>
+  <button onclick="setSize(5)" class="size-btn" id="s5">5x5</button>
+  <button onclick="shuffleGame()">Shuffle</button>
+  <button onclick="resetGame()">Reset</button>
+</div>
+<div class="win-overlay" id="winOverlay">
+  <h2>You Win!</h2>
+  <p id="winText"></p>
+  <button onclick="closeWin()">Play Again</button>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let N = 4;
+let TILE, PAD, BOARD;
+let board = [];
+let emptyR, emptyC;
+let moves = 0;
+let timerInterval = null;
+let startTime = 0;
+let elapsed = 0;
+let won = false;
+let animating = false;
+let animTile = null;
+let animFrom = null;
+let animTo = null;
+let animProgress = 0;
+let rotateX = 0, rotateY = 0;
+let targetRotX = 0, targetRotY = 0;
+let lastTime = 0;
+
+const COLORS = [
+  '#f85149','#f0883e','#d29922','#3fb950','#58a6ff',
+  '#bc8cff','#f778ba','#79c0ff','#56d364','#e3b341',
+  '#ff7b72','#ffa657','#d2a8ff','#7ee787','#a5d6ff',
+  '#ff9bce','#ffd8b1','#b1e3ff','#d4f7dc','#fff3cd',
+  '#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#9b59b6',
+  '#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6'
+];
+
+function resize() {
+  const maxW = Math.min(window.innerWidth - 40, 500);
+  BOARD = maxW;
+  TILE = Math.floor((BOARD - 10) / N);
+  PAD = Math.floor((BOARD - TILE * N) / 2);
+  canvas.width = BOARD;
+  canvas.height = BOARD;
+}
+
+function initBoard() {
+  board = [];
+  let num = 1;
+  for (let r = 0; r < N; r++) {
+    board[r] = [];
+    for (let c = 0; c < N; c++) {
+      if (r === N-1 && c === N-1) {
+        board[r][c] = 0;
+        emptyR = r;
+        emptyC = c;
+      } else {
+        board[r][c] = num++;
+      }
+    }
+  }
+}
+
+function shuffleBoard() {
+  // Random moves from solved state to guarantee solvability
+  for (let i = 0; i < N * N * 200; i++) {
+    const dirs = [];
+    if (emptyR > 0) dirs.push([-1, 0]);
+    if (emptyR < N-1) dirs.push([1, 0]);
+    if (emptyC > 0) dirs.push([0, -1]);
+    if (emptyC < N-1) dirs.push([0, 1]);
+    const [dr, dc] = dirs[Math.floor(Math.random() * dirs.length)];
+    const nr = emptyR + dr, nc = emptyC + dc;
+    board[emptyR][emptyC] = board[nr][nc];
+    board[nr][nc] = 0;
+    emptyR = nr;
+    emptyC = nc;
+  }
+}
+
+function isSolvable() {
+  let inv = 0;
+  const flat = [];
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (board[r][c]) flat.push(board[r][c]);
+  for (let i = 0; i < flat.length; i++)
+    for (let j = i+1; j < flat.length; j++)
+      if (flat[i] > flat[j]) inv++;
+  if (N % 2 === 1) return inv % 2 === 0;
+  return (inv + emptyR) % 2 === 1;
+}
+
+function shuffleGame() {
+  won = false;
+  document.getElementById('winOverlay').classList.remove('show');
+  moves = 0;
+  elapsed = 0;
+  document.getElementById('moves').textContent = '0';
+  document.getElementById('timer').textContent = '0:00';
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+
+  do {
+    shuffleBoard();
+  } while (!isSolvable() || isSolved());
+}
+
+function resetGame() {
+  won = false;
+  document.getElementById('winOverlay').classList.remove('show');
+  moves = 0;
+  elapsed = 0;
+  document.getElementById('moves').textContent = '0';
+  document.getElementById('timer').textContent = '0:00';
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  initBoard();
+}
+
+function isSolved() {
+  let num = 1;
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++) {
+      if (r === N-1 && c === N-1) return board[r][c] === 0;
+      if (board[r][c] !== num++) return false;
+    }
+  return true;
+}
+
+function startTimer() {
+  if (timerInterval) return;
+  startTime = Date.now() - elapsed * 1000;
+  timerInterval = setInterval(() => {
+    elapsed = (Date.now() - startTime) / 1000;
+    const m = Math.floor(elapsed / 60);
+    const s = Math.floor(elapsed % 60);
+    document.getElementById('timer').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+  }, 100);
+}
+
+function tilePos(r, c) {
+  return {
+    x: PAD + c * TILE,
+    y: PAD + r * TILE
+  };
+}
+
+function drawRoundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function getTileColor(num) {
+  return COLORS[(num - 1) % COLORS.length];
+}
+
+function getTileEmoji(num) {
+  const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟',
+    '🔵','🟢','🟡','🟠','🔴','💜','💗','💎','⭐','🌟',
+    '🎯','🎲','🎮','🕹️','🔑','🗝️','🛡️','⚔️','🔮','🏆'];
+  return emojis[(num - 1) % emojis.length];
+}
+
+function draw3DTile(x, y, w, h, num, depth, scale) {
+  const color = getTileColor(num);
+  const margin = 3 * scale;
+  const tx = x + margin;
+  const ty = y + margin;
+  const tw = w - margin * 2;
+  const th = h - margin * 2;
+  const r = 8 * scale;
+
+  // 3D depth shadow
+  const d = depth * 3 * scale;
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  drawRoundRect(tx + d, ty + d, tw, th, r);
+  ctx.fill();
+
+  // Side (3D depth effect)
+  if (d > 0) {
+    ctx.fillStyle = shadeColor(color, -30);
+    drawRoundRect(tx + d*0.5, ty + d*0.5, tw, th, r);
+    ctx.fill();
+  }
+
+  // Main tile face
+  const grad = ctx.createLinearGradient(tx, ty, tx + tw, ty + th);
+  grad.addColorStop(0, shadeColor(color, 20));
+  grad.addColorStop(0.5, color);
+  grad.addColorStop(1, shadeColor(color, -20));
+  ctx.fillStyle = grad;
+  drawRoundRect(tx, ty, tw, th, r);
+  ctx.fill();
+
+  // Top highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  drawRoundRect(tx + 2, ty + 2, tw - 4, th * 0.4, r);
+  ctx.fill();
+
+  // Number
+  const fontSize = Math.floor(tw * 0.4);
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 3;
+  ctx.fillText(num, tx + tw/2, ty + th/2 - 1);
+  ctx.shadowBlur = 0;
+
+  // Emoji below number
+  const emojiSize = Math.floor(tw * 0.2);
+  ctx.font = `${emojiSize}px sans-serif`;
+  ctx.fillText(getTileEmoji(num), tx + tw/2, ty + th/2 + fontSize * 0.45);
+}
+
+function shadeColor(hex, percent) {
+  const num = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, Math.max(0, (num >> 16) + percent));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + percent));
+  const b = Math.min(255, Math.max(0, (num & 0xff) + percent));
+  return `rgb(${r},${g},${b})`;
+}
+
+function render(time) {
+  const dt = (time - lastTime) / 1000;
+  lastTime = time;
+
+  // Smooth rotation
+  rotateX += (targetRotX - rotateX) * 5 * dt;
+  rotateY += (targetRotY - rotateY) * 5 * dt;
+
+  ctx.clearRect(0, 0, BOARD, BOARD);
+
+  // Board background with 3D perspective hint
+  const bgGrad = ctx.createRadialGradient(BOARD/2, BOARD/2, 0, BOARD/2, BOARD/2, BOARD*0.7);
+  bgGrad.addColorStop(0, '#1a1a2e');
+  bgGrad.addColorStop(1, '#0d1117');
+  ctx.fillStyle = bgGrad;
+  drawRoundRect(0, 0, BOARD, BOARD, 12);
+  ctx.fill();
+
+  // Board border glow
+  ctx.strokeStyle = 'rgba(88,166,255,0.15)';
+  ctx.lineWidth = 2;
+  drawRoundRect(1, 1, BOARD-2, BOARD-2, 12);
+  ctx.stroke();
+
+  // Draw grid slots (empty spaces)
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const {x, y} = tilePos(r, c);
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      drawRoundRect(x + 3, y + 3, TILE - 6, TILE - 6, 6);
+      ctx.fill();
+    }
+  }
+
+  // Animate active tile
+  if (animating && animTile) {
+    animProgress += dt * 8;
+    if (animProgress >= 1) {
+      animProgress = 1;
+      animating = false;
+      // Finalize move
+      board[emptyR][emptyC] = board[animFrom.r][animFrom.c];
+      board[animFrom.r][animFrom.c] = 0;
+      emptyR = animFrom.r;
+      emptyC = animFrom.c;
+    }
+  }
+
+  // Draw tiles
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const num = board[r][c];
+      if (num === 0) continue;
+
+      let x, y, depth = 0;
+
+      if (animating && animTile && animFrom.r === r && animFrom.c === c) {
+        const t = easeInOutCubic(animProgress);
+        const from = tilePos(animFrom.r, animFrom.c);
+        const to = tilePos(animTo.r, animTo.c);
+        x = from.x + (to.x - from.x) * t;
+        y = from.y + (to.y - from.y) * t;
+        depth = Math.sin(t * Math.PI) * 4; // Pop up during animation
+      } else {
+        const pos = tilePos(r, c);
+        x = pos.x;
+        y = pos.y;
+      }
+
+      // 3D depth based on position (subtle tilt)
+      const centerX = BOARD/2, centerY = BOARD/2;
+      const dx = (x + TILE/2 - centerX) / BOARD;
+      const dy = (y + TILE/2 - centerY) / BOARD;
+      depth += (dx * rotateY + dy * rotateX) * 2;
+
+      const scale = 1;
+      draw3DTile(x, y, TILE, TILE, num, depth, scale);
+    }
+  }
+
+  // Win effect
+  if (won) {
+    ctx.fillStyle = `rgba(63,185,80,${0.1 + Math.sin(time/300) * 0.05})`;
+    drawRoundRect(0, 0, BOARD, BOARD, 12);
+    ctx.fill();
+  }
+
+  requestAnimationFrame(render);
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+}
+
+function findTile(num) {
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (board[r][c] === num) return {r, c};
+  return null;
+}
+
+function moveTile(r, c) {
+  if (animating || won) return;
+  if (r === emptyR && c === emptyC) return;
+
+  const dr = Math.sign(r - emptyR);
+  const dc = Math.sign(c - emptyC);
+
+  // Must be adjacent
+  if (Math.abs(r - emptyR) + Math.abs(c - emptyC) !== 1) return;
+
+  // Start animation
+  animTile = board[r][c];
+  animFrom = {r, c};
+  animTo = {r: emptyR, c: emptyC};
+  animProgress = 0;
+  animating = true;
+
+  moves++;
+  document.getElementById('moves').textContent = moves;
+  startTimer();
+
+  // Check win after animation
+  setTimeout(() => {
+    if (isSolved()) {
+      won = true;
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+
+      const best = localStorage.getItem('15best_' + N);
+      if (!best || moves < parseInt(best)) {
+        localStorage.setItem('15best_' + N, moves);
+        document.getElementById('best').textContent = moves;
+      }
+
+      setTimeout(() => {
+        document.getElementById('winText').textContent =
+          `${N}x${N} solved in ${moves} moves, ${document.getElementById('timer').textContent}`;
+        document.getElementById('winOverlay').classList.add('show');
+      }, 400);
+    }
+  }, 140);
+}
+
+function closeWin() {
+  document.getElementById('winOverlay').classList.remove('show');
+  shuffleGame();
+}
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (board[r][c] === 0) continue;
+      const {x, y} = tilePos(r, c);
+      if (mx >= x && mx < x + TILE && my >= y && my < y + TILE) {
+        moveTile(r, c);
+        return;
+      }
+    }
+  }
+});
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const mx = (touch.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (touch.clientY - rect.top) * (canvas.height / rect.height);
+
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (board[r][c] === 0) continue;
+      const {x, y} = tilePos(r, c);
+      if (mx >= x && mx < x + TILE && my >= y && my < y + TILE) {
+        moveTile(r, c);
+        return;
+      }
+    }
+  }
+}, {passive: false});
+
+// Keyboard (arrow keys move tile adjacent to empty)
+document.addEventListener('keydown', (e) => {
+  let tr = emptyR, tc = emptyC;
+  switch(e.key) {
+    case 'ArrowUp': tr = emptyR + 1; break;
+    case 'ArrowDown': tr = emptyR - 1; break;
+    case 'ArrowLeft': tc = emptyC + 1; break;
+    case 'ArrowRight': tc = emptyC - 1; break;
+    default: return;
+  }
+  e.preventDefault();
+  if (tr >= 0 && tr < N && tc >= 0 && tc < N) moveTile(tr, tc);
+});
+
+// Mouse tilt for 3D effect
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / rect.width - 0.5;
+  const my = (e.clientY - rect.top) / rect.height - 0.5;
+  targetRotX = my * -8;
+  targetRotY = mx * 8;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  targetRotX = 0;
+  targetRotY = 0;
+});
+
+function setSize(n) {
+  N = n;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('s' + n).classList.add('active');
+  resize();
+  resetGame();
+  shuffleGame();
+
+  const best = localStorage.getItem('15best_' + N);
+  document.getElementById('best').textContent = best || '-';
+}
+
+// Init
+resize();
+initBoard();
+const best = localStorage.getItem('15best_' + N);
+document.getElementById('best').textContent = best || '-';
+shuffleGame();
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

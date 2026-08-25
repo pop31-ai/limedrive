@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Римские Галеры</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Georgia', serif; overflow: hidden; }
+canvas { border: 3px solid #c9a84c; border-radius: 4px; }
+#ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: #c9a84c; text-align: center; font-size: 18px; pointer-events: none; }
+#score { font-size: 28px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+#info { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+#overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.7); color: #c9a84c; z-index: 10; }
+#overlay h1 { font-size: 48px; margin-bottom: 10px; text-shadow: 3px 3px 6px #000; }
+#overlay p { font-size: 18px; margin-bottom: 20px; }
+#overlay button { padding: 14px 40px; font-size: 22px; font-family: 'Georgia', serif; background: #8b4513; color: #c9a84c; border: 2px solid #c9a84c; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+#overlay button:hover { background: #a0522d; transform: scale(1.05); }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div id="score">Очки: 0</div>
+  <div id="info">A/D или ←/→ — движение | ПРОБЕЛ — таран</div>
+</div>
+<div id="overlay">
+  <h1>🏛️ РИМСКИЕ ГАЛЕРЫ 🏛️</h1>
+  <p>Управляй римской галерой на реке Тибр!<br>Избегай камней и вражеских лодок, собирай золото и тарани врагов!</p>
+  <button onclick="startGame()">В БОЙ!</button>
+</div>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width = 800;
+const H = canvas.height = 600;
+
+if (!ctx.roundRect) {
+  ctx.roundRect = function(x, y, w, h, r) {
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.arcTo(x + w, y, x + w, y + r, r);
+    this.lineTo(x + w, y + h - r);
+    this.arcTo(x + w, y + h, x + w - r, y + h, r);
+    this.lineTo(x + r, y + h);
+    this.arcTo(x, y + h, x, y + h - r, r);
+    this.lineTo(x, y + r);
+    this.arcTo(x, y, x + r, y, r);
+    this.closePath();
+  };
+}
+
+let keys = {};
+document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Enter' && !gameRunning) startGame(); e.preventDefault(); });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+const LEVELS = [
+  { name: "Чистое море", desc: "Бирюзовые воды Средиземноморья", spawnRate: 70, rockChance: 0.5, coinChance: 0.3, enemyChance: 0.2, enemyHp: 1, baseSpeed: 1.5, maxSpeed: 3, scoreToNext: 80, theme: "sea", waterColor: "#0e6655" },
+  { name: "Берега Тибра", desc: "Зелёные береги и руины храмов", spawnRate: 55, rockChance: 0.35, coinChance: 0.35, enemyChance: 0.3, enemyHp: 1, baseSpeed: 2, maxSpeed: 4, scoreToNext: 200, theme: "tiber", waterColor: "#1a5276" },
+  { name: "Гавань Остии", desc: "Торговые причалы и склады", spawnRate: 48, rockChance: 0.25, coinChance: 0.4, enemyChance: 0.35, enemyHp: 2, baseSpeed: 2.2, maxSpeed: 4.5, scoreToNext: 350, theme: "harbor", waterColor: "#1b4f72" },
+  { name: "Крепость Рима", desc: "Стены и башни легионеров", spawnRate: 42, rockChance: 0.25, coinChance: 0.25, enemyChance: 0.5, enemyHp: 2, baseSpeed: 2.5, maxSpeed: 5, scoreToNext: 520, theme: "fortress", waterColor: "#154360" },
+  { name: "Пирамиды Египта", desc: "Песчаные берега Нила", spawnRate: 38, rockChance: 0.2, coinChance: 0.3, enemyChance: 0.5, enemyHp: 2, baseSpeed: 2.8, maxSpeed: 5.5, scoreToNext: 700, theme: "pyramid", waterColor: "#1a5276" },
+  { name: "Древняя Русь", desc: "Берёзы и деревянные крепости", spawnRate: 34, rockChance: 0.2, coinChance: 0.2, enemyChance: 0.6, enemyHp: 3, baseSpeed: 3, maxSpeed: 5.5, scoreToNext: 900, theme: "rus", waterColor: "#1b4f72" },
+  { name: "Финальная битва", desc: "Последний бой за империю!", spawnRate: 28, rockChance: 0.15, coinChance: 0.15, enemyChance: 0.7, enemyHp: 3, baseSpeed: 3.5, maxSpeed: 6, scoreToNext: Infinity, theme: "final", waterColor: "#154360" },
+];
+
+let player, obstacles, coins, enemies, particles, score, speed, spawner, gameRunning, ramCooldown, waterOffset;
+let romanPopup = null;
+let currentLevel = 0;
+let levelTransition = null;
+let frameCount = 0;
+let banks = [];
+let bankSpawner = 0;
+
+const romanLines = {
+  coin: [
+    { text: "Золото Рима блестит,\nКошелёк наш толстеет!", face: "senator" },
+    { text: "Деньги — не главное,\nА без них — печально!", face: "merchant" },
+    { text: "Аурус! Монетка найдена,\nИмперия рада сполна!", face: "legionary" },
+    { text: "Цезарь бы одобрил,\nКольца с монетами сменил!", face: "centurion" },
+    { text: "Денариев целых десять!\nБудет что в дорогу съесть!", face: "slave" },
+  ],
+  ram: [
+    { text: "ТАРАН! Разлетается\nВражий корабль на части!", face: "legionary" },
+    { text: "Тараном бьём, не щадим!\nВрагов на дно мы гоним!", face: "centurion" },
+    { text: "Ты кто такой? Я — Рим!\nА ну, давай корми!\nНаш таран неострый —\nНо прёт ужасно злой!", face: "captain" },
+    { text: "Вжжжж! Катапульта!\nНет, это таран!\nКорабль вражеский\nВдребезги — и вesan!", face: "senator" },
+    { text: "Руби, ломай, топчи!\nРимлянин в бою\nТаранит от души,\nПотом хвастаю я!\nМой щит — чугунный,\nА меч — золотой!", face: "gladiator" },
+  ],
+  hit: [
+    { text: "Ой! Камень!\nЭто не камень —\nЭто варвар!\nО, Юпитер!\nБолит!\nБолит очень!", face: "slave" },
+    { text: "Противник нас ударил!\nНо мы — римляне!\nМы не сдаёмся!\nМы... немного\nПотерпим!", face: "centurion" },
+    { text: "Вражеский корабль\nНас задел!\nПозор!\nДолой!\nНо он правда\nБыстро ездит!", face: "merchant" },
+    { text: "Ой-ой-ой!\nКорпус трещит!\nРемонтируйте!\nСкорее!\nМой палец\nЗаживо!\nАаааа!", face: "slave" },
+  ],
+  start: [
+    { text: "В РИМСКИЕ ГАЛЕРЫ!\nАве, Цезарь!\nМы идём\nНа восток!\nА может,\nНа запад?\nЛадно,\nВперёд!", face: "captain" },
+    { text: "Солдат! Вперёд!\nИмперия ждёт!\nРим — наше имя!\nВраг — наше\nУгощение!\nАве!", face: "legionary" },
+    { text: "Тибр течёт,\nГалера ждёт!\nВраги дрожат,\nА мы — поём!\nАве, Цезарь!", face: "senator" },
+  ],
+  gameover: [
+    { text: "Мы проиграли...\nЦезарь плачет.\nСенат в панике.\nРабы смеются.\nПозор!", face: "centurion" },
+    { text: "Тибр забрал\nНашу галеру.\nНо дух римский\nНе утонет!\nРеванш!\nАве!", face: "legionary" },
+    { text: "Поражение?\nНет!\nПросто\nТактическое\nОтступление!\nНазад,\nРимляне!", face: "captain" },
+  ],
+  milestone: [
+    { text: "100 очков!\nЦезарь\nТебя\nОдобрительно\nКивает!", face: "senator" },
+    { text: "Ты крутой!\nКак Ганнибал!\nНо он\nПредатель!\nТы — лучше!", face: "merchant" },
+    { text: "Где твоя\nСлава?\nА, вот\nОна!\n100 очков!", face: "gladiator" },
+    { text: "200 очков!\nТы —\nНовый\nПомпей!\nА Помпей\nБыл...\nЛадно,\nТы лучше!", face: "centurion" },
+  ],
+  newlevel: [
+    { text: "Новый берег!\nНовые\nВраги!\nНовые\nМонеты!\nАве!", face: "legionary" },
+    { text: "Земля\nМеняется!\nА мы\nВсё те же!\nСильные!\nРимляне!", face: "centurion" },
+    { text: "Новый\nУровень!\nНовая\nОпасность!\nНо наш\nТаран\nСильнее!", face: "captain" },
+  ],
+};
+
+function drawRomanFace(type, x, y, size) {
+  ctx.save();
+  ctx.translate(x, y);
+  const s = size;
+
+  // helmet
+  ctx.fillStyle = '#888';
+  ctx.beginPath();
+  ctx.arc(0, -s*0.1, s*0.45, Math.PI, 0);
+  ctx.lineTo(s*0.35, s*0.15);
+  ctx.lineTo(-s*0.35, s*0.15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#c9a84c';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // helmet crest (red plume)
+  ctx.fillStyle = '#cc0000';
+  ctx.beginPath();
+  ctx.moveTo(0, -s*0.55);
+  ctx.quadraticCurveTo(s*0.15, -s*0.45, 0, -s*0.15);
+  ctx.quadraticCurveTo(-s*0.15, -s*0.45, 0, -s*0.55);
+  ctx.fill();
+
+  // face
+  const faceColor = type === 'slave' ? '#d4a574' : '#e8c088';
+  ctx.fillStyle = faceColor;
+  ctx.beginPath();
+  ctx.arc(0, s*0.05, s*0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  // eyes
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(-s*0.12, -s*0.02, s*0.04, 0, Math.PI*2);
+  ctx.arc(s*0.12, -s*0.02, s*0.04, 0, Math.PI*2);
+  ctx.fill();
+
+  // mouth
+  ctx.strokeStyle = '#6b3a1f';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, s*0.12, s*0.1, 0.1, Math.PI - 0.1);
+  ctx.stroke();
+
+  // type-specific features
+  if (type === 'senator') {
+    // laurel wreath
+    ctx.strokeStyle = '#228B22';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, -s*0.25, s*0.35, Math.PI*1.15, Math.PI*1.85);
+    ctx.stroke();
+  } else if (type === 'centurion') {
+    // scar
+    ctx.strokeStyle = '#a0522d';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(s*0.15, -s*0.1);
+    ctx.lineTo(s*0.25, s*0.15);
+    ctx.stroke();
+  } else if (type === 'gladiator') {
+    // eyebrow ring
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(-s*0.12, -s*0.09, s*0.025, 0, Math.PI*2);
+    ctx.arc(s*0.12, -s*0.09, s*0.025, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function showRomanPopup(eventType) {
+  const lines = romanLines[eventType];
+  if (!lines || lines.length === 0) return;
+  const line = lines[Math.floor(Math.random() * lines.length)];
+  romanPopup = { ...line, timer: 180, type: eventType };
+}
+
+function drawRomanPopup() {
+  if (!romanPopup) return;
+  romanPopup.timer--;
+  if (romanPopup.timer <= 0) { romanPopup = null; return; }
+
+  const alpha = romanPopup.timer > 160 ? (180 - romanPopup.timer) / 20 :
+                romanPopup.timer < 30 ? romanPopup.timer / 30 : 1;
+  ctx.globalAlpha = alpha;
+
+  const bx = 15, by = 80, bw = 170, bh = 140;
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.strokeStyle = '#c9a84c';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  drawRomanFace(romanPopup.face, bx + 45, by + 35, 50);
+
+  ctx.fillStyle = '#f5f5dc';
+  ctx.font = '11px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const lines = romanPopup.text.split('\n');
+  lines.forEach((l, i) => {
+    ctx.fillText(l, bx + bw/2, by + 65 + i * 14);
+  });
+
+  ctx.globalAlpha = 1;
+}
+
+function resetGame() {
+  player = { x: W/2, y: H - 100, w: 60, h: 28, vx: 0, hp: 3, ramming: false, ramTimer: 0, invincible: 0 };
+  obstacles = [];
+  coins = [];
+  enemies = [];
+  particles = [];
+  score = 0;
+  currentLevel = 0;
+  speed = LEVELS[0].baseSpeed;
+  spawner = 0;
+  ramCooldown = 0;
+  waterOffset = 0;
+  frameCount = 0;
+  banks = [];
+  bankSpawner = 0;
+  levelTransition = { text: LEVELS[0].name, sub: LEVELS[0].desc, timer: 150 };
+}
+
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  resetGame();
+  gameRunning = true;
+  showRomanPopup('start');
+  requestAnimationFrame(gameLoop);
+}
+
+if (window.location.hash === '#autostart') {
+  setTimeout(startGame, 500);
+}
+
+function spawnObstacle() {
+  const lv = LEVELS[currentLevel];
+  const r = Math.random();
+  if (r < lv.rockChance) {
+    obstacles.push({ x: Math.random() * (W - 40), y: -30, w: 30 + Math.random()*20, h: 25 + Math.random()*15 });
+  } else if (r < lv.rockChance + lv.coinChance) {
+    coins.push({ x: Math.random() * (W - 20), y: -20, r: 10, pulse: 0 });
+  } else {
+    enemies.push({ x: Math.random() * (W - 50), y: -30, w: 55, h: 25, hp: lv.enemyHp, flash: 0 });
+  }
+}
+
+function addParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y, vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+      life: 30 + Math.random()*20, color, r: 2 + Math.random()*3
+    });
+  }
+}
+
+function collides(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+const BANK_THEMES = {
+  sea: ["seaweed", "seaweed", "buoy", "coral"],
+  tiber: ["tree", "bush", "ruin", "grass", "rock"],
+  harbor: ["barrel", "crate", "post", "net"],
+  fortress: ["wall", "tower", "banner", "wall"],
+  pyramid: ["palm", "pyramid", "sand", "cactus"],
+  rus: ["birch", "izba", "fence", "church"],
+  final: ["tree", "tower", "palm", "birch", "wall", "ruin"],
+};
+
+function drawBankItem(item) {
+  const { type, x, y } = item;
+  ctx.save();
+  switch (type) {
+    case "seaweed":
+      ctx.strokeStyle = '#2ecc71';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x+25, y+60);
+      ctx.quadraticCurveTo(x+15, y+30, x+25+Math.sin(y*0.05)*8, y+5);
+      ctx.stroke();
+      ctx.strokeStyle = '#27ae60';
+      ctx.beginPath();
+      ctx.moveTo(x+35, y+60);
+      ctx.quadraticCurveTo(x+45, y+35, x+35+Math.cos(y*0.04)*6, y+10);
+      ctx.stroke();
+      break;
+    case "buoy":
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(x+30, y+35, 8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#f5f5dc';
+      ctx.fillRect(x+28, y+10, 4, 20);
+      break;
+    case "coral":
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(x+25, y+45, 10, 0, Math.PI*2);
+      ctx.arc(x+35, y+38, 8, 0, Math.PI*2);
+      ctx.arc(x+30, y+30, 7, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case "tree":
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(x+26, y+35, 8, 25);
+      ctx.fillStyle = '#228B22';
+      ctx.beginPath();
+      ctx.arc(x+30, y+25, 18, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#2ecc71';
+      ctx.beginPath();
+      ctx.arc(x+24, y+22, 12, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case "bush":
+      ctx.fillStyle = '#27ae60';
+      ctx.beginPath();
+      ctx.arc(x+30, y+45, 15, 0, Math.PI*2);
+      ctx.arc(x+18, y+42, 10, 0, Math.PI*2);
+      ctx.arc(x+42, y+42, 10, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case "ruin":
+      ctx.fillStyle = '#bdc3c7';
+      ctx.fillRect(x+15, y+20, 8, 40);
+      ctx.fillRect(x+35, y+30, 8, 30);
+      ctx.fillRect(x+15, y+18, 28, 6);
+      ctx.fillStyle = '#95a5a6';
+      ctx.fillRect(x+25, y+25, 6, 35);
+      break;
+    case "grass":
+      ctx.strokeStyle = '#27ae60';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x+10+i*10, y+60);
+        ctx.lineTo(x+10+i*10+Math.sin(y*0.1+i)*5, y+35+Math.random()*5);
+        ctx.stroke();
+      }
+      break;
+    case "barrel":
+      ctx.fillStyle = '#8B4513';
+      ctx.beginPath();
+      ctx.ellipse(x+30, y+40, 12, 18, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#5D4037';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(x+30, y+32, 12, 3, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x+30, y+48, 12, 3, 0, 0, Math.PI*2);
+      ctx.stroke();
+      break;
+    case "crate":
+      ctx.fillStyle = '#D2B48C';
+      ctx.fillRect(x+15, y+30, 30, 25);
+      ctx.strokeStyle = '#8B4513';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x+15, y+30, 30, 25);
+      ctx.beginPath();
+      ctx.moveTo(x+15, y+42); ctx.lineTo(x+45, y+42);
+      ctx.moveTo(x+30, y+30); ctx.lineTo(x+30, y+55);
+      ctx.stroke();
+      break;
+    case "post":
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(x+27, y+15, 6, 45);
+      ctx.fillStyle = '#bdc3c7';
+      ctx.beginPath();
+      ctx.arc(x+30, y+15, 5, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case "net":
+      ctx.strokeStyle = '#f5f5dc';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x+15, y+20+i*10);
+        ctx.lineTo(x+45, y+20+i*10);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x+15+i*10, y+20);
+        ctx.lineTo(x+15+i*10, y+50);
+        ctx.stroke();
+      }
+      break;
+    case "wall":
+      ctx.fillStyle = '#7f8c8d';
+      ctx.fillRect(x+5, y+10, 50, 50);
+      ctx.fillStyle = '#95a5a6';
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 3; c++) {
+          ctx.fillRect(x+8+c*16+(r%2)*8, y+13+r*12, 14, 10);
+        }
+      }
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(x+22, y+35, 16, 25);
+      break;
+    case "tower":
+      ctx.fillStyle = '#7f8c8d';
+      ctx.fillRect(x+12, y+5, 36, 55);
+      ctx.fillStyle = '#95a5a6';
+      for (let i = 0; i < 4; i++) {
+        ctx.fillRect(x+12+i*9, y+2, 8, 8);
+      }
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(x+24, y+35, 12, 25);
+      ctx.fillStyle = '#2c3e50';
+      ctx.fillRect(x+18, y+15, 6, 8);
+      ctx.fillRect(x+36, y+15, 6, 8);
+      break;
+    case "banner":
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(x+28, y+5, 4, 55);
+      ctx.fillStyle = '#c0392b';
+      ctx.beginPath();
+      ctx.moveTo(x+32, y+10);
+      ctx.lineTo(x+50, y+18);
+      ctx.lineTo(x+32, y+30);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#f1c40f';
+      ctx.font = 'bold 8px Georgia';
+      ctx.fillText('SPQR', x+33, y+24);
+      break;
+    case "palm":
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(x+27, y+30, 6, 30);
+      ctx.strokeStyle = '#228B22';
+      ctx.lineWidth = 3;
+      for (let a = 0; a < 5; a++) {
+        const angle = (a / 5) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(x+30, y+25);
+        ctx.quadraticCurveTo(x+30+Math.cos(angle)*25, y+25+Math.sin(angle)*10-15, x+30+Math.cos(angle)*30, y+25+Math.sin(angle)*5);
+        ctx.stroke();
+      }
+      break;
+    case "pyramid":
+      ctx.fillStyle = '#d4a76a';
+      ctx.beginPath();
+      ctx.moveTo(x+30, y+10);
+      ctx.lineTo(x+5, y+60);
+      ctx.lineTo(x+55, y+60);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#c49555';
+      ctx.beginPath();
+      ctx.moveTo(x+30, y+10);
+      ctx.lineTo(x+30, y+60);
+      ctx.lineTo(x+55, y+60);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#b8860b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x+30, y+10);
+      ctx.lineTo(x+5, y+60);
+      ctx.lineTo(x+55, y+60);
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    case "sand":
+      ctx.fillStyle = '#f0d9a0';
+      ctx.beginPath();
+      ctx.ellipse(x+30, y+50, 30, 12, 0, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case "cactus":
+      ctx.fillStyle = '#27ae60';
+      ctx.fillRect(x+26, y+20, 8, 40);
+      ctx.fillRect(x+14, y+28, 14, 8);
+      ctx.fillRect(x+14, y+22, 8, 14);
+      ctx.fillRect(x+36, y+32, 14, 8);
+      ctx.fillRect(x+42, y+26, 8, 14);
+      break;
+    case "birch":
+      ctx.fillStyle = '#ecf0f1';
+      ctx.fillRect(x+27, y+20, 6, 40);
+      ctx.strokeStyle = '#2c3e50';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x+27, y+25+i*8);
+        ctx.lineTo(x+33, y+23+i*8);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#2ecc71';
+      ctx.beginPath();
+      ctx.arc(x+30, y+18, 14, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case "izba":
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(x+10, y+30, 40, 30);
+      ctx.fillStyle = '#D2691E';
+      ctx.beginPath();
+      ctx.moveTo(x+5, y+30);
+      ctx.lineTo(x+30, y+12);
+      ctx.lineTo(x+55, y+30);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(x+24, y+40, 12, 20);
+      ctx.fillStyle = '#f39c12';
+      ctx.fillRect(x+15, y+36, 8, 8);
+      break;
+    case "fence":
+      ctx.fillStyle = '#8B4513';
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(x+8+i*10, y+25, 4, 35);
+      }
+      ctx.fillRect(x+8, y+32, 44, 4);
+      ctx.fillRect(x+8, y+48, 44, 4);
+      break;
+    case "church":
+      ctx.fillStyle = '#ecf0f1';
+      ctx.fillRect(x+15, y+25, 30, 35);
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath();
+      ctx.moveTo(x+12, y+25);
+      ctx.lineTo(x+30, y+8);
+      ctx.lineTo(x+48, y+25);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(x+30, y+10, 4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#f1c40f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x+30, y+6);
+      ctx.lineTo(x+30, y+14);
+      ctx.moveTo(x+26, y+10);
+      ctx.lineTo(x+34, y+10);
+      ctx.stroke();
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(x+25, y+40, 10, 20);
+      break;
+  }
+  ctx.restore();
+}
+
+function drawBanks() {
+  for (const b of banks) {
+    drawBankItem(b);
+  }
+}
+
+function drawWater() {
+  const lv = LEVELS[currentLevel];
+  waterOffset = (waterOffset + speed * 0.5) % 40;
+  ctx.fillStyle = lv.waterColor;
+  ctx.fillRect(0, 0, W, H);
+  for (let y = -20; y < H + 20; y += 40) {
+    ctx.strokeStyle = 'rgba(52,152,219,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = -10; x < W + 10; x += 5) {
+      const wy = y + Math.sin((x + waterOffset) * 0.05) * 4;
+      x === -10 ? ctx.moveTo(x, wy) : ctx.lineTo(x, wy);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawBoat(x, y, w, h, isEnemy, flash) {
+  ctx.save();
+  ctx.translate(x + w/2, y + h/2);
+  if (flash > 0) ctx.globalAlpha = 0.5;
+
+  // hull
+  ctx.fillStyle = isEnemy ? '#8b0000' : '#654321';
+  ctx.beginPath();
+  ctx.moveTo(-w/2, -h/4);
+  ctx.lineTo(w/2, -h/4);
+  ctx.lineTo(w/2 - 5, h/4);
+  ctx.lineTo(-w/2 + 5, h/4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = isEnemy ? '#ff4444' : '#c9a84c';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // deck line
+  ctx.strokeStyle = isEnemy ? '#ff6666' : '#daa520';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-w/3, 0);
+  ctx.lineTo(w/3, 0);
+  ctx.stroke();
+
+  // mast
+  ctx.fillStyle = '#8B7355';
+  ctx.fillRect(-2, -h/2 - 10, 4, h/2 + 5);
+
+  // sail
+  ctx.fillStyle = isEnemy ? '#cc0000' : '#f5f5dc';
+  ctx.beginPath();
+  ctx.moveTo(2, -h/2 - 8);
+  ctx.lineTo(22, -h/4);
+  ctx.lineTo(2, h/8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = isEnemy ? '#ff0000' : '#c9a84c';
+  ctx.stroke();
+
+  // ram
+  ctx.fillStyle = '#888';
+  ctx.beginPath();
+  ctx.moveTo(-w/2 - 8, 0);
+  ctx.lineTo(-w/2, -4);
+  ctx.lineTo(-w/2, 4);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawRock(x, y, w, h) {
+  ctx.fillStyle = '#5d6d7e';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y + 2);
+  ctx.lineTo(x + w - 3, y + h);
+  ctx.lineTo(x + 3, y + h - 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#7f8c8d';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#85929e';
+  ctx.beginPath();
+  ctx.arc(x + w/2 - 3, y + h/3, 3, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function drawCoin(x, y, r, pulse) {
+  const s = r + Math.sin(pulse) * 2;
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(x, y, s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#b8860b';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#b8860b';
+  ctx.font = 'bold 12px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('$', x, y);
+}
+
+function drawHUD() {
+  const lv = LEVELS[currentLevel];
+  // HP
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = i < player.hp ? '#e74c3c' : '#555';
+    ctx.beginPath();
+    ctx.arc(25 + i * 28, H - 25, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#c9a84c';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  // ram cooldown
+  if (ramCooldown > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(W/2 - 40, H - 40, 80, 12);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(W/2 - 40, H - 40, 80 * (1 - ramCooldown/60), 12);
+    ctx.strokeStyle = '#c9a84c';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(W/2 - 40, H - 40, 80, 12);
+  }
+  // level progress bar
+  if (lv.scoreToNext < Infinity) {
+    const progress = Math.min(score / lv.scoreToNext, 1);
+    const bx = W - 200, by = H - 18, bw = 180, bh = 10;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = '#c9a84c';
+    ctx.fillRect(bx, by, bw * progress, bh);
+    ctx.strokeStyle = '#c9a84c';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#f5f5dc';
+    ctx.font = '10px Georgia';
+    ctx.textAlign = 'right';
+    ctx.fillText(score + '/' + lv.scoreToNext, bx - 5, by + 9);
+  } else {
+    ctx.fillStyle = '#c9a84c';
+    ctx.font = '12px Georgia';
+    ctx.textAlign = 'right';
+    ctx.fillText('ФИНАЛ', W - 20, H - 16);
+  }
+}
+
+function drawLevelTransition() {
+  if (!levelTransition) return;
+  const alpha = levelTransition.timer > 130 ? (150 - levelTransition.timer) / 20 :
+                levelTransition.timer < 30 ? levelTransition.timer / 30 : 1;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, H/2 - 50, W, 100);
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = 'bold 36px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(levelTransition.text, W/2, H/2 - 12);
+  ctx.fillStyle = '#f5f5dc';
+  ctx.font = '16px Georgia';
+  ctx.fillText(levelTransition.sub, W/2, H/2 + 22);
+  ctx.globalAlpha = 1;
+}
+
+function gameLoop() {
+  if (!gameRunning) return;
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+function update() {
+  const lv = LEVELS[currentLevel];
+  speed = Math.min(lv.baseSpeed + score * 0.003, lv.maxSpeed);
+  frameCount++;
+
+  if (levelTransition) {
+    levelTransition.timer--;
+    if (levelTransition.timer <= 0) { levelTransition = null; }
+    else if (levelTransition.timer > 130) return;
+    else return;
+  }
+
+  // player movement
+  if (keys['ArrowLeft'] || keys['KeyA']) player.vx = -5;
+  else if (keys['ArrowRight'] || keys['KeyD']) player.vx = 5;
+  else player.vx *= 0.85;
+
+  if (keys['Space'] && ramCooldown <= 0 && !player.ramming) {
+    player.ramming = true;
+    player.ramTimer = 20;
+    ramCooldown = 60;
+    addParticles(player.x, player.y + player.h/2, '#ff4444', 10);
+  }
+
+  if (player.ramming) {
+    player.ramTimer--;
+    if (player.ramTimer <= 0) player.ramming = false;
+  }
+  if (ramCooldown > 0) ramCooldown--;
+
+  player.x += player.vx;
+  if (player.x < 10) player.x = 10;
+  if (player.x + player.w > W - 10) player.x = W - player.w - 10;
+  if (player.invincible > 0) player.invincible--;
+
+  // level progression
+  if (score >= lv.scoreToNext && currentLevel < LEVELS.length - 1) {
+    currentLevel++;
+    const nlv = LEVELS[currentLevel];
+    levelTransition = { text: nlv.name, sub: nlv.desc, timer: 150 };
+    obstacles = [];
+    enemies = [];
+    coins = [];
+    banks = [];
+    showRomanPopup('newlevel');
+    player.invincible = 120;
+  }
+
+  // spawner
+  spawner++;
+  if (spawner > lv.spawnRate) {
+    spawnObstacle();
+    spawner = 0;
+  }
+
+  // obstacles
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    obstacles[i].y += speed;
+    if (obstacles[i].y > H + 40) { obstacles.splice(i, 1); continue; }
+    if (player.invincible <= 0 && collides(player, obstacles[i])) {
+      addParticles(obstacles[i].x, obstacles[i].y, '#7f8c8d', 8);
+      obstacles.splice(i, 1);
+      player.hp--;
+      player.invincible = 60;
+      showRomanPopup('hit');
+      if (player.hp <= 0) { gameOver(); return; }
+    }
+  }
+
+  // coins
+  for (let i = coins.length - 1; i >= 0; i--) {
+    coins[i].y += speed;
+    coins[i].pulse += 0.1;
+    if (coins[i].y > H + 30) { coins.splice(i, 1); continue; }
+    if (collides(player, { x: coins[i].x - coins[i].r, y: coins[i].y - coins[i].r, w: coins[i].r*2, h: coins[i].r*2 })) {
+      addParticles(coins[i].x, coins[i].y, '#ffd700', 12);
+      const prev = score;
+      score += 10;
+      if (Math.floor(prev/100) < Math.floor(score/100) && score >= 100) {
+        showRomanPopup('milestone');
+      } else {
+        showRomanPopup('coin');
+      }
+      coins.splice(i, 1);
+    }
+  }
+
+  // enemies
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    enemies[i].y += speed * 0.8;
+    if (enemies[i].flash > 0) enemies[i].flash--;
+    if (enemies[i].y > H + 40) { enemies.splice(i, 1); continue; }
+
+    if (player.invincible <= 0 && collides(player, enemies[i])) {
+      if (player.ramming) {
+        enemies[i].hp--;
+        enemies[i].flash = 10;
+        addParticles(enemies[i].x + enemies[i].w/2, enemies[i].y + enemies[i].h/2, '#ff0000', 15);
+        player.ramming = false;
+        player.ramTimer = 0;
+        if (enemies[i].hp <= 0) {
+          score += 25;
+          addParticles(enemies[i].x + enemies[i].w/2, enemies[i].y + enemies[i].h/2, '#ff6600', 20);
+          showRomanPopup('ram');
+          enemies.splice(i, 1);
+        }
+      } else {
+        player.hp--;
+        player.invincible = 60;
+        addParticles(player.x + player.w/2, player.y + player.h/2, '#e74c3c', 10);
+        showRomanPopup('hit');
+        if (player.hp <= 0) { gameOver(); return; }
+      }
+    }
+  }
+
+  // particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // banks
+  bankSpawner++;
+  if (bankSpawner > 18) {
+    bankSpawner = 0;
+    const theme = lv.theme;
+    const leftItems = BANK_THEMES[theme] || BANK_THEMES.sea;
+    const item = leftItems[Math.floor(Math.random() * leftItems.length)];
+    const side = Math.random() < 0.5 ? 'left' : 'right';
+    const bx = side === 'left' ? -10 : W - 50;
+    banks.push({ type: item, side, x: bx, y: -40, w: 60, h: 60 });
+  }
+  for (let i = banks.length - 1; i >= 0; i--) {
+    banks[i].y += speed * 0.6;
+    if (banks[i].y > H + 60) banks.splice(i, 1);
+  }
+
+  document.getElementById('score').textContent = 'Очки: ' + score + ' | ' + LEVELS[currentLevel].name;
+}
+
+function draw() {
+  drawWater();
+  drawBanks();
+
+  // obstacles
+  for (const o of obstacles) drawRock(o.x, o.y, o.w, o.h);
+
+  // coins
+  for (const c of coins) drawCoin(c.x, c.y, c.r, c.pulse);
+
+  // enemies
+  for (const e of enemies) drawBoat(e.x, e.y, e.w, e.h, true, e.flash);
+
+  // player
+  const px = player.invincible > 0 && Math.floor(player.invincible/3) % 2 === 0;
+  if (!px) drawBoat(player.x, player.y, player.w, player.h, false, 0);
+
+  if (player.ramming) {
+    ctx.fillStyle = 'rgba(255,100,0,0.3)';
+    ctx.beginPath();
+    ctx.arc(player.x - 5, player.y + player.h/2, 18, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // particles
+  for (const p of particles) {
+    ctx.globalAlpha = p.life / 50;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  drawHUD();
+  drawRomanPopup();
+  drawLevelTransition();
+}
+
+function gameOver() {
+  gameRunning = false;
+  showRomanPopup('gameover');
+  setTimeout(() => { romanPopup = null; }, 3000);
+  const lv = LEVELS[currentLevel];
+  document.getElementById('overlay').style.display = 'flex';
+  document.getElementById('overlay').innerHTML = `
+    <h1>ПОРАЖЕНИЕ</h1>
+    <p>Дошли до уровня: <b>${lv.name}</b><br>Набрано очков: <b>${score}</b></p>
+    <button onclick="startGame()">РЕВАНШ!</button>
+  `;
+}
+</script>
+</body>
+</html>

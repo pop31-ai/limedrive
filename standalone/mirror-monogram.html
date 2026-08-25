@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Зеркальный Вензель</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080810;color:#d4af37;font-family:Georgia,serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;overflow-x:hidden}
+h1{font-size:28px;letter-spacing:6px;text-shadow:0 0 20px rgba(212,175,55,0.4);margin:16px 0 8px;font-weight:normal}
+#levels{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;justify-content:center}
+.lvl-btn{background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.3);color:#d4af37;padding:6px 14px;cursor:pointer;font-family:Georgia,serif;font-size:13px;border-radius:4px;transition:all 0.3s}
+.lvl-btn:hover{background:rgba(212,175,55,0.2)}
+.lvl-btn.active{background:rgba(212,175,55,0.25);border-color:#d4af37;box-shadow:0 0 10px rgba(212,175,55,0.3)}
+.lvl-btn.done{border-color:#4a4;box-shadow:0 0 6px rgba(68,170,68,0.3)}
+#game-wrap{display:flex;gap:16px;align-items:flex-start}
+canvas{border:1px solid rgba(212,175,55,0.2);cursor:crosshair;border-radius:4px;background:#0c0c1a}
+#sidebar{width:170px;display:flex;flex-direction:column;gap:8px}
+#sidebar h3{font-size:14px;font-weight:normal;letter-spacing:3px;text-align:center;margin-bottom:4px}
+.tool-btn{display:flex;align-items:center;gap:8px;background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.2);color:#d4af37;padding:8px 10px;cursor:pointer;font-family:Georgia,serif;font-size:12px;border-radius:4px;transition:all 0.2s}
+.tool-btn:hover{background:rgba(212,175,55,0.15)}
+.tool-btn.active{background:rgba(212,175,55,0.2);border-color:#d4af37}
+.tool-btn .icon{width:24px;height:24px;display:inline-block;vertical-align:middle;border-radius:3px}
+#reset-btn{margin-top:8px;background:rgba(180,50,50,0.15);border:1px solid rgba(180,50,50,0.4);color:#c66;padding:8px;cursor:pointer;font-family:Georgia,serif;font-size:13px;border-radius:4px;transition:all 0.2s}
+#reset-btn:hover{background:rgba(180,50,50,0.3)}
+#info{margin-top:12px;padding:10px;background:rgba(212,175,55,0.04);border:1px solid rgba(212,175,55,0.15);border-radius:4px;font-size:12px;line-height:1.6}
+#status{text-align:center;margin-top:14px;font-size:14px;min-height:24px;letter-spacing:1px}
+.win{color:#5c5;animation:glow 1s ease-in-out infinite alternate}
+@keyframes glow{from{text-shadow:0 0 5px rgba(85,204,85,0.3)}to{text-shadow:0 0 20px rgba(85,204,85,0.7)}}
+.legend{display:flex;gap:10px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#998}
+.legend-dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,0.2)}
+</style>
+</head>
+<body>
+<h1>ЗЕРКАЛЬНЫЙ ВЕНЗЕЛЬ</h1>
+<div id="levels"></div>
+<div id="game-wrap">
+  <canvas id="canvas"></canvas>
+  <div id="sidebar">
+    <h3>Инструменты</h3>
+    <div id="tools"></div>
+    <button id="reset-btn" onclick="resetLevel()">Сброс</button>
+    <div id="info"></div>
+  </div>
+</div>
+<div id="status"></div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#fff"></div>Белый луч</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f44"></div>Красный</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4f4"></div>Зелёный</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#48f"></div>Синий</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d4af37"></div>Вензель</div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const CELL = 64;
+let gridW, gridH, grid, fixed, sources, playerItems, hoveredCell;
+let beamLines = [], litOrnaments = new Set(), reachedTargets = new Set();
+let currentLevel = 0, selectedTool = null, animFrame = 0;
+let particles = [], completedLevels = new Set();
+let prevLitOrnaments = new Set();
+
+const COLORS = {
+  white: '#ffffff', red: '#ff4444', green: '#44ff66', blue: '#4488ff',
+  whiteG: 'rgba(255,255,255,0.15)', redG: 'rgba(255,60,60,0.2)',
+  greenG: 'rgba(60,255,100,0.2)', blueG: 'rgba(60,120,255,0.2)'
+};
+
+const TOOLS = [
+  {id:'mirror45', name:'Зеркало /', key:'1'},
+  {id:'mirror135', name:'Зеркало \\', key:'2'},
+  {id:'prism', name:'Призма', key:'3'},
+  {id:'filterR', name:'Фильтр R', key:'4'},
+  {id:'filterG', name:'Фильтр G', key:'5'},
+  {id:'filterB', name:'Фильтр B', key:'6'},
+];
+
+// ===== SOUND ENGINE =====
+/** @type {AudioContext|null} */
+let audioCtx = null;
+/** Ленивая инициализация AudioContext */
+function getAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+/** Воспроизводит синтезированный звук. @param {'mirror'|'prism'|'ornament'|'win'|'place'|'remove'|'filter'} type */
+function playSound(type){
+  try{
+    const ac = getAudio();
+    const now = ac.currentTime;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain);
+    gain.connect(ac.destination);
+
+    if(type==='mirror'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(800,now);
+      osc.frequency.exponentialRampToValueAtTime(1400,now+0.08);
+      gain.gain.setValueAtTime(0.12,now);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+0.12);
+      osc.start(now);osc.stop(now+0.12);
+    }else if(type==='prism'){
+      osc.type='triangle';
+      osc.frequency.setValueAtTime(500,now);
+      osc.frequency.exponentialRampToValueAtTime(1800,now+0.25);
+      gain.gain.setValueAtTime(0.08,now);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+0.3);
+      osc.start(now);osc.stop(now+0.3);
+      // Second tone for sparkle
+      const o2=ac.createOscillator(),g2=ac.createGain();
+      o2.connect(g2);g2.connect(ac.destination);
+      o2.type='sine';o2.frequency.setValueAtTime(1200,now+0.05);
+      o2.frequency.exponentialRampToValueAtTime(2400,now+0.2);
+      g2.gain.setValueAtTime(0.06,now+0.05);
+      g2.gain.exponentialRampToValueAtTime(0.001,now+0.2);
+      o2.start(now+0.05);o2.stop(now+0.2);
+    }else if(type==='ornament'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(523,now);
+      osc.frequency.setValueAtTime(659,now+0.08);
+      osc.frequency.setValueAtTime(784,now+0.16);
+      gain.gain.setValueAtTime(0.18,now);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+0.4);
+      osc.start(now);osc.stop(now+0.4);
+    }else if(type==='win'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(523,now);
+      osc.frequency.setValueAtTime(659,now+0.12);
+      osc.frequency.setValueAtTime(784,now+0.24);
+      osc.frequency.setValueAtTime(1047,now+0.36);
+      gain.gain.setValueAtTime(0.2,now);
+      gain.gain.linearRampToValueAtTime(0.15,now+0.5);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+0.9);
+      osc.start(now);osc.stop(now+0.9);
+      // Harmony
+      const o2=ac.createOscillator(),g2=ac.createGain();
+      o2.connect(g2);g2.connect(ac.destination);
+      o2.type='sine';o2.frequency.setValueAtTime(392,now+0.36);
+      o2.frequency.setValueAtTime(523,now+0.48);
+      g2.gain.setValueAtTime(0.12,now+0.36);
+      g2.gain.exponentialRampToValueAtTime(0.001,now+0.9);
+      o2.start(now+0.36);o2.stop(now+0.9);
+    }else if(type==='place'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(500,now);
+      osc.frequency.exponentialRampToValueAtTime(800,now+0.04);
+      gain.gain.setValueAtTime(0.08,now);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+0.06);
+      osc.start(now);osc.stop(now+0.06);
+    }else if(type==='remove'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(600,now);
+      osc.frequency.exponentialRampToValueAtTime(300,now+0.06);
+      gain.gain.setValueAtTime(0.08,now);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+0.08);
+      osc.start(now);osc.stop(now+0.08);
+    }else if(type==='filter'){
+      osc.type='triangle';
+      osc.frequency.setValueAtTime(700,now);
+      osc.frequency.exponentialRampToValueAtTime(900,now+0.06);
+      gain.gain.setValueAtTime(0.07,now);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+0.1);
+      osc.start(now);osc.stop(now+0.1);
+    }
+  }catch(e){}
+}
+
+const LEVELS = [
+  {
+    name:'Первое отражение', desc:'Направьте луч к вензелю и далее к цели.',
+    w:5,h:5, sources:[{x:0,y:2,dx:1,dy:0,color:'white'}],
+    fixed:{'2,2':'ornament','4,4':'target'},
+    tools:['mirror45','mirror135']
+  },
+  {
+    name:'Два зеркала', desc:'Луч должен пройти через оба вензеля и достичь цели.',
+    w:6,h:6, sources:[{x:0,y:0,dx:1,dy:0,color:'white'}],
+    fixed:{'2,0':'ornament','4,3':'ornament','4,5':'target','3,1':'wall','3,2':'wall','3,3':'wall'},
+    tools:['mirror45','mirror135']
+  },
+  {
+    name:'Зеркальный лабиринт', desc:'Пробейте путь сквозь стены к вензелям и цели.',
+    w:7,h:7, sources:[{x:0,y:0,dx:1,dy:0,color:'white'}],
+    fixed:{'2,0':'ornament','5,4':'ornament','6,6':'target',
+      '3,1':'wall','3,2':'wall','1,3':'wall','2,3':'wall','5,1':'wall','5,2':'wall','5,3':'wall','4,5':'wall'},
+    tools:['mirror45','mirror135']
+  },
+  {
+    name:'Призма', desc:'Белый луч разлагается в спектр. Направьте цвета к вензелям.',
+    w:7,h:7, sources:[{x:0,y:3,dx:1,dy:0,color:'white'}],
+    fixed:{'3,3':'prism','2,1':'ornament','2,5':'ornament','5,3':'ornament','6,1':'targetR','6,5':'targetB','6,3':'targetG'},
+    tools:['mirror45','mirror135']
+  },
+  {
+    name:'Спектральный танец', desc:'Призма + зеркала + фильтры. Зажгите все вензели.',
+    w:8,h:8, sources:[{x:0,y:3,dx:1,dy:0,color:'white'}],
+    fixed:{'3,3':'prism','1,1':'ornament','1,5':'ornament','6,3':'ornament','7,0':'target','7,7':'target',
+      '4,1':'wall','4,2':'wall','4,4':'wall','4,5':'wall'},
+    tools:['mirror45','mirror135','filterR','filterG','filterB']
+  },
+  {
+    name:'Шедевр', desc:'Два луча, призмы, фильтры. Мастер-уровень.',
+    w:9,h:9, sources:[{x:0,y:1,dx:1,dy:0,color:'white'},{x:0,y:7,dx:1,dy:0,color:'white'}],
+    fixed:{'2,1':'ornament','2,7':'ornament','5,4':'ornament','8,4':'target',
+      '4,0':'wall','4,1':'wall','4,2':'wall','4,6':'wall','4,7':'wall','4,8':'wall',
+      '6,2':'wall','6,3':'wall','6,5':'wall','6,6':'wall'},
+    tools:['mirror45','mirror135','prism','filterR','filterG','filterB']
+  },
+  {
+    name:'Зеркальный зал', desc:'Большой зал. Луч должен пройти зигзагом через 4 вензеля.',
+    w:9,h:7, sources:[{x:0,y:3,dx:1,dy:0,color:'white'}],
+    fixed:{'2,3':'ornament','4,1':'ornament','4,5':'ornament','6,3':'ornament','8,0':'target',
+      '3,0':'wall','3,2':'wall','3,4':'wall','3,6':'wall','5,0':'wall','5,2':'wall','5,4':'wall','5,6':'wall',
+      '7,1':'wall','7,5':'wall'},
+    tools:['mirror45','mirror135']
+  },
+  {
+    name:'Дисперсия', desc:'Два призмы разлагают луч. Соберите все цвета к вензелям.',
+    w:9,h:8, sources:[{x:0,y:3,dx:1,dy:0,color:'white'}],
+    fixed:{'2,3':'prism','6,3':'prism',
+      '1,1':'ornament','1,5':'ornament','5,1':'ornament','5,5':'ornament','8,3':'target',
+      '4,0':'wall','4,7':'wall'},
+    tools:['mirror45','mirror135','filterR','filterG','filterB']
+  },
+  {
+    name:'Фильтрация', desc:'Много цветов, нужно правильно отфильтровать. 3 вензеля.',
+    w:8,h:8, sources:[{x:0,y:3,dx:1,dy:0,color:'white'},{x:0,y:6,dx:1,dy:0,color:'white'}],
+    fixed:{'3,3':'prism','3,6':'prism',
+      '6,1':'ornament','6,4':'ornament','6,7':'ornament','7,1':'targetR','7,4':'targetG','7,7':'targetB',
+      '5,2':'wall','5,5':'wall'},
+    tools:['mirror45','mirror135','filterR','filterG','filterB']
+  },
+  {
+    name:'Оптический шедевр', desc:'Финальный вызов. Все элементы. Зажгите все 5 вензелей.',
+    w:10,h:8, sources:[{x:0,y:1,dx:1,dy:0,color:'white'},{x:0,y:6,dx:1,dy:0,color:'white'}],
+    fixed:{'2,1':'prism','2,6':'prism',
+      '5,0':'ornament','5,3':'ornament','5,7':'ornament','8,1':'ornament','8,6':'ornament',
+      '9,3':'target',
+      '4,0':'wall','4,1':'wall','4,6':'wall','4,7':'wall',
+      '6,2':'wall','6,4':'wall','6,5':'wall','7,3':'wall'},
+    tools:['mirror45','mirror135','prism','filterR','filterG','filterB']
+  }
+];
+
+// ===== LEVEL LOGIC =====
+/** Инициализация уровня по индексу. Сетка, фиксированные элементы, UI. @param {number} idx */
+function initLevel(idx){
+  currentLevel=idx;
+  const L=LEVELS[idx];
+  gridW=L.w;gridH=L.h;
+  fixed={};grid={};playerItems={};
+  for(const[k,v]of Object.entries(L.fixed))fixed[k]=v;
+  hoveredCell=null;selectedTool=null;
+  canvas.width=gridW*CELL;
+  canvas.height=gridH*CELL;
+  buildToolsUI(L.tools);
+  prevLitOrnaments=new Set();
+  trace();
+  updateUI();
+}
+
+function cellKey(x,y){return x+','+y}
+function getCell(x,y){return playerItems[cellKey(x,y)]||fixed[cellKey(x,y)]||null}
+
+function trace(){
+  beamLines=[];litOrnaments=new Set();reachedTargets=new Set();
+  const L=LEVELS[currentLevel];
+  for(const s of L.sources)traceBeam(s.x,s.y,s.dx,s.dy,s.color,new Set());
+  detectNewOrnaments();
+  checkWin();
+}
+
+function detectNewOrnaments(){
+  for(const k of litOrnaments){
+    if(!prevLitOrnaments.has(k)){
+      const[x,y]=k.split(',').map(Number);
+      spawnOrnamentBurst(x,y);
+      playSound('ornament');
+    }
+  }
+  prevLitOrnaments=new Set(litOrnaments);
+}
+
+/**
+ * Рекурсивный трассировщик луча. Следует по сетке, обрабатывает отражения,
+ * дисперсию призмы, фильтрацию. Останавливается на стенах и выходе за границы.
+ * @param {number} x - X координата ячейки
+ * @param {number} y - Y координата ячейки
+ * @param {number} dx - Направление X (-1, 0, 1)
+ * @param {number} dy - Направление Y (-1, 0, 1)
+ * @param {string} color - 'white'|'red'|'green'|'blue'
+ * @param {Set<string>} visited - Множество посещённых состояний (защита от циклов)
+ */
+function traceBeam(x,y,dx,dy,color,visited){
+  let steps=0;
+  while(steps++<300&&x>=0&&x<gridW&&y>=0&&y<gridH){
+    const k=cellKey(x,y)+','+dx+','+dy+','+color;
+    if(visited.has(k))break;
+    visited.add(k);
+    const cell=getCell(x,y);
+
+    if(cell==='ornament')litOrnaments.add(cellKey(x,y));
+    if(cell&&cell.startsWith('target')){
+      const tc=cell.replace('target','');
+      if(!tc||tc===color||color==='white')reachedTargets.add(cellKey(x,y));
+    }
+    if(cell==='wall')return;
+
+    let ndx=dx,ndy=dy;
+    let soundType=null;
+    if(cell==='mirror45'){ndx=-dy;ndy=-dx;soundType='mirror';}
+    else if(cell==='mirror135'){ndx=dy;ndy=dx;soundType='mirror';}
+    else if(cell==='prism'&&color==='white'){
+      beamLines.push({x1:x,y1:y,x2:x+dx,y2:y+dy,color:'white'});
+      spawnParticles(x,y,'white',8);
+      playSound('prism');
+      traceBeam(x,y,dx,dy,'red',visited);
+      traceBeam(x,y,-dy,dx,'green',visited);
+      traceBeam(x,y,dy,-dx,'blue',visited);
+      return;
+    }else if(cell==='filterR'){
+      if(color==='white'){color='red';soundType='filter';}
+      else if(color!=='red')return;
+    }else if(cell==='filterG'){
+      if(color==='white'){color='green';soundType='filter';}
+      else if(color!=='green')return;
+    }else if(cell==='filterB'){
+      if(color==='white'){color='blue';soundType='filter';}
+      else if(color!=='blue')return;
+    }
+
+    const nx=x+ndx,ny=y+ndy;
+    beamLines.push({x1:x,y1:y,x2:nx,y2:ny,color});
+    spawnBeamParticles(x,y,nx,ny,color,2);
+    if(soundType)playSound(soundType);
+    x=nx;y=ny;dx=ndx;dy=ndy;
+  }
+}
+
+// ===== PARTICLES =====
+/** Создаёт взрыв частиц в точке. @param {number} cx - X ячейки @param {number} cy - Y ячейки */
+function spawnParticles(cx,cy,color,n){
+  const px=cx*CELL+CELL/2,py=cy*CELL+CELL/2;
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2;
+    const spd=0.5+Math.random()*2;
+    particles.push({
+      x:px,y:py, vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+      life:25+Math.random()*35,
+      color:COLORS[color]||'#fff',
+      size:1.5+Math.random()*2.5,
+      trail:[]
+    });
+  }
+}
+
+function spawnBeamParticles(x1,y1,x2,y2,color,n){
+  const px1=x1*CELL+CELL/2,py1=y1*CELL+CELL/2;
+  const px2=x2*CELL+CELL/2,py2=y2*CELL+CELL/2;
+  for(let i=0;i<n;i++){
+    const t=Math.random();
+    const bx=px1+(px2-px1)*t;
+    const by=py1+(py2-py1)*t;
+    particles.push({
+      x:bx+(Math.random()-0.5)*4, y:by+(Math.random()-0.5)*4,
+      vx:(Math.random()-0.5)*0.8,vy:(Math.random()-0.5)*0.8,
+      life:15+Math.random()*20,
+      color:COLORS[color]||'#fff',
+      size:0.8+Math.random()*1.5,
+      trail:[]
+    });
+  }
+}
+
+function spawnOrnamentBurst(cx,cy){
+  const px=cx*CELL+CELL/2,py=cy*CELL+CELL/2;
+  for(let i=0;i<20;i++){
+    const a=Math.random()*Math.PI*2;
+    const spd=1+Math.random()*3;
+    particles.push({
+      x:px,y:py, vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+      life:40+Math.random()*40,
+      color:'#FFD700',
+      size:2+Math.random()*3,
+      trail:[]
+    });
+  }
+}
+
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.trail.push({x:p.x,y:p.y});
+    if(p.trail.length>6)p.trail.shift();
+    p.x+=p.vx;p.y+=p.vy;
+    p.vx*=0.97;p.vy*=0.97;
+    p.life--;
+    if(p.life<=0){particles.splice(i,1);}
+  }
+}
+
+// ===== WIN CHECK =====
+/** @type {boolean} Состояние победы текущего уровня */
+let winState=false;
+
+/** Проверяет условие победы: все вензели зажжены + все цели достигнуты */
+function checkWin(){
+  let allOrn=true;
+  for(const k of Object.keys(fixed)){
+    if(fixed[k]==='ornament'&&!litOrnaments.has(k)){allOrn=false;break;}
+  }
+  let allTgt=true;
+  for(const k of Object.keys(fixed)){
+    if(fixed[k]&&fixed[k].startsWith('target')&&!reachedTargets.has(k)){allTgt=false;break;}
+  }
+  const wasWin=winState;
+  winState=allOrn&&allTgt;
+  const st=document.getElementById('status');
+  if(winState){
+    st.textContent='Уровень пройден!'+(currentLevel<LEVELS.length-1?' → Следующий уровень':' — Поздравляем!');
+    st.className='win';
+    completedLevels.add(currentLevel);
+    updateLevelButtons();
+    if(!wasWin)playSound('win');
+  }else{
+    st.textContent='Вензелей: '+litOrnaments.size+'/'+countOrn()+'  |  Целей: '+reachedTargets.size+'/'+countTgt();
+    st.className='';
+  }
+}
+function countOrn(){let c=0;for(const v of Object.values(fixed))if(v==='ornament')c++;return c;}
+function countTgt(){let c=0;for(const v of Object.values(fixed))if(v&&v.startsWith('target'))c++;return c;}
+
+function resetLevel(){
+  for(const k of Object.keys(playerItems))delete playerItems[k];
+  trace();updateUI();
+}
+
+/**
+ * Размещает/меняет/убирает инструмент в ячейке.
+ * Цикл: пусто → текущий инструмент → следующий тип → удаление.
+ */
+function placeTool(x,y){
+  if(x<0||x>=gridW||y<0||y>=gridH)return;
+  const k=cellKey(x,y);
+  if(fixed[k]&&fixed[k]!=='ornament'&&!fixed[k].startsWith('target'))return;
+  if(playerItems[k]===selectedTool){
+    delete playerItems[k];
+    playSound('remove');
+  }else if(playerItems[k]){
+    const cycle={mirror45:'mirror135',mirror135:null,prism:'prism',filterR:'filterR',filterG:'filterG',filterB:'filterB'};
+    const next=cycle[playerItems[k]];
+    if(next)playerItems[k]=next;else delete playerItems[k];
+    playSound('place');
+  }else{
+    playerItems[k]=selectedTool;
+    playSound('place');
+  }
+  trace();updateUI();
+}
+
+function updateUI(){
+  const info=document.getElementById('info');
+  const L=LEVELS[currentLevel];
+  info.innerHTML='<b>'+L.name+'</b><br>'+L.desc;
+  document.querySelectorAll('.tool-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.tool===selectedTool);
+  });
+}
+
+function buildToolsUI(available){
+  const cont=document.getElementById('tools');
+  cont.innerHTML='';
+  TOOLS.forEach(t=>{
+    if(!available.includes(t.id))return;
+    const b=document.createElement('div');
+    b.className='tool-btn';
+    b.dataset.tool=t.id;
+    b.innerHTML='<img class="icon" src="'+toolIcon(t.id)+'" width="24" height="24">'+t.name;
+    b.onclick=()=>{
+      selectedTool=selectedTool===t.id?null:t.id;
+      updateUI();
+    };
+    cont.appendChild(b);
+  });
+}
+
+function toolIcon(id){
+  const c=document.createElement('canvas');c.width=24;c.height=24;
+  const x=c.getContext('2d');
+  x.strokeStyle='#d4af37';x.lineWidth=2;
+  if(id==='mirror45'){x.beginPath();x.moveTo(4,20);x.lineTo(20,4);x.stroke();}
+  else if(id==='mirror135'){x.beginPath();x.moveTo(4,4);x.lineTo(20,20);x.stroke();}
+  else if(id==='prism'){
+    x.beginPath();x.moveTo(12,3);x.lineTo(22,21);x.lineTo(2,21);x.closePath();
+    x.strokeStyle='#aaa';x.stroke();x.fillStyle='rgba(200,200,255,0.15)';x.fill();
+  }else{
+    const colors={filterR:'#f44',filterG:'#4f4',filterB:'#48f'};
+    x.fillStyle=colors[id]||'#888';
+    x.beginPath();x.arc(12,12,9,0,Math.PI*2);x.fill();
+    x.globalAlpha=0.3;x.fill();x.globalAlpha=1;
+  }
+  return c.toDataURL();
+}
+
+function updateLevelButtons(){
+  document.querySelectorAll('.lvl-btn').forEach((b,i)=>{
+    b.classList.toggle('done',completedLevels.has(i));
+  });
+}
+
+// ===== RENDERING =====
+/** Главный цикл отрисовки — вызывается через requestAnimationFrame */
+function draw(){
+  animFrame++;
+  updateParticles();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawGrid();
+  drawFixedCells();
+  drawBeams();
+  drawPlayerItems();
+  drawOrnaments();
+  drawTargets();
+  drawSources();
+  drawParticlesGfx();
+  drawHover();
+  requestAnimationFrame(draw);
+}
+
+function drawGrid(){
+  ctx.strokeStyle='rgba(212,175,55,0.08)';
+  ctx.lineWidth=1;
+  for(let x=0;x<=gridW;x++){
+    ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,gridH*CELL);ctx.stroke();
+  }
+  for(let y=0;y<=gridH;y++){
+    ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(gridW*CELL,y*CELL);ctx.stroke();
+  }
+}
+
+function drawFixedCells(){
+  for(const[k,v]of Object.entries(fixed)){
+    const[x,y]=k.split(',').map(Number);
+    if(v==='wall')drawWall(x,y);
+  }
+}
+
+function drawWall(x,y){
+  const px=x*CELL,py=y*CELL;
+  const g=ctx.createLinearGradient(px,py,px+CELL,py+CELL);
+  g.addColorStop(0,'#1a1a2e');g.addColorStop(0.5,'#15152a');g.addColorStop(1,'#1a1a2e');
+  ctx.fillStyle=g;ctx.fillRect(px+1,py+1,CELL-2,CELL-2);
+  ctx.strokeStyle='rgba(100,100,140,0.3)';ctx.lineWidth=1;
+  ctx.strokeRect(px+2,py+2,CELL-4,CELL-4);
+  ctx.strokeStyle='rgba(80,80,120,0.15)';
+  ctx.beginPath();
+  ctx.moveTo(px+CELL/2,py+4);ctx.lineTo(px+CELL/2,py+CELL/2);
+  ctx.moveTo(px+4,py+CELL/2);ctx.lineTo(px+CELL-4,py+CELL/2);
+  ctx.moveTo(px+CELL/4,py+CELL/2);ctx.lineTo(px+CELL/4,py+CELL-4);
+  ctx.moveTo(px+CELL*3/4,py+CELL/2);ctx.lineTo(px+CELL*3/4,py+CELL-4);
+  ctx.stroke();
+}
+
+function drawPlayerItems(){
+  for(const[k,v]of Object.entries(playerItems)){
+    const[x,y]=k.split(',').map(Number);
+    const px=x*CELL+CELL/2,py=y*CELL+CELL/2;
+    if(v==='mirror45')drawMirror(px,py,false);
+    else if(v==='mirror135')drawMirror(px,py,true);
+    else if(v==='prism')drawPrism(px,py);
+    else if(v.startsWith('filter'))drawFilter(px,py,v);
+  }
+}
+
+function drawMirror(cx,cy,backslash){
+  const s=CELL*0.4;
+  ctx.save();ctx.translate(cx,cy);
+  ctx.shadowColor='rgba(200,200,255,0.5)';ctx.shadowBlur=8;
+  ctx.strokeStyle='#c0c0e0';ctx.lineWidth=3;
+  ctx.beginPath();
+  if(backslash){ctx.moveTo(-s,-s);ctx.lineTo(s,s);}
+  else{ctx.moveTo(-s,s);ctx.lineTo(s,-s);}
+  ctx.stroke();
+  ctx.strokeStyle='rgba(212,175,55,0.6)';ctx.lineWidth=1;ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(200,200,255,0.3)';
+  ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function drawPrism(cx,cy){
+  const s=CELL*0.38;
+  ctx.save();ctx.translate(cx,cy);
+  ctx.shadowColor='rgba(150,150,255,0.4)';ctx.shadowBlur=10;
+  ctx.beginPath();ctx.moveTo(0,-s);ctx.lineTo(s,s*0.7);ctx.lineTo(-s,s*0.7);ctx.closePath();
+  ctx.fillStyle='rgba(180,180,255,0.12)';ctx.fill();
+  ctx.strokeStyle='rgba(180,180,255,0.6)';ctx.lineWidth=2;ctx.stroke();
+  const hintColors=['#f44','#ff4','#4f4','#48f'];
+  for(let i=0;i<4;i++){
+    ctx.strokeStyle=hintColors[i];ctx.globalAlpha=0.3;ctx.lineWidth=1;
+    ctx.beginPath();
+    const a=-0.5+i*0.3;
+    ctx.moveTo(-s*0.3,s*0.2);
+    ctx.lineTo(-s*0.3+Math.cos(a)*s*0.6,s*0.2+Math.sin(a)*s*0.6);
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.restore();
+}
+
+function drawFilter(cx,cy,type){
+  const colors={filterR:'#ff4444',filterG:'#44ff66',filterB:'#4488ff'};
+  const col=colors[type]||'#888';
+  ctx.save();ctx.translate(cx,cy);
+  ctx.shadowColor=col;ctx.shadowBlur=6;
+  ctx.beginPath();ctx.arc(0,0,CELL*0.3,0,Math.PI*2);
+  ctx.fillStyle=col;ctx.globalAlpha=0.25;ctx.fill();
+  ctx.globalAlpha=0.8;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+  ctx.globalAlpha=0.5;ctx.stroke();
+  ctx.globalAlpha=1;ctx.shadowBlur=0;
+  ctx.fillStyle=col;ctx.font='bold 11px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';
+  const labels={filterR:'R',filterG:'G',filterB:'B'};
+  ctx.fillText(labels[type],0,1);
+  ctx.restore();
+}
+
+function drawBeams(){
+  for(const b of beamLines){
+    const x1=b.x1*CELL+CELL/2,y1=b.y1*CELL+CELL/2;
+    const x2=b.x2*CELL+CELL/2,y2=b.y2*CELL+CELL/2;
+    const col=COLORS[b.color]||'#fff';
+    const glow=COLORS[b.color+'G']||COLORS.whiteG;
+    ctx.strokeStyle=glow;ctx.lineWidth=10;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    ctx.strokeStyle=col;ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+}
+
+// ===== ORNAMENTS (VENZELS) =====
+function drawOrnaments(){
+  for(const[k,v]of Object.entries(fixed)){
+    if(v!=='ornament')continue;
+    const[x,y]=k.split(',').map(Number);
+    const lit=litOrnaments.has(k);
+    drawMonogram(x*CELL+CELL/2,y*CELL+CELL/2,CELL*0.42,lit,(x+y)%8);
+  }
+}
+
+/**
+ * Рисует декоративный вензель (ornament) — барочный орнамент из кривых Безье.
+ * 8 вариантов: медальон, лилия, кельтский узел, роза, S-кривые, ромб, рама, мандала.
+ * @param {number} cx - Центр X
+ * @param {number} cy - Центр Y
+ * @param {number} s - Размер
+ * @param {boolean} lit - Активирован ли лучом
+ * @param {number} variant - Тип орнамента (0-7)
+ */
+function drawMonogram(cx,cy,s,lit,variant){
+  ctx.save();ctx.translate(cx,cy);
+
+  const pulse=lit?1+Math.sin(animFrame*0.06)*0.15:1;
+  const sc=s*pulse;
+  const alpha=lit?1:0.5;
+  const col=lit?`rgba(255,215,0,${alpha})`:`rgba(120,100,30,${alpha})`;
+  const fillCol=lit?'rgba(255,215,0,0.1)':'rgba(120,100,30,0.03)';
+
+  if(lit){
+    ctx.shadowColor='rgba(255,215,0,0.7)';
+    ctx.shadowBlur=16+Math.sin(animFrame*0.04)*6;
+    const rg=ctx.createRadialGradient(0,0,sc*0.1,0,0,sc*1.2);
+    rg.addColorStop(0,'rgba(255,215,0,0.2)');rg.addColorStop(0.5,'rgba(255,215,0,0.05)');rg.addColorStop(1,'rgba(255,215,0,0)');
+    ctx.fillStyle=rg;ctx.beginPath();ctx.arc(0,0,sc*1.2,0,Math.PI*2);ctx.fill();
+  }
+
+  ctx.strokeStyle=col;ctx.lineWidth=lit?2.2:1.5;
+  ctx.fillStyle=fillCol;ctx.lineCap='round';ctx.lineJoin='round';
+
+  const v=variant%8;
+
+  if(v===0){
+    // Heavy baroque medallion with 4-fold symmetry
+    for(let i=0;i<4;i++){
+      ctx.save();ctx.rotate(i*Math.PI/2);
+      // Main scroll
+      ctx.beginPath();ctx.moveTo(0,-sc*0.05);
+      ctx.bezierCurveTo(sc*0.35,-sc*0.1,sc*0.5,-sc*0.4,sc*0.2,-sc*0.5);
+      ctx.bezierCurveTo(-sc*0.05,-sc*0.52,-sc*0.05,-sc*0.3,sc*0.1,-sc*0.25);
+      ctx.stroke();
+      // Inner curl
+      ctx.beginPath();ctx.moveTo(sc*0.1,-sc*0.25);
+      ctx.bezierCurveTo(sc*0.2,-sc*0.2,sc*0.3,-sc*0.3,sc*0.2,-sc*0.4);
+      ctx.stroke();
+      // Dot at tip
+      ctx.beginPath();ctx.arc(sc*0.2,-sc*0.45,sc*0.04,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.restore();
+    }
+    // Central circle
+    ctx.beginPath();ctx.arc(0,0,sc*0.12,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(0,0,sc*0.06,0,Math.PI*2);ctx.stroke();
+
+  }else if(v===1){
+    // Triple fleur-de-lis with heavy petals
+    for(let i=0;i<3;i++){
+      ctx.save();ctx.rotate(i*Math.PI*2/3-Math.PI/2);
+      // Main petal
+      ctx.beginPath();ctx.moveTo(0,0);
+      ctx.bezierCurveTo(sc*0.15,-sc*0.3,sc*0.25,-sc*0.55,sc*0.12,-sc*0.6);
+      ctx.bezierCurveTo(0,-sc*0.62,-sc*0.12,-sc*0.55,-sc*0.12,-sc*0.6);
+      ctx.bezierCurveTo(-sc*0.25,-sc*0.55,-sc*0.15,-sc*0.3,0,0);
+      ctx.fill();ctx.stroke();
+      // Side curls
+      ctx.beginPath();ctx.moveTo(sc*0.08,-sc*0.2);
+      ctx.bezierCurveTo(sc*0.3,-sc*0.25,sc*0.35,-sc*0.4,sc*0.2,-sc*0.35);
+      ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-sc*0.08,-sc*0.2);
+      ctx.bezierCurveTo(-sc*0.3,-sc*0.25,-sc*0.35,-sc*0.4,-sc*0.2,-sc*0.35);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.beginPath();ctx.arc(0,0,sc*0.08,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+  }else if(v===2){
+    // Celtic knot style - 4 interlocking loops
+    for(let i=0;i<4;i++){
+      ctx.save();ctx.rotate(i*Math.PI/2);
+      ctx.beginPath();
+      ctx.moveTo(sc*0.05,0);
+      ctx.bezierCurveTo(sc*0.35,-sc*0.08,sc*0.45,-sc*0.35,sc*0.3,-sc*0.45);
+      ctx.bezierCurveTo(sc*0.15,-sc*0.52,sc*0.05,-sc*0.35,sc*0.15,-sc*0.25);
+      ctx.bezierCurveTo(sc*0.25,-sc*0.15,sc*0.15,-sc*0.05,sc*0.05,0);
+      ctx.fill();ctx.stroke();
+      // Accent dot
+      ctx.beginPath();ctx.arc(sc*0.3,-sc*0.42,sc*0.035,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+    // Central diamond
+    ctx.beginPath();ctx.moveTo(0,-sc*0.1);ctx.lineTo(sc*0.1,0);
+    ctx.lineTo(0,sc*0.1);ctx.lineTo(-sc*0.1,0);ctx.closePath();
+    ctx.fill();ctx.stroke();
+
+  }else if(v===3){
+    // Rose window - circular with petals
+    for(let i=0;i<6;i++){
+      ctx.save();ctx.rotate(i*Math.PI/3);
+      ctx.beginPath();ctx.ellipse(0,-sc*0.3,sc*0.1,sc*0.22,0,0,Math.PI*2);
+      ctx.fill();ctx.stroke();
+      ctx.restore();
+    }
+    ctx.beginPath();ctx.arc(0,0,sc*0.15,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(0,0,sc*0.07,0,Math.PI*2);ctx.stroke();
+    // Outer ring
+    ctx.beginPath();ctx.arc(0,0,sc*0.52,0,Math.PI*2);
+    ctx.globalAlpha=lit?0.5:0.2;ctx.stroke();ctx.globalAlpha=1;
+
+  }else if(v===4){
+    // Ornate S-curves (double scroll)
+    for(let i=0;i<2;i++){
+      ctx.save();ctx.rotate(i*Math.PI);
+      // Main S
+      ctx.beginPath();ctx.moveTo(0,-sc*0.05);
+      ctx.bezierCurveTo(sc*0.4,-sc*0.15,sc*0.4,-sc*0.45,0,-sc*0.5);
+      ctx.bezierCurveTo(-sc*0.35,-sc*0.52,-sc*0.45,-sc*0.2,-sc*0.15,sc*0.05);
+      ctx.fill();ctx.stroke();
+      // Curl at top
+      ctx.beginPath();ctx.arc(sc*0.05,-sc*0.48,sc*0.06,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.restore();
+    }
+    // Center
+    ctx.beginPath();ctx.arc(0,0,sc*0.05,0,Math.PI*2);ctx.fill();
+
+  }else if(v===5){
+    // Diamond with flourishes
+    ctx.beginPath();ctx.moveTo(0,-sc*0.5);ctx.lineTo(sc*0.35,0);
+    ctx.lineTo(0,sc*0.5);ctx.lineTo(-sc*0.35,0);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    // Corner flourishes
+    for(let i=0;i<4;i++){
+      ctx.save();ctx.rotate(i*Math.PI/2+Math.PI/4);
+      ctx.beginPath();ctx.moveTo(sc*0.1,0);
+      ctx.bezierCurveTo(sc*0.35,-sc*0.12,sc*0.4,-sc*0.3,sc*0.25,-sc*0.25);
+      ctx.stroke();
+      ctx.beginPath();ctx.arc(sc*0.35,-sc*0.15,sc*0.03,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+
+  }else if(v===6){
+    // Baroque frame - rectangular with corner scrolls
+    const fw=sc*0.4,fh=sc*0.35;
+    ctx.strokeRect(-fw,-fh,fw*2,fh*2);
+    ctx.fillRect(-fw,-fh,fw*2,fh*2);
+    // Corner scrolls
+    for(let i=0;i<4;i++){
+      ctx.save();
+      const sx=i<2?1:-1,sy=i%2===0?-1:1;
+      ctx.translate(sx*fw,sy*fh);
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.bezierCurveTo(sx*sc*0.2,sy*sc*0.05,sx*sc*0.25,sy*sc*0.2,sx*sc*0.1,sy*sc*0.2);
+      ctx.stroke();
+      ctx.beginPath();ctx.arc(sx*sc*0.1,sy*sc*0.18,sc*0.03,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+
+  }else{
+    // Mandala - concentric with radial petals
+    for(let r=0;r<2;r++){
+      const rad=sc*(0.2+r*0.22);
+      const n=6+r*2;
+      ctx.globalAlpha=lit?(0.7-r*0.2):(0.3-r*0.1);
+      for(let i=0;i<n;i++){
+        ctx.save();ctx.rotate(i*Math.PI*2/n);
+        ctx.beginPath();ctx.ellipse(0,-rad,sc*0.06,sc*0.12,0,0,Math.PI*2);
+        ctx.fill();ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.globalAlpha=1;
+    ctx.beginPath();ctx.arc(0,0,sc*0.08,0,Math.PI*2);ctx.fill();ctx.stroke();
+  }
+
+  ctx.shadowBlur=0;ctx.restore();
+}
+
+// ===== TARGETS =====
+function drawTargets(){
+  for(const[k,v]of Object.entries(fixed)){
+    if(!v||!v.startsWith('target'))continue;
+    const[x,y]=k.split(',').map(Number);
+    const reached=reachedTargets.has(k);
+    const color=v.replace('target','');
+    ctx.save();ctx.translate(x*CELL+CELL/2,y*CELL+CELL/2);
+    if(reached){
+      const pulse=0.8+Math.sin(animFrame*0.08)*0.2;
+      ctx.shadowColor='rgba(85,255,85,0.6)';ctx.shadowBlur=15*pulse;
+      const rg=ctx.createRadialGradient(0,0,0,0,0,CELL*0.4);
+      rg.addColorStop(0,'rgba(85,255,85,0.25)');rg.addColorStop(1,'rgba(85,255,85,0)');
+      ctx.fillStyle=rg;ctx.beginPath();ctx.arc(0,0,CELL*0.4,0,Math.PI*2);ctx.fill();
+    }
+    const r=CELL*0.25,ri=r*0.45;
+    ctx.beginPath();
+    for(let i=0;i<8;i++){
+      const a=i*Math.PI/4-Math.PI/2;
+      const rr=i%2===0?r:ri;
+      if(i===0)ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);
+      else ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);
+    }
+    ctx.closePath();
+    const tcol=color==='R'?'#ff4444':color==='G'?'#44ff66':color==='B'?'#4488ff':'#d4af37';
+    ctx.fillStyle=reached?tcol:'rgba(100,100,100,0.3)';
+    ctx.fill();
+    ctx.strokeStyle=reached?tcol:'rgba(150,150,150,0.3)';
+    ctx.lineWidth=1.5;ctx.stroke();
+    ctx.shadowBlur=0;ctx.restore();
+  }
+}
+
+// ===== SOURCES =====
+function drawSources(){
+  const L=LEVELS[currentLevel];
+  for(const s of L.sources){
+    ctx.save();ctx.translate(s.x*CELL+CELL/2,s.y*CELL+CELL/2);
+    const pulse=0.5+Math.sin(animFrame*0.08)*0.3;
+    const rg=ctx.createRadialGradient(0,0,0,0,0,CELL*0.45);
+    rg.addColorStop(0,`rgba(255,255,200,${0.3*pulse})`);
+    rg.addColorStop(1,'rgba(255,255,200,0)');
+    ctx.fillStyle=rg;ctx.beginPath();ctx.arc(0,0,CELL*0.45,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#333';ctx.strokeStyle='#d4af37';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(0,0,CELL*0.18,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#d4af37';
+    ctx.beginPath();
+    const ax=s.dx*CELL*0.12,ay=s.dy*CELL*0.12;
+    ctx.arc(ax,ay,3,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ===== PARTICLES GFX =====
+function drawParticlesGfx(){
+  for(const p of particles){
+    const alpha=Math.min(1,p.life/15)*0.8;
+    // Trail
+    if(p.trail.length>1){
+      ctx.strokeStyle=p.color;ctx.lineWidth=p.size*0.5;
+      ctx.globalAlpha=alpha*0.3;
+      ctx.beginPath();
+      ctx.moveTo(p.trail[0].x,p.trail[0].y);
+      for(let i=1;i<p.trail.length;i++)ctx.lineTo(p.trail[i].x,p.trail[i].y);
+      ctx.lineTo(p.x,p.y);ctx.stroke();
+    }
+    // Particle
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+    // Glow
+    ctx.globalAlpha=alpha*0.3;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size*2,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawHover(){
+  if(!hoveredCell||!selectedTool)return;
+  const[x,y]=hoveredCell;
+  ctx.fillStyle='rgba(212,175,55,0.1)';
+  ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+  ctx.strokeStyle='rgba(212,175,55,0.4)';ctx.lineWidth=1;
+  ctx.strokeRect(x*CELL+0.5,y*CELL+0.5,CELL-1,CELL-1);
+}
+
+// ===== INPUT =====
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const x=Math.floor(mx/CELL),y=Math.floor(my/CELL);
+  hoveredCell=(x>=0&&x<gridW&&y>=0&&y<gridH)?[x,y]:null;
+});
+canvas.addEventListener('mouseleave',()=>{hoveredCell=null;});
+canvas.addEventListener('click',()=>{
+  if(!hoveredCell||!selectedTool)return;
+  placeTool(hoveredCell[0],hoveredCell[1]);
+});
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  if(!hoveredCell)return;
+  const k=cellKey(hoveredCell[0],hoveredCell[1]);
+  if(playerItems[k]){delete playerItems[k];playSound('remove');trace();updateUI();}
+});
+
+document.addEventListener('keydown',e=>{
+  const t=TOOLS.find(t=>t.key===e.key);
+  if(t){
+    const L=LEVELS[currentLevel];
+    if(L.tools.includes(t.id)){
+      selectedTool=selectedTool===t.id?null:t.id;
+      updateUI();
+    }
+  }
+  if(e.key==='Escape')selectedTool=null,updateUI();
+  if(e.key==='r'||e.key==='R')resetLevel();
+  // Quick level select with arrow keys
+  if(e.key==='ArrowRight'&&currentLevel<LEVELS.length-1){
+    document.querySelectorAll('.lvl-btn')[currentLevel+1]?.click();
+  }
+  if(e.key==='ArrowLeft'&&currentLevel>0){
+    document.querySelectorAll('.lvl-btn')[currentLevel-1]?.click();
+  }
+});
+
+// ===== INIT UI =====
+function buildLevelButtons(){
+  const cont=document.getElementById('levels');
+  cont.innerHTML='';
+  LEVELS.forEach((l,i)=>{
+    const b=document.createElement('button');
+    b.className='lvl-btn'+(i===currentLevel?' active':'');
+    b.textContent=(i+1);b.title=l.name;
+    b.onclick=()=>{
+      document.querySelectorAll('.lvl-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      initLevel(i);
+    };
+    cont.appendChild(b);
+  });
+}
+
+buildLevelButtons();
+initLevel(0);
+draw();
+</script>
+</body>
+</html>

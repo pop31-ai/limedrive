@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Мозаика — раскрась по номерам</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;overflow:hidden;font-family:'Segoe UI',sans-serif;color:#fff;touch-action:none;user-select:none}
+#app{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+#title{font-size:clamp(16px,2.5vw,28px);font-weight:800;background:linear-gradient(135deg,#f0f,#0af);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px}
+#stats{display:flex;gap:20px;font-size:13px;color:#888}
+#stats span{color:#0ff}
+#canvas-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
+#grid-wrap{position:relative;border:2px solid rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+#grid-wrap canvas{display:block;width:100%;height:auto;max-width:70vmin;max-height:70vmin}
+#palette{display:flex;flex-wrap:wrap;gap:6px;max-width:200px;justify-content:center}
+.pal-btn{width:40px;height:40px;border-radius:6px;border:2px solid transparent;cursor:pointer;position:relative;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:rgba(255,255,255,.7)}
+.pal-btn:hover{transform:scale(1.08)}
+.pal-btn.sel{border-color:#fff;box-shadow:0 0 12px rgba(255,255,255,.3);transform:scale(1.1)}
+.pal-btn .num{position:absolute;bottom:1px;right:4px;font-size:9px;font-weight:600;opacity:.6}
+#controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.btn{padding:8px 20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#aaa;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn:hover{background:rgba(0,255,255,.1);border-color:rgba(0,255,255,.3);color:#fff;transform:translateY(-1px)}
+.btn.active{background:rgba(0,255,255,.15);border-color:rgba(0,255,255,.4);color:#0ff}
+#level-select{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:4px}
+.lvl-btn{padding:4px 12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#666;border-radius:4px;font-size:11px;cursor:pointer;transition:all .2s}
+.lvl-btn:hover{background:rgba(0,255,255,.08);color:#0af}
+.lvl-btn.cur{border-color:#0af;color:#0ff;background:rgba(0,255,255,.1)}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(4px)}
+#overlay.show{display:flex}
+#overlay-box{background:rgba(20,20,40,.95);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:30px 40px;text-align:center;max-width:90vw}
+#overlay-box h2{font-size:28px;color:#0ff;margin-bottom:8px}
+#overlay-box p{color:#aaa;font-size:14px;margin:4px 0}
+#overlay-box .btn{margin-top:16px}
+#hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:900;pointer-events:none;opacity:0;transition:all .4s;z-index:50}
+#hint.show{opacity:1;transform:translate(-50%,-70%)}
+@keyframes pop{0%{transform:scale(0.3);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.pop{animation:pop .4s ease-out}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="title">✦ Мозаика</div>
+<div id="stats">Прогресс: <span id="progress">0%</span> &nbsp;|&nbsp; Ходов: <span id="moves">0</span> &nbsp;|&nbsp; Время: <span id="timer">0:00</span></div>
+<div id="level-select"></div>
+<div id="canvas-wrap">
+<div id="grid-wrap"><canvas id="c"></canvas></div>
+<div id="palette"></div>
+</div>
+<div id="controls">
+<button class="btn" id="clearBtn">✕ Очистить</button>
+<button class="btn" id="hintBtn">👁 Подсказка</button>
+<button class="btn" id="newBtn">⟳ Новая</button>
+</div>
+</div>
+<div id="overlay">
+<div id="overlay-box">
+<h2 id="overlay-title">🎉 Готово!</h2>
+<p id="overlay-text">Мозаика собрана!</p>
+<button class="btn active" id="overlay-btn">Далее</button>
+</div>
+</div>
+<div id="hint"></div>
+<script>
+// ========== MOSAIC DATA ==========
+const MOSAICS = [
+  {
+    name:'Сердце',w:15,h:15,
+    data:[
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,
+      1,2,2,1,0,0,0,0,0,0,0,1,2,2,1,
+      1,2,2,2,1,0,0,0,0,0,1,2,2,2,1,
+      1,2,2,2,2,1,0,0,0,1,2,2,2,2,1,
+      0,1,2,2,2,2,1,0,1,2,2,2,2,1,0,
+      0,0,1,2,2,2,2,2,2,2,2,2,2,0,0,
+      0,0,0,1,2,2,2,2,2,2,2,2,0,0,0,
+      0,0,0,0,1,2,2,2,2,2,2,0,0,0,0,
+      0,0,0,0,0,1,2,2,2,2,0,0,0,0,0,
+      0,0,0,0,0,0,1,2,2,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    ]
+  },
+  {
+    name:'Звезда',w:15,h:15,
+    data:[
+      0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,
+      0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,
+      0,0,0,0,1,1,2,2,2,1,1,0,0,0,0,
+      0,0,0,1,1,2,2,2,2,2,1,1,0,0,0,
+      0,0,1,1,2,2,2,2,2,2,2,1,1,0,0,
+      0,1,1,2,2,2,2,2,2,2,2,2,1,1,0,
+      1,1,1,2,2,2,2,2,2,2,2,2,1,1,1,
+      0,1,1,2,2,2,2,2,2,2,2,2,1,1,0,
+      0,0,1,1,2,2,2,2,2,2,2,1,1,0,0,
+      0,0,0,1,1,1,2,2,2,1,1,1,0,0,0,
+      0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,
+      0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,
+      0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,1,0,0,0,0,0,0,0
+    ]
+  },
+  {
+    name:'Кошка',w:14,h:14,
+    data:[
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,1,1,0,0,0,0,0,0,0,0,0,1,0,
+      1,1,1,1,0,0,0,0,0,0,0,1,1,1,
+      1,1,1,1,1,0,0,0,0,0,1,1,1,1,
+      0,1,1,0,1,1,0,0,0,1,1,0,1,1,
+      0,0,0,0,0,1,1,0,1,1,0,0,0,0,
+      0,0,0,0,0,0,1,1,1,0,0,0,0,0,
+      0,0,0,0,0,1,1,1,1,1,0,0,0,0,
+      0,0,0,0,1,1,1,2,1,1,1,0,0,0,
+      0,0,0,1,1,1,1,1,1,1,1,1,0,0,
+      0,0,1,1,1,1,1,1,1,1,1,1,1,0,
+      0,0,0,1,1,1,1,1,1,1,1,1,0,0,
+      0,0,0,0,1,1,1,0,1,1,1,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    ]
+  },
+  {
+    name:'Рыбка',w:14,h:12,
+    data:[
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+      0,0,0,0,0,0,1,1,1,1,2,2,2,2,
+      0,0,0,0,0,1,3,3,3,3,2,2,2,2,
+      0,0,0,1,1,1,3,3,3,3,1,1,1,0,
+      0,0,0,1,1,1,2,2,3,3,2,2,0,0,
+      0,0,1,1,1,1,2,2,2,2,2,2,0,0,
+      0,1,1,1,1,1,1,2,2,2,2,0,0,0,
+      0,0,1,1,1,1,1,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    ]
+  },
+  {
+    name:'Пингвин',w:12,h:16,
+    data:[
+      0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,1,1,1,1,0,0,0,0,
+      0,0,0,1,1,1,1,1,1,0,0,0,
+      0,0,1,1,1,1,1,1,1,1,0,0,
+      0,0,1,1,1,1,1,1,1,1,0,0,
+      0,1,1,1,2,2,2,2,1,1,1,0,
+      0,1,1,1,2,2,2,2,1,1,1,0,
+      0,1,1,1,2,2,2,2,1,1,1,0,
+      0,0,1,1,1,1,1,1,1,1,0,0,
+      0,0,1,1,1,1,1,1,1,1,0,0,
+      0,0,0,1,1,1,1,1,1,0,0,0,
+      0,1,1,1,1,1,1,1,1,1,1,0,
+      1,1,1,1,1,1,1,1,1,1,1,1,
+      1,1,1,1,1,0,0,1,1,1,1,1,
+      0,0,1,1,0,0,0,0,1,1,0,0,
+      0,0,1,1,0,0,0,0,1,1,0,0
+    ]
+  },
+  {
+    name:'Цветок',w:13,h:13,
+    data:[
+      0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,1,1,0,0,0,1,1,0,0,0,
+      0,0,1,2,2,1,0,1,2,2,1,0,0,
+      0,1,2,2,2,2,1,2,2,2,2,1,0,
+      0,1,2,2,2,2,2,2,2,2,2,1,0,
+      0,0,1,2,2,2,2,2,2,2,1,0,0,
+      0,0,0,1,2,2,2,2,2,1,0,0,0,
+      0,0,1,2,2,2,2,2,2,2,1,0,0,
+      0,1,2,2,2,2,1,2,2,2,2,1,0,
+      0,1,2,2,2,1,0,1,2,2,2,1,0,
+      0,0,1,2,2,1,0,0,1,2,2,1,0,
+      0,0,0,1,1,0,0,0,0,1,1,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0
+    ]
+  },
+  {
+    name:'Смайлик',w:13,h:13,
+    data:[
+      0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,1,1,1,1,1,1,1,0,0,0,
+      0,0,1,1,1,1,1,1,1,1,1,0,0,
+      0,1,1,1,1,1,1,1,1,1,1,1,0,
+      0,1,1,1,2,2,1,1,2,2,1,1,0,
+      0,1,1,1,2,2,1,1,2,2,1,1,0,
+      0,1,1,1,1,1,1,1,1,1,1,1,0,
+      0,1,1,1,1,1,1,1,1,1,1,1,0,
+      0,1,1,1,2,2,1,1,2,2,1,1,0,
+      0,1,1,2,2,2,2,2,2,2,2,1,0,
+      0,1,1,1,2,2,2,2,2,2,1,1,0,
+      0,0,1,1,1,1,1,1,1,1,1,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0
+    ]
+  },
+  {
+    name:'Ёлка',w:11,h:15,
+    data:[
+      0,0,0,0,0,1,0,0,0,0,0,
+      0,0,0,0,1,2,1,0,0,0,0,
+      0,0,0,1,2,2,2,1,0,0,0,
+      0,0,1,2,2,2,2,2,1,0,0,
+      0,0,0,1,2,2,2,1,0,0,0,
+      0,0,1,2,2,2,2,2,1,0,0,
+      0,1,2,2,2,2,2,2,2,1,0,
+      0,0,1,2,2,2,2,2,1,0,0,
+      0,1,2,2,2,2,2,2,2,1,0,
+      1,2,2,2,2,2,2,2,2,2,1,
+      0,0,0,0,1,2,1,0,0,0,0,
+      0,0,0,1,2,2,2,1,0,0,0,
+      0,0,1,2,2,2,2,2,1,0,0,
+      0,0,0,0,1,1,1,0,0,0,0,
+      0,0,0,0,1,1,1,0,0,0,0
+    ]
+  }
+];
+
+// ========== COLORS (number -> color) ==========
+const PALETTE = [
+  null,
+  '#e74c3c',
+  '#f1c40f',
+  '#3498db',
+  '#2ecc71',
+  '#9b59b6',
+  '#e67e22',
+  '#1abc9c',
+  '#e91e63',
+  '#00bcd4',
+  '#ff5722',
+  '#8bc34a',
+  '#ffeb3b',
+  '#795548',
+  '#607d8b',
+  '#3f51b5',
+];
+const PAL = [
+  null,
+  [231,76,60],
+  [241,196,15],
+  [52,152,219],
+  [46,204,113],
+  [155,89,182],
+  [230,126,34],
+  [26,188,156],
+  [233,30,99],
+  [0,188,212],
+  [255,87,34],
+  [139,195,74],
+  [255,235,59],
+  [121,85,72],
+  [96,125,139],
+  [63,81,181],
+];
+const BG_COLOR = [30,34,50];
+
+// ========== STATE ==========
+let canvas,ctx;
+let level = 0;
+let grid = [];
+let player = [];
+let scale = 32;
+let offX=0,offY=0;
+let selectedColor = 1;
+let moves = 0;
+let timerSec = 0;
+let timerInterval = null;
+let isComplete = false;
+let hintMode = false;
+let dragFill = false;
+
+// ========== INIT ==========
+function init(){
+  canvas = document.getElementById('c');
+  ctx = canvas.getContext('2d');
+  buildLevelSelect();
+  loadLevel(0);
+  buildPalette();
+  canvas.addEventListener('mousedown',onDown);
+  canvas.addEventListener('mousemove',onMove);
+  canvas.addEventListener('mouseup',onUp);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];onDown({offsetX:t.clientX-canvas.getBoundingClientRect().left,offsetY:t.clientY-canvas.getBoundingClientRect().top,button:0});},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];onMove({offsetX:t.clientX-canvas.getBoundingClientRect().left,offsetY:t.clientY-canvas.getBoundingClientRect().top});},{passive:false});
+  canvas.addEventListener('touchend',e=>{e.preventDefault();onUp({});},{passive:false});
+  document.getElementById('clearBtn').onclick=clearPlayer;
+  document.getElementById('hintBtn').onclick=toggleHint;
+  document.getElementById('newBtn').onclick=()=>loadLevel(level);
+  document.getElementById('overlay-btn').onclick=()=>{
+    hideOverlay();
+    if(level<MOSAICS.length-1){loadLevel(level+1);}
+    else{loadLevel(0);}
+  };
+  window.addEventListener('resize',resizeCanvas);
+  resizeCanvas();
+}
+
+function buildLevelSelect(){
+  const c=document.getElementById('level-select');
+  c.innerHTML='';
+  MOSAICS.forEach((m,i)=>{
+    const b=document.createElement('button');
+    b.className='lvl-btn'+(i===level?' cur':'');
+    b.textContent=m.name;
+    b.onclick=()=>loadLevel(i);
+    c.appendChild(b);
+  });
+}
+
+function buildPalette(){
+  const c=document.getElementById('palette');
+  c.innerHTML='';
+  const used=new Set();
+  grid.forEach(v=>{if(v>0)used.add(v);});
+  const sorted=[...used].sort((a,b)=>a-b);
+  if(sorted.length===0){sorted.push(1);}
+  sorted.forEach(n=>{
+    const b=document.createElement('button');
+    b.className='pal-btn'+(n===selectedColor?' sel':'');
+    b.style.background=PALETTE[n]||'#555';
+    if(n===selectedColor)b.style.borderColor='#fff';
+    b.innerHTML=`<span class="num">${n}</span>`;
+    b.onclick=()=>selectColor(n);
+    c.appendChild(b);
+  });
+}
+
+function selectColor(n){
+  selectedColor=n;
+  document.querySelectorAll('.pal-btn').forEach(b=>{
+    const num=parseInt(b.querySelector('.num').textContent);
+    b.classList.toggle('sel',num===n);
+  });
+}
+
+function loadLevel(idx){
+  level=idx;
+  const m=MOSAICS[idx];
+  grid=m.data.slice();
+  player=new Array(grid.length).fill(0);
+  moves=0;
+  isComplete=false;
+  hintMode=false;
+  document.getElementById('hintBtn').textContent='👁 Подсказка';
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  timerSec=0;
+  updateTimer();
+  updateStats();
+  buildLevelSelect();
+  buildPalette();
+  computeScale();
+  resizeCanvas();
+  draw();
+  hideOverlay();
+}
+
+function computeScale(){
+  const m=MOSAICS[level];
+  const maxCell=32;
+  const w=window.innerWidth*0.7;
+  const h=window.innerHeight*0.55;
+  scale=Math.min(maxCell,Math.floor(w/m.w),Math.floor(h/m.h));
+  scale=Math.max(scale,16);
+  offX=0;offY=0;
+}
+
+function resizeCanvas(){
+  const m=MOSAICS[level];
+  canvas.width=m.w*scale;
+  canvas.height=m.h*scale;
+  canvas.style.width=canvas.width+'px';
+  canvas.style.height=canvas.height+'px';
+  draw();
+}
+
+function draw(){
+  const m=MOSAICS[level];
+  const w=m.w,h=m.h;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const i=y*w+x;
+      const target=grid[i];
+      const filled=player[i];
+      const cx=x*scale,cy=y*scale;
+      const isCorrect=filled===target&&target>0;
+      if(filled>0){
+        const [r,g,b]=PAL[filled]||BG_COLOR;
+        ctx.fillStyle=`rgb(${r},${g},${b})`;
+        ctx.fillRect(cx,cy,scale,scale);
+        if(!isCorrect&&target>0){
+          ctx.fillStyle='rgba(255,0,0,0.15)';
+          ctx.fillRect(cx,cy,scale,scale);
+        }
+      }else if(target===0){
+        ctx.fillStyle='rgba(255,255,255,0.03)';
+        ctx.fillRect(cx,cy,scale,scale);
+      }
+      if(hintMode&&target>0&&filled!==target){
+        const [r,g,b]=PAL[target]||BG_COLOR;
+        ctx.fillStyle=`rgba(${r},${g},${b},0.08)`;
+        ctx.fillRect(cx,cy,scale,scale);
+      }
+      ctx.strokeStyle='rgba(255,255,255,0.06)';
+      ctx.strokeRect(cx,cy,scale,scale);
+      if(filled===0&&target>0){
+        ctx.fillStyle='rgba(255,255,255,0.15)';
+        ctx.font=`${Math.max(8,scale*0.35)}px "Segoe UI",sans-serif`;
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        ctx.fillText(target,cx+scale/2,cy+scale/2);
+      }
+    }
+  }
+}
+
+function getCell(e){
+  const rect=canvas.getBoundingClientRect();
+  const x=Math.floor((e.offsetX)/scale);
+  const y=Math.floor((e.offsetY)/scale);
+  const m=MOSAICS[level];
+  if(x<0||x>=m.w||y<0||y>=m.h)return -1;
+  return y*m.w+x;
+}
+
+function fillCell(i){
+  if(i<0||isComplete)return;
+  const target=grid[i];
+  if(target===0)return;
+  if(player[i]===selectedColor)return;
+  player[i]=selectedColor;
+  moves++;
+  updateStats();
+  draw();
+  checkComplete();
+}
+
+function onDown(e){
+  if(isComplete)return;
+  const i=getCell(e);
+  if(i<0)return;
+  dragFill=true;
+  fillCell(i);
+}
+
+function onMove(e){
+  if(!dragFill||isComplete)return;
+  const i=getCell(e);
+  if(i<0)return;
+  fillCell(i);
+}
+
+function onUp(e){
+  dragFill=false;
+}
+
+function toggleHint(){
+  hintMode=!hintMode;
+  document.getElementById('hintBtn').textContent=hintMode?'👁 Скрыть':'👁 Подсказка';
+  draw();
+}
+
+function clearPlayer(){
+  if(isComplete)return;
+  const m=MOSAICS[level];
+  for(let i=0;i<player.length;i++){
+    if(grid[i]>0)player[i]=0;
+  }
+  moves++;
+  updateStats();
+  draw();
+}
+
+function checkComplete(){
+  const m=MOSAICS[level];
+  let all=true;
+  for(let i=0;i<grid.length;i++){
+    if(grid[i]>0&&player[i]!==grid[i]){all=false;break;}
+  }
+  if(all){
+    isComplete=true;
+    if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+    showOverlay();
+  }else{
+    if(!timerInterval){
+      timerInterval=setInterval(()=>{timerSec++;updateTimer();},1000);
+    }
+  }
+}
+
+function showOverlay(){
+  const m=MOSAICS[level];
+  const min=m.w*m.h*0.03;
+  const bonus=Math.max(0,Math.floor((min*60-moves)*2));
+  document.getElementById('overlay-title').textContent='🎉 Мозаика собрана!';
+  document.getElementById('overlay-text').innerHTML=
+    `«${m.name}»<br>Ходов: ${moves} &nbsp;|&nbsp; Время: ${formatTime(timerSec)}<br>Бонус: +${bonus}`;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function hideOverlay(){
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function updateStats(){
+  const m=MOSAICS[level];
+  let done=0,total=0;
+  for(let i=0;i<grid.length;i++){
+    if(grid[i]>0){total++;if(player[i]===grid[i])done++;}
+  }
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('progress').textContent=pct+'%';
+  document.getElementById('moves').textContent=moves;
+}
+
+function updateTimer(){
+  document.getElementById('timer').textContent=formatTime(timerSec);
+}
+
+function formatTime(s){
+  const m=Math.floor(s/60);
+  const sec=s%60;
+  return m+':'+(sec<10?'0':'')+sec;
+}
+
+window.onload=init;
+</script>
+</body>
+</html>

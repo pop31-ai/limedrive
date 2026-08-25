@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Рыцарский Турнир</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e1a; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+#gameContainer { position: relative; }
+canvas { display: block; border-radius: 12px; box-shadow: 0 0 60px rgba(255,200,50,0.15); cursor: pointer; }
+#ui { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
+.panel { background: rgba(0,0,0,0.65); color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; backdrop-filter: blur(4px); border: 1px solid rgba(255,215,0,0.2); }
+.panel b { color: #ffd700; }
+#startScreen, #endScreen { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; border-radius: 12px; z-index: 10; }
+#startScreen h1 { font-size: 42px; color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.5); letter-spacing: 4px; }
+#startScreen h1 i { font-style: normal; display: inline-block; }
+.subtitle { color: #c8b88a; margin: 12px 0 28px; font-size: 14px; max-width: 420px; text-align: center; line-height: 1.7; }
+.btn { background: linear-gradient(135deg, #ffd700, #f59e0b); color: #1a1a2e; border: none; padding: 12px 40px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; pointer-events: all; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+.btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(255,215,0,0.5); }
+#endScreen h1 { font-size: 36px; }
+#endScreen .finalScore { font-size: 56px; color: #ffd700; font-weight: bold; margin: 8px 0; }
+#endScreen .finalStats { color: #c8b88a; margin-bottom: 18px; font-size: 14px; line-height: 1.8; }
+#instructions { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 12px; pointer-events: none; white-space: nowrap; }
+.timerBar { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); width: 300px; height: 24px; background: rgba(0,0,0,0.6); border-radius: 12px; border: 2px solid rgba(255,215,0,0.3); overflow: hidden; pointer-events: none; display: none; }
+.timerBar .fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e, #f59e0b, #ef4444); border-radius: 10px; transition: width 0.05s; }
+.timerBar .zone { position: absolute; top: 0; height: 100%; width: 60px; background: rgba(34,197,94,0.3); border-left: 2px solid rgba(34,197,94,0.6); border-right: 2px solid rgba(34,197,94,0.6); pointer-events: none; }
+.hitText { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 48px; font-weight: bold; pointer-events: none; opacity: 0; transition: all 0.3s; text-shadow: 0 0 20px currentColor; }
+.hitText.show { opacity: 1; transform: translate(-50%, -60%); }
+#roundDisplay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; font-weight: bold; color: #ffd700; pointer-events: none; opacity: 0; text-shadow: 0 0 30px rgba(255,215,0,0.5); }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <div class="panel">⚔️ <b id="pscore">0</b> : <b id="oscore">0</b></div>
+    <div class="panel">🏆 Раунд <b id="roundNum">1</b>/7</div>
+    <div class="panel">🎯 <b id="hitStreak">0</b> подряд</div>
+  </div>
+  <div id="startScreen">
+    <h1>🏰 РЫЦАРСКИЙ ТУРНИР</h1>
+    <div class="subtitle">
+      Сразись в конном поединке!<br>
+      Нажми ПРОБЕЛ или кликни, когда полоса будет в <b style="color:#22c55e">зелёной зоне</b>.<br>
+      Чем точнее удар — тем больше лент взлетит!<br>
+      Первый до <b>4</b> побед — чемпион!
+    </div>
+    <button class="btn" onclick="startGame()">⚔️ НАЧАТЬ ТУРНИР</button>
+  </div>
+  <div id="endScreen" style="display:none">
+    <h1 id="endTitle">ТУРНИР ОКОНЧЕН!</h1>
+    <div class="finalScore" id="finalScore">0 : 0</div>
+    <div class="finalStats" id="finalStats"></div>
+    <button class="btn" onclick="startGame()">🔄 ЕЩЁ РАЗ</button>
+  </div>
+  <div class="timerBar" id="timerBar">
+    <div class="fill" id="timerFill"></div>
+    <div class="zone" id="timerZone" style="left: 90px;"></div>
+  </div>
+  <div class="hitText" id="hitText">💥 ПОПАДАНИЕ!</div>
+  <div id="roundDisplay">РАУНД 1</div>
+  <div id="instructions">ПРОБЕЛ или клик — ударить копьём &nbsp;|&nbsp; Точность = ленточки</div>
+</div>
+
+<script>
+const C = document.getElementById('c');
+const ctx = C.getContext('2d');
+const W = 1000, H = 600;
+C.width = W; C.height = H;
+
+// ---- UTILITIES ----
+function rnd(a, b) { return Math.random() * (b - a) + a; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+// ---- GAME STATE ----
+let state = 'menu'; // menu, playing, charging, result, roundEnd
+let playerScore = 0, opponentScore = 0;
+let roundNum = 1, maxRounds = 7;
+let hitStreak = 0, bestStreak = 0;
+let hits = 0, totalStrikes = 0;
+let roundResult = '';
+
+// ---- TIMING BAR ----
+let timingBar = { progress: 0, speed: 0, direction: 1, zoneCenter: 0, zoneWidth: 0.2, locked: false, success: false };
+
+// ---- KNIGHTS ----
+function createKnight(side, color1, color2, ribbonColor) {
+  const isLeft = side === 'left';
+  return {
+    side, x: isLeft ? 140 : W - 140, y: 380,
+    targetX: isLeft ? 140 : W - 140, targetY: 380,
+    vx: 0, vy: 0,
+    color1, color2, ribbonColor,
+    armorColor: '#8899aa',
+    helmetColor: '#aabbcc',
+    plumeColor: ribbonColor,
+    lanceAngle: isLeft ? 0.15 : Math.PI - 0.15,
+    gallopPhase: rnd(0, Math.PI * 2),
+    bounceY: 0,
+    hitAnimation: 0,
+    stunned: 0,
+    won: false,
+
+    // Ribbons
+    plumes: [],
+    pennon: [],
+    horseRibbons: [],
+    shieldRibbon: [],
+
+    // Horse state
+    horseBreathe: rnd(0, Math.PI * 2),
+    tailPhase: rnd(0, Math.PI * 2),
+    earPhase: rnd(0, Math.PI * 2),
+    blinkTimer: rnd(0, 200),
+    blinking: false,
+    blinkFrame: 0,
+
+    initRibbons() {
+      this.plumes = [];
+      this.pennon = [];
+      this.horseRibbons = [];
+      this.shieldRibbon = [];
+      const len = 10;
+      for (let i = 0; i <= len; i++) {
+        const t = i / len;
+        this.plumes.push({ x: 0, y: 0, ox: 0, oy: -20 - t * 50 });
+        this.pennon.push({ x: 0, y: 0, ox: 60 + t * 40, oy: -t * 15 });
+        this.horseRibbons.push({ x: 0, y: 0, ox: (isLeft ? 1 : -1) * t * 30, oy: -15 - t * 20 });
+        this.shieldRibbon.push({ x: 0, y: 0, ox: (isLeft ? -1 : 1) * t * 25, oy: -t * 15 });
+      }
+    }
+  };
+}
+
+let player, opponent;
+let particles = [];
+let ribbonBursts = [];
+let confetti = [];
+let time = 0;
+
+function initKnights() {
+  player = createKnight('left', '#dc2626', '#991b1b', '#ff4444');
+  opponent = createKnight('right', '#2563eb', '#1e40af', '#4488ff');
+  player.initRibbons();
+  opponent.initRibbons();
+}
+
+// ---- RIBBON DRAWING ----
+function updateRibbonPoints(ribbon, baseX, baseY, scaleX, time, wind, isLeft) {
+  for (let i = 0; i < ribbon.length; i++) {
+    const t = i / (ribbon.length - 1);
+    const ox = ribbon[i].ox * (isLeft ? 1 : -1);
+    const oy = ribbon[i].oy;
+    const wave = Math.sin(time * 2.5 + t * 5 + (isLeft ? 0 : 1.5)) * 12 * t;
+    const wave2 = Math.cos(time * 2 + t * 3.5) * 8 * t;
+    const windX = (wind || 0) * t * 25;
+    ribbon[i].x = baseX + ox * scaleX + wave + windX;
+    ribbon[i].y = baseY + oy + wave2 + Math.sin(time + t * 4) * 4 * t;
+  }
+}
+
+function drawRibbon(ctx, points, width, color, alpha) {
+  if (points.length < 2) return;
+  ctx.save();
+  ctx.globalAlpha = alpha || 0.85;
+
+  const getPerp = (i) => {
+    let dx, dy;
+    if (i < points.length - 1) { dx = points[i+1].x - points[i].x; dy = points[i+1].y - points[i].y; }
+    else { dx = points[i].x - points[i-1].x; dy = points[i].y - points[i-1].y; }
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    return { x: -dy/len, y: dx/len };
+  };
+
+  ctx.beginPath();
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const perp = getPerp(i);
+    ctx.lineTo(p.x + perp.x * width/2, p.y + perp.y * width/2);
+  }
+  for (let i = points.length - 1; i >= 0; i--) {
+    const p = points[i];
+    const perp = getPerp(i);
+    ctx.lineTo(p.x - perp.x * width/2, p.y - perp.y * width/2);
+  }
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(points[0].x, points[0].y, points[points.length-1].x, points[points.length-1].y);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, lightenColor(color, 30));
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Edge highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function lightenColor(hex, amt) {
+  let c = parseInt(hex.slice(1), 16);
+  let r = Math.min(255, (c >> 16) + amt);
+  let g = Math.min(255, ((c >> 8) & 0xff) + amt);
+  let b = Math.min(255, (c & 0xff) + amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ---- PARTICLES ----
+function spawnRibbonBurst(x, y, color, count) {
+  for (let i = 0; i < (count || 30); i++) {
+    const angle = rnd(0, Math.PI * 2);
+    const speed = rnd(2, 8);
+    const len = rnd(15, 40);
+    ribbonBursts.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2,
+      life: rnd(30, 70), maxLife: rnd(30, 70), length: len, width: rnd(3, 6),
+      color: color, phase: rnd(0, Math.PI * 2), gravity: 0.08,
+      points: []
+    });
+  }
+}
+
+function spawnConfetti(x, y, count) {
+  const colors = ['#ff4444', '#4444ff', '#ffd700', '#22c55e', '#ff66cc', '#44ddff', '#ff9900', '#cc66ff'];
+  for (let i = 0; i < (count || 50); i++) {
+    confetti.push({
+      x: x + rnd(-20, 20), y: y + rnd(-20, 20),
+      vx: rnd(-6, 6), vy: rnd(-10, 2),
+      life: rnd(60, 120), maxLife: rnd(60, 120),
+      color: colors[Math.floor(rnd(0, colors.length))],
+      size: rnd(4, 10), rot: rnd(0, Math.PI * 2), rotSpeed: rnd(-0.1, 0.1),
+      gravity: 0.15, phase: rnd(0, Math.PI * 2),
+      w: rnd(4, 10), h: rnd(2, 5)
+    });
+  }
+}
+
+function spawnSparkles(x, y, color, count) {
+  for (let i = 0; i < (count || 15); i++) {
+    const angle = rnd(0, Math.PI * 2);
+    const speed = rnd(1, 4);
+    particles.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      life: rnd(15, 35), maxLife: rnd(15, 35), radius: rnd(1, 3),
+      color: color || '#ffd700', gravity: 0.02
+    });
+  }
+}
+
+// ---- DRAW FUNCTIONS ----
+function drawSky() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+  grad.addColorStop(0, '#1a1a3e');
+  grad.addColorStop(0.4, '#2d2d5e');
+  grad.addColorStop(0.7, '#4a3a5e');
+  grad.addColorStop(1, '#8a7a5e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H * 0.55);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  for (let i = 0; i < 40; i++) {
+    const sx = (i * 137.5 + 50) % W;
+    const sy = (i * 97.3 + 20) % (H * 0.4);
+    const sz = 0.5 + Math.sin(time + i) * 0.5;
+    ctx.beginPath(); ctx.arc(sx, sy, sz, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawArena() {
+  // Ground
+  const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+  grad.addColorStop(0, '#c8b88a');
+  grad.addColorStop(0.3, '#a89070');
+  grad.addColorStop(0.7, '#8a7a5e');
+  grad.addColorStop(1, '#6a5a4a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, H * 0.5, W, H * 0.5);
+
+  // Horizon glow
+  const glow = ctx.createRadialGradient(W/2, H*0.5, 10, W/2, H*0.5, 200);
+  glow.addColorStop(0, 'rgba(255,200,100,0.12)');
+  glow.addColorStop(1, 'rgba(255,200,100,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, H*0.4, W, H*0.2);
+
+  // Tournament fence (tilt) down the middle
+  ctx.strokeStyle = '#5a4a3a';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.52);
+  ctx.lineTo(W, H * 0.52);
+  ctx.stroke();
+
+  // Fence posts
+  for (let i = 0; i < 20; i++) {
+    const fx = (i / 19) * W;
+    ctx.fillStyle = '#6a5a4a';
+    ctx.fillRect(fx - 2, H * 0.5, 4, H * 0.04);
+    // Ribbon on each post
+    const ribbonWave = Math.sin(time * 2 + i * 1.2) * 8 + 8;
+    ctx.fillStyle = ['#ff4444', '#4444ff', '#ffd700', '#22c55e'][i % 4];
+    ctx.beginPath();
+    ctx.moveTo(fx, H * 0.5);
+    ctx.lineTo(fx - 5 + ribbonWave * 0.3, H * 0.5 + 20 + i * 1.5);
+    ctx.lineTo(fx + 5 + ribbonWave * 0.3, H * 0.5 + 18 + i * 1.5);
+    ctx.fill();
+  }
+
+  // Grandstands (background)
+  for (let row = 0; row < 4; row++) {
+    const ry = H * 0.35 - row * 18;
+    const rw = W - 60 - row * 30;
+    const rx = 30 + row * 15;
+    ctx.fillStyle = `rgba(60,50,40,${0.5 - row * 0.08})`;
+    ctx.fillRect(rx, ry, rw, 16);
+
+    // Crowd dots
+    for (let i = 0; i < 40 - row * 5; i++) {
+      const cx = rx + 10 + (i / (40 - row * 5)) * (rw - 20);
+      const cb = Math.sin(time * 0.5 + cx * 0.1 + row) * 0.3 + 0.7;
+      ctx.fillStyle = `rgba(200,180,150,${cb * 0.4})`;
+      ctx.beginPath(); ctx.arc(cx, ry + 8, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Banner ribbons on grandstand
+  for (let i = 0; i < 8; i++) {
+    const bx = 60 + (i / 7) * (W - 120);
+    const by = H * 0.35 - 5;
+    const bwave = Math.sin(time * 1.8 + i * 1.7) * 10;
+    const colors = ['#ff4444', '#ffd700', '#4444ff', '#22c55e', '#ff66cc', '#ffd700', '#44ddff', '#ff4444'];
+    ctx.fillStyle = colors[i];
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx - 6 + bwave * 0.2, by + 35 + i * 0.5);
+    ctx.lineTo(bx + 6 + bwave * 0.2, by + 33 + i * 0.5);
+    ctx.fill();
+    // Second ribbon layer
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(bx - 2, by + 5);
+    ctx.lineTo(bx - 4 + bwave * 0.15, by + 28 + i * 0.3);
+    ctx.lineTo(bx + 1 + bwave * 0.15, by + 26 + i * 0.3);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawHorse(ctx, knight, facingRight) {
+  const h = knight;
+  const dir = facingRight ? 1 : -1;
+  const bounce = h.bounceY;
+  const gallop = Math.sin(h.gallopPhase) * (state === 'charging' ? 4 : 0);
+
+  ctx.save();
+  ctx.translate(h.x, h.y + bounce);
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, 25 + Math.abs(bounce) * 0.5, 20, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Scale for facing
+  ctx.scale(dir, 1);
+
+  // Horse body
+  const breathe = 1 + Math.sin(h.horseBreathe) * 0.02;
+  ctx.scale(breathe, 1 / breathe);
+
+  // Tail (behind body)
+  ctx.strokeStyle = '#5a4a3a';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-18, -2);
+  const tw = Math.sin(h.tailPhase + time * 2) * 8;
+  ctx.quadraticCurveTo(-28, -5 + tw, -35, 5 + tw * 0.5);
+  ctx.stroke();
+
+  // Ribbon on tail
+  ctx.strokeStyle = h.ribbonColor;
+  ctx.lineWidth = 2.5;
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(-18, -2);
+  const tw2 = Math.sin(h.tailPhase + time * 2 + 0.5) * 7;
+  ctx.quadraticCurveTo(-26, -3 + tw2, -32, 8 + tw2 * 0.5);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Body
+  ctx.fillStyle = h.color1;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Body highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.ellipse(-4, -4, 8, 10, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Caparison (decorative cloth on horse) with ribbon trim
+  ctx.fillStyle = h.color2;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(-14, -8);
+  ctx.lineTo(14, -8);
+  ctx.lineTo(16, 6);
+  ctx.lineTo(-16, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Ribbon trim on caparison
+  const cw = Math.sin(time * 2.5) * 3;
+  ctx.strokeStyle = h.ribbonColor;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-14, -8 + cw);
+  ctx.lineTo(14, -8 - cw);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-16, 6 + Math.sin(time * 2) * 2);
+  ctx.lineTo(16, 6 - Math.sin(time * 2) * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Horse Ribbons (decorative flowing ribbons on horse's back)
+  const hrX = -5;
+  const hrY = -10;
+  for (let r = 0; r < 3; r++) {
+    const rpts = [];
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      const wave = Math.sin(time * 3 + r * 2 + t * 6) * 10 * t;
+      rpts.push({
+        x: hrX + r * 6 + t * 25,
+        y: hrY + t * 15 + wave
+      });
+    }
+    drawRibbon(ctx, rpts, 3, [h.ribbonColor, '#ffd700', '#ffffff'][r % 3], 0.6);
+  }
+
+  // Legs
+  const legAnim = Math.sin(h.gallopPhase) * 5;
+  const legAnim2 = Math.sin(h.gallopPhase + Math.PI) * 5;
+  ctx.strokeStyle = '#4a3a2a';
+  ctx.lineWidth = 3.5;
+  ctx.lineCap = 'round';
+
+  // Back legs
+  ctx.beginPath(); ctx.moveTo(-10, 12); ctx.lineTo(-12 + legAnim, 24); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-4, 12); ctx.lineTo(-6 - legAnim, 24); ctx.stroke();
+
+  // Front legs
+  ctx.beginPath(); ctx.moveTo(6, 10); ctx.lineTo(8 - legAnim2, 22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(12, 10); ctx.lineTo(14 + legAnim2, 22); ctx.stroke();
+
+  // Hooves
+  ctx.fillStyle = '#3a2a1a';
+  [[-12 + legAnim, 24], [-6 - legAnim, 24], [8 - legAnim2, 22], [14 + legAnim2, 22]].forEach(([hx, hy]) => {
+    ctx.beginPath(); ctx.arc(hx, hy, 2.5, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Neck
+  ctx.fillStyle = h.color1;
+  ctx.beginPath();
+  ctx.moveTo(16, -6);
+  ctx.lineTo(24, -16);
+  ctx.lineTo(20, -20);
+  ctx.lineTo(12, -10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(24, -18, 8, 7, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye
+  h.blinkTimer--;
+  if (h.blinkTimer <= 0) { h.blinking = true; h.blinkFrame = 0; h.blinkTimer = rnd(60, 200); }
+  if (h.blinking) {
+    h.blinkFrame++;
+    if (h.blinkFrame > 5) { h.blinking = false; }
+  }
+  const eyeSquash = h.blinking ? Math.max(0.1, 1 - h.blinkFrame / 4) : 1;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(26, -19, 2.5, 2.5 * eyeSquash, 0, 0, Math.PI * 2); ctx.fill();
+  if (!h.blinking) {
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(26.5, -19, 1.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.arc(27, -19.5, 0.5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Ear
+  ctx.fillStyle = '#5a4a3a';
+  h.earPhase += 0.03;
+  const earW = Math.sin(h.earPhase) * 2;
+  ctx.beginPath();
+  ctx.moveTo(22, -23);
+  ctx.lineTo(20 + earW, -29);
+  ctx.lineTo(25, -24);
+  ctx.fill();
+
+  // Mane
+  ctx.fillStyle = '#4a3a2a';
+  for (let i = 0; i < 5; i++) {
+    const mx = 18 - i * 6;
+    const my = -18 + i * 3;
+    const mw = Math.sin(time * 3 + i * 1.2) * 3;
+    ctx.beginPath();
+    ctx.ellipse(mx + mw, my, 2, 5, mw * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawKnight(ctx, knight, facingRight) {
+  const h = knight;
+  const dir = facingRight ? 1 : -1;
+  const bounce = h.bounceY;
+  const stun = h.stunned > 0 ? Math.sin(h.stunned * 20) * 2 : 0;
+
+  ctx.save();
+  // The knight sits on the horse
+  const kx = h.x + (facingRight ? 8 : -8);
+  const ky = h.y + bounce - 16 + stun;
+
+  ctx.translate(kx, ky);
+  ctx.scale(dir, 1);
+
+  // Body armor
+  ctx.fillStyle = h.armorColor;
+  ctx.beginPath();
+  ctx.moveTo(-8, 0);
+  ctx.lineTo(8, 0);
+  ctx.lineTo(10, 20);
+  ctx.lineTo(-10, 20);
+  ctx.closePath();
+  ctx.fill();
+
+  // Armor details
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-5, 8);
+  ctx.lineTo(5, 8);
+  ctx.stroke();
+
+  // Shield (on the side visible to viewer)
+  ctx.fillStyle = h.color1;
+  ctx.beginPath();
+  ctx.moveTo(10, 2);
+  ctx.lineTo(18, 2);
+  ctx.lineTo(18, 16);
+  ctx.lineTo(14, 20);
+  ctx.lineTo(10, 16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = h.color2;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Shield ribbon
+  if (h.shieldRibbon.length > 0) {
+    const sr = h.shieldRibbon;
+    const srx = 14;
+    const sry = 18;
+    updateRibbonPoints(sr, kx + dir * srx, ky + sry, 0.5, time, Math.sin(time * 0.5) * 0.3, facingRight);
+    drawRibbon(ctx, sr, 3, h.ribbonColor, 0.7);
+  }
+
+  // Helmet
+  ctx.fillStyle = h.helmetColor;
+  ctx.beginPath();
+  ctx.arc(0, -4, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Visor slit
+  ctx.fillStyle = '#2a2a3a';
+  ctx.beginPath();
+  ctx.ellipse(-1, -3, 5, 1.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye glow
+  if (h.stunned <= 0) {
+    ctx.fillStyle = 'rgba(255,200,100,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(-1, -3, 3, 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cross crest on helmet
+  ctx.strokeStyle = h.ribbonColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.lineTo(0, -2);
+  ctx.moveTo(-4, -6);
+  ctx.lineTo(4, -6);
+  ctx.stroke();
+
+  // Helmet plume (big flowing ribbon!)
+  if (h.plumes.length > 0) {
+    const plumeX = 0;
+    const plumeY = -12;
+    updateRibbonPoints(h.plumes, kx + dir * plumeX, ky + plumeY, 1, time, Math.sin(time * 0.7) * 0.5, facingRight);
+    // Draw plume as thick ribbon
+    drawRibbon(ctx, h.plumes, 6, h.plumeColor, 0.9);
+    // Secondary plume layer
+    drawRibbon(ctx, h.plumes, 3, '#ffffff', 0.4);
+  }
+
+  // Lance
+  ctx.save();
+  const lanceAngle = h.lanceAngle;
+
+  // Lance shaft
+  ctx.strokeStyle = '#6a5a4a';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(8, 4);
+  const lanceLen = 60;
+  const lx = 8 + Math.cos(lanceAngle) * lanceLen;
+  const ly = 4 + Math.sin(lanceAngle) * lanceLen;
+  ctx.lineTo(lx, ly);
+  ctx.stroke();
+
+  // Lance tip
+  ctx.fillStyle = '#c0c0c0';
+  ctx.beginPath();
+  ctx.moveTo(lx, ly);
+  ctx.lineTo(lx + Math.cos(lanceAngle - 0.2) * 8, ly + Math.sin(lanceAngle - 0.2) * 8);
+  ctx.lineTo(lx + Math.cos(lanceAngle + 0.2) * 8, ly + Math.sin(lanceAngle + 0.2) * 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Lance pennon (the big ribbon on the lance!)
+  if (h.pennon.length > 0) {
+    const plx = kx + dir * (8 + Math.cos(lanceAngle) * 55);
+    const ply = ky + 4 + Math.sin(lanceAngle) * 55;
+    const isLeft = facingRight;
+    updateRibbonPoints(h.pennon, plx, ply, 1, time, Math.sin(time * 0.8) * 0.4 + 0.3, isLeft);
+    drawRibbon(ctx, h.pennon, 8, h.ribbonColor, 0.85);
+    // Inner ribbon highlight
+    drawRibbon(ctx, h.pennon, 3, '#ffffff', 0.3);
+
+    // Second pennon ribbon (other side)
+    const h2 = h.pennon.map(p => ({ x: p.x + dir * 4, y: p.y - 2 }));
+    drawRibbon(ctx, h2, 5, lightenColor(h.ribbonColor, 40), 0.5);
+  }
+
+  ctx.restore();
+
+  // Arm (holding lance)
+  ctx.fillStyle = h.armorColor;
+  ctx.beginPath();
+  ctx.arc(10, 2, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  // Ribbon bursts
+  ribbonBursts = ribbonBursts.filter(b => b.life > 0);
+  for (const b of ribbonBursts) {
+    b.x += b.vx;
+    b.y += b.vy;
+    b.vy += b.gravity;
+    b.vx *= 0.98;
+    b.vy *= 0.98;
+    b.life--;
+
+    const alpha = b.life / b.maxLife;
+    const pts = [];
+    const len = b.length * alpha;
+    for (let i = 0; i <= 6; i++) {
+      const t = i / 6;
+      const wave = Math.sin(b.phase + time * 3 + t * 4) * 4 * t;
+      pts.push({ x: b.x + t * len * 0.5, y: b.y + t * len * 0.3 + wave });
+    }
+    drawRibbon(ctx, pts, b.width * alpha, b.color, alpha * 0.7);
+  }
+
+  // Confetti
+  confetti = confetti.filter(c => c.life > 0);
+  for (const c of confetti) {
+    c.x += c.vx;
+    c.y += c.vy;
+    c.vy += c.gravity;
+    c.vx *= 0.99;
+    c.rot += c.rotSpeed;
+    c.life--;
+
+    const alpha = c.life / c.maxLife;
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.rot);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = c.color;
+    ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h);
+    ctx.restore();
+  }
+
+  // Sparkles
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += p.gravity;
+    p.life--;
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawHUD() {
+  document.getElementById('pscore').textContent = playerScore;
+  document.getElementById('oscore').textContent = opponentScore;
+  document.getElementById('roundNum').textContent = roundNum;
+  document.getElementById('hitStreak').textContent = hitStreak;
+}
+
+// ---- GAME LOGIC ----
+let chargeTimer = 0;
+let chargeDuration = 2;
+let strikeMoment = 0;
+let roundWinner = '';
+
+function resetRound() {
+  player.x = 140;
+  player.y = 380;
+  player.vx = 0;
+  player.stunned = 0;
+  player.hitAnimation = 0;
+  player.bounceY = 0;
+  player.gallopPhase = 0;
+  player.lanceAngle = 0.15;
+
+  opponent.x = W - 140;
+  opponent.y = 380;
+  opponent.vx = 0;
+  opponent.stunned = 0;
+  opponent.hitAnimation = 0;
+  opponent.bounceY = 0;
+  opponent.gallopPhase = 0;
+  opponent.lanceAngle = Math.PI - 0.15;
+
+  chargeTimer = 0;
+  timingBar.progress = 0;
+  timingBar.speed = 0.8;
+  timingBar.direction = 1;
+  timingBar.locked = false;
+  timingBar.success = false;
+  strikeMoment = 0;
+  roundWinner = '';
+  roundResult = '';
+
+  document.getElementById('timerBar').style.display = 'none';
+  document.getElementById('hitText').classList.remove('show');
+}
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('endScreen').style.display = 'none';
+  playerScore = 0;
+  opponentScore = 0;
+  roundNum = 1;
+  hitStreak = 0;
+  bestStreak = 0;
+  hits = 0;
+  totalStrikes = 0;
+  confetti = [];
+  particles = [];
+  ribbonBursts = [];
+  initKnights();
+  resetRound();
+  state = 'playing';
+  showRoundDisplay('РАУНД 1');
+}
+
+function showRoundDisplay(text) {
+  const el = document.getElementById('roundDisplay');
+  el.textContent = text;
+  el.style.opacity = 1;
+  el.style.transform = 'translate(-50%, -50%) scale(1.2)';
+  setTimeout(() => {
+    el.style.opacity = 0;
+    el.style.transform = 'translate(-50%, -50%) scale(1)';
+  }, 1200);
+}
+
+function startCharge() {
+  if (state !== 'playing') return;
+  state = 'charging';
+  chargeTimer = 0;
+  timingBar.progress = 0.1;
+  timingBar.speed = 0.6 + Math.random() * 0.3;
+  timingBar.direction = 1;
+  timingBar.locked = false;
+  timingBar.zoneCenter = 0.4 + Math.random() * 0.2;
+  timingBar.zoneWidth = 0.12;
+  document.getElementById('timerBar').style.display = 'block';
+  document.getElementById('timerZone').style.left = (timingBar.zoneCenter - timingBar.zoneWidth) * 300 + 'px';
+  document.getElementById('timerZone').style.width = (timingBar.zoneWidth * 2) * 300 + 'px';
+}
+
+function doStrike() {
+  if (state !== 'charging' || timingBar.locked) return;
+  timingBar.locked = true;
+  totalStrikes++;
+
+  const center = timingBar.zoneCenter;
+  const halfW = timingBar.zoneWidth;
+  const p = timingBar.progress;
+  const dist = Math.abs(p - center);
+  const maxDist = halfW + 0.15;
+
+  let grade;
+  if (dist <= halfW) {
+    // HIT! Within green zone
+    const perfection = 1 - (dist / halfW) * 0.5;
+    grade = perfection;
+    timingBar.success = true;
+    hits++;
+    hitStreak++;
+    if (hitStreak > bestStreak) bestStreak = hitStreak;
+    playerScore++;
+    roundWinner = 'player';
+    roundResult = 'ПОПАДАНИЕ!';
+    // Spawn lots of ribbons!
+    const impactX = (player.x + opponent.x) / 2;
+    const impactY = (player.y + opponent.y) / 2 - 20;
+    spawnRibbonBurst(impactX, impactY, player.ribbonColor, 20 + Math.round(perfection * 30));
+    spawnRibbonBurst(impactX + rnd(-10, 10), impactY + rnd(-10, 10), opponent.ribbonColor, 15);
+    spawnConfetti(impactX, impactY, 30 + Math.round(perfection * 40));
+    spawnSparkles(impactX, impactY, '#ffd700', 20);
+
+    opponent.stunned = 20;
+    opponent.bounceY = -5;
+
+    // Show hit text
+    const hitEl = document.getElementById('hitText');
+    if (perfection > 0.8) hitEl.textContent = '💥 ИДЕАЛЬНО!';
+    else if (perfection > 0.5) hitEl.textContent = '⚔️ ПОПАДАНИЕ!';
+    else hitEl.textContent = '🔨 ПО ЦЕЛИ!';
+    hitEl.style.color = '#22c55e';
+    hitEl.classList.add('show');
+    setTimeout(() => hitEl.classList.remove('show'), 1000);
+  } else {
+    // Miss!
+    hitStreak = 0;
+    opponentScore++;
+    roundWinner = 'opponent';
+    roundResult = 'ПРОМАХ!';
+    player.stunned = 15;
+    player.bounceY = -4;
+    spawnSparkles(player.x, player.y - 20, '#ff4444', 10);
+
+    const hitEl = document.getElementById('hitText');
+    hitEl.textContent = '💨 ПРОМАХ!';
+    hitEl.style.color = '#ef4444';
+    hitEl.classList.add('show');
+    setTimeout(() => hitEl.classList.remove('show'), 1000);
+  }
+  drawHUD();
+
+  setTimeout(endRound, 800);
+}
+
+function endRound() {
+  state = 'roundEnd';
+  if (playerScore >= 4 || opponentScore >= 4 || roundNum >= maxRounds) {
+    endGame();
+    return;
+  }
+  roundNum++;
+  setTimeout(() => {
+    resetRound();
+    state = 'playing';
+    showRoundDisplay(`РАУНД ${roundNum}`);
+    drawHUD();
+  }, 1000);
+}
+
+function endGame() {
+  state = 'result';
+  const el = document.getElementById('endScreen');
+  el.style.display = 'flex';
+  document.getElementById('finalScore').textContent = `${playerScore} : ${opponentScore}`;
+  const title = document.getElementById('endTitle');
+  if (playerScore > opponentScore) {
+    title.textContent = '🏆 ПОБЕДА!';
+    title.style.color = '#ffd700';
+    spawnConfetti(W/2, H/2, 100);
+    spawnRibbonBurst(W/2, H/2, '#ffd700', 40);
+    spawnRibbonBurst(W/2 + 50, H/2 - 30, '#ff4444', 25);
+    spawnRibbonBurst(W/2 - 50, H/2 - 30, '#4444ff', 25);
+  } else {
+    title.textContent = 'ПОРАЖЕНИЕ...';
+    title.style.color = '#ef4444';
+  }
+  const acc = totalStrikes > 0 ? Math.round(hits / totalStrikes * 100) : 0;
+  document.getElementById('finalStats').innerHTML =
+    `🎯 Точность: ${acc}% (${hits}/${totalStrikes})<br>` +
+    `🔥 Лучшая серия: ${bestStreak} подряд<br>` +
+    `🏅 Всего попаданий: ${hits}`;
+  document.getElementById('timerBar').style.display = 'none';
+  document.getElementById('hitText').classList.remove('show');
+}
+
+// ---- INPUT ----
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (state === 'menu' || state === 'result') return;
+    if (state === 'playing') { startCharge(); return; }
+    if (state === 'charging' && !timingBar.locked) { doStrike(); return; }
+  }
+});
+C.addEventListener('click', () => {
+  if (state === 'menu' || state === 'result') return;
+  if (state === 'playing') { startCharge(); return; }
+  if (state === 'charging' && !timingBar.locked) { doStrike(); }
+});
+
+// ---- UPDATE ----
+function update(dt) {
+  time += dt;
+
+  if (state === 'playing' || state === 'charging' || state === 'roundEnd') {
+    // Horse breathing
+    player.horseBreathe += dt * 1.5;
+    opponent.horseBreathe += dt * 1.5;
+    player.tailPhase += dt * 3;
+    opponent.tailPhase += dt * 3;
+    player.earPhase += dt * 2;
+    opponent.earPhase += dt * 2;
+
+    // Stun animation
+    if (player.stunned > 0) player.stunned -= dt * 30;
+    else player.stunned = 0;
+    if (opponent.stunned > 0) opponent.stunned -= dt * 30;
+    else opponent.stunned = 0;
+
+    // Bounce recovery
+    player.bounceY *= 0.9;
+    opponent.bounceY *= 0.9;
+
+    // Slight idle sway
+    if (state !== 'charging') {
+      player.bounceY += Math.sin(time * 2) * 0.2;
+      opponent.bounceY += Math.sin(time * 2 + 1) * 0.2;
+    }
+  }
+
+  if (state === 'charging') {
+    chargeTimer += dt;
+    const progress = chargeTimer / chargeDuration;
+
+    // Knights move towards each other
+    const chargeSpeed = 200;
+    player.vx = chargeSpeed * dt;
+    opponent.vx = -chargeSpeed * dt;
+    player.x += player.vx;
+    opponent.x += opponent.vx;
+
+    player.gallopPhase += dt * 12;
+    opponent.gallopPhase += dt * 12;
+    player.bounceY = Math.abs(Math.sin(player.gallopPhase)) * 3;
+    opponent.bounceY = Math.abs(Math.sin(opponent.gallopPhase)) * 3;
+
+    // Lance angle adjusts
+    const t = clamp(chargeTimer / 1.5, 0, 1);
+    player.lanceAngle = lerp(0.15, 0.05, t);
+    opponent.lanceAngle = lerp(Math.PI - 0.15, Math.PI - 0.05, t);
+
+    // Timing bar
+    if (!timingBar.locked) {
+      timingBar.progress += timingBar.speed * dt * timingBar.direction;
+      if (timingBar.progress >= 1) { timingBar.progress = 1; timingBar.direction = -1; }
+      if (timingBar.progress <= 0) { timingBar.progress = 0; timingBar.direction = 1; }
+      const fill = document.getElementById('timerFill');
+      fill.style.width = (timingBar.progress * 100) + '%';
+    }
+
+    // Auto-miss if knights pass each other
+    if (player.x > opponent.x && !timingBar.locked) {
+      timingBar.locked = true;
+      totalStrikes++;
+      hitStreak = 0;
+      opponentScore++;
+      roundWinner = 'opponent';
+      roundResult = 'РАЗМИНУЛИСЬ!';
+      const hitEl = document.getElementById('hitText');
+      hitEl.textContent = '💨 РАЗМИНУЛИСЬ!';
+      hitEl.style.color = '#f59e0b';
+      hitEl.classList.add('show');
+      setTimeout(() => hitEl.classList.remove('show'), 1000);
+      drawHUD();
+      setTimeout(endRound, 800);
+    }
+  }
+
+  // Update ribbon bursts
+  for (const b of ribbonBursts) {
+    b.vx *= 0.98;
+    b.vy *= 0.98;
+  }
+}
+
+// ---- DRAW ----
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  drawSky();
+  drawArena();
+
+  // Draw knights
+  if (player) drawHorse(ctx, player, true);
+  if (player) drawKnight(ctx, player, true);
+  if (opponent) drawHorse(ctx, opponent, false);
+  if (opponent) drawKnight(ctx, opponent, false);
+
+  drawParticles();
+
+  // Instructions for charging
+  if (state === 'playing') {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,215,0,0.5)';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Нажми ПРОБЕЛ или кликни, чтобы атаковать!', W/2, H - 18);
+    ctx.restore();
+  }
+}
+
+// ---- GAME LOOP ----
+let lastTime = 0;
+
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  update(dt);
+  draw();
+  drawHUD();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ---- INIT ----
+initKnights();
+resetRound();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

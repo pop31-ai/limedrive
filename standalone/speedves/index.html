@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>АРЕНА ДРОН-ГОНКИ · 30 треков</title>
+<style>
+  html,body{margin:0;padding:0;background:#0b0e14;overflow:hidden;height:100%;}
+  body{
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(1200px 700px at 50% 30%, #16202e 0%, #0b0e14 70%);
+  }
+  #wrap{position:relative;width:min(100vw,1200px);}
+  canvas{
+    width:100%;height:auto;display:block;
+    border-radius:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 0 1px #27313f inset;
+    outline:none;
+  }
+  #splash{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:14px;
+    background:rgba(5,8,12,.72);
+    cursor:pointer;
+    z-index:5;
+  }
+  #splash .card{
+    text-align:center;padding:34px 44px;border-radius:16px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 10px 40px rgba(0,0,0,.5);
+  }
+  #splash .t{font:800 40px system-ui;color:#ffd23e;}
+  #splash .s{font:600 17px system-ui;color:#e8eef5;margin-top:8px;}
+  #splash .h{font:600 14px system-ui;color:#9fb2c6;margin-top:20px;line-height:1.8;}
+  #splash .go{margin-top:14px;font:700 15px system-ui;color:#5cf;animation:p 1.2s infinite;}
+  @keyframes p{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="cv" width="1280" height="720" tabindex="0"></canvas>
+<div id="splash">
+  <div class="card">
+    <div class="t">АРЕНА ДРОН-ГОНКИ</div>
+    <div class="s">30 треков · покрытия · горки · толкашки</div>
+    <div class="h">← → / A D — руль &nbsp;·&nbsp; S — тормоз &nbsp;·&nbsp; G — толкашка<br>
+    R — реванш &nbsp;·&nbsp; Enter — следующий трек &nbsp;·&nbsp; M — звук</div>
+    <div class="go">КЛИК ИЛИ ЛЮБАЯ КЛАВИША</div>
+  </div>
+</div>
+</div>
+<script src="core.js"></script>
+<script src="render.js"></script>
+<script src="sim.js"></script>
+</body>
+</html>

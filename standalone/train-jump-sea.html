@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>🚂 Train Jump Sea 🌊</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(135deg, #0c0c1d, #1a1a3e);
+    display: flex; justify-content: center; align-items: center;
+    height: 100vh; font-family: 'Segoe UI', sans-serif;
+  }
+  canvas { border-radius: 12px; box-shadow: 0 0 40px rgba(233,69,96,0.3); }
+</style>
+</head>
+<body>
+<canvas id="c" width="900" height="500"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 900, H = 500;
+
+const G = 0.5, JUMP = -11, BASE_SPEED = 4;
+let gameOver = false, score = 0, frame = 0, highScore = 0;
+let speed = BASE_SPEED;
+let player, trains, particles, clouds, stars, bgOffset;
+
+function init() {
+  player = { x: 180, y: 300, vy: 0, w: 28, h: 34, grounded: false, jumpBuffered: false };
+  trains = [];
+  particles = [];
+  clouds = [];
+  stars = [];
+  bgOffset = 0;
+  for (let i = 0; i < 60; i++) {
+    stars.push({ x: Math.random() * W, y: Math.random() * 250, size: Math.random() * 2 + 0.5, twinkle: Math.random() * 100 });
+  }
+  for (let i = 0; i < 5; i++) {
+    clouds.push({ x: Math.random() * W, y: 30 + Math.random() * 100, w: 60 + Math.random() * 100, speed: 0.2 + Math.random() * 0.3 });
+  }
+}
+init();
+
+const trainColors = ['#e94560','#f5a623','#7ed321','#50e3c2','#b8e986','#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6eb4'];
+const wheelColors = ['#ffd700','#ff6b6b','#4ecdc4'];
+
+function spawnTrain() {
+  let h = 35 + Math.random() * 45;
+  let w = 70 + Math.random() * 50;
+  let c = trainColors[Math.floor(Math.random() * trainColors.length)];
+  trains.push({ x: W + 30, y: 430 - h, w, h, color: c, wheels: [] });
+  let t = trains[trains.length - 1];
+  for (let wx = t.x + 10; wx < t.x + t.w - 8; wx += 20) {
+    t.wheels.push(wx);
+  }
+}
+
+function spawnParticles(x, y, color, count, spread) {
+  for (let i = 0; i < count; i++) {
+    let a = Math.random() * Math.PI * 2;
+    let spd = Math.random() * spread + 1;
+    particles.push({
+      x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd - 1,
+      life: 1, decay: 0.015 + Math.random() * 0.02, size: 2 + Math.random() * 4, color
+    });
+  }
+}
+
+function update() {
+  if (gameOver) return;
+  frame++;
+  speed = BASE_SPEED + Math.floor(score / 300) * 0.5;
+  if (speed > 8) speed = 8;
+
+  if (frame % Math.max(40, 80 - Math.floor(speed) * 3) === 0) spawnTrain();
+  if (frame % 2 === 0) bgOffset = (bgOffset + 1) % 40;
+
+  player.vy += G;
+  player.y += player.vy;
+  player.grounded = false;
+
+  if (player.y + player.h > 430) {
+    if (!player.grounded) spawnParticles(player.x + player.w/2, 430, '#ffd93d', 8, 3);
+    player.y = 430 - player.h; player.vy = 0; player.grounded = true;
+  }
+
+  for (let t of trains) {
+    t.x -= speed;
+    for (let i = 0; i < t.wheels.length; i++) t.wheels[i] -= speed;
+    if (player.vy >= 0 &&
+        player.x + player.w > t.x + 5 && player.x < t.x + t.w - 5 &&
+        player.y + player.h > t.y && player.y + player.h < t.y + t.h + 12) {
+      if (!player.grounded) spawnParticles(player.x + player.w/2, t.y, '#ffd93d', 6, 2);
+      player.y = t.y - player.h; player.vy = 0; player.grounded = true;
+    }
+    if (player.x + player.w > t.x + 3 && player.x < t.x + t.w - 3 &&
+        player.y < t.y + t.h - 2 && player.y + player.h > t.y + 5 &&
+        !player.grounded) {
+      gameOver = true;
+      spawnParticles(player.x + player.w/2, player.y + player.h/2, '#e94560', 25, 5);
+    }
+  }
+
+  if (player.y + player.h > 435 && !gameOver) { gameOver = true; spawnParticles(player.x + player.w/2, player.y + player.h/2, '#e94560', 25, 5); }
+
+  if (player.jumpBuffered && player.grounded) {
+    player.vy = JUMP;
+    player.grounded = false;
+    player.jumpBuffered = false;
+    spawnParticles(player.x + player.w/2, player.y + player.h, '#7ed321', 10, 3);
+  }
+
+  trains = trains.filter(t => t.x + t.w > -80);
+
+  for (let p of particles) {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.05;
+    p.life -= p.decay;
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  for (let c of clouds) {
+    c.x -= c.speed;
+    if (c.x + c.w < -10) { c.x = W + 10; c.y = 30 + Math.random() * 100; }
+  }
+
+  if (!gameOver) score++;
+  if (gameOver && Math.floor(score / 10) > highScore) highScore = Math.floor(score / 10);
+}
+
+function drawSky() {
+  let grad = ctx.createLinearGradient(0, 0, 0, 400);
+  grad.addColorStop(0, '#0b0b2a');
+  grad.addColorStop(0.3, '#1a1a4e');
+  grad.addColorStop(0.6, '#2d1b69');
+  grad.addColorStop(0.85, '#e94560');
+  grad.addColorStop(1, '#ffd93d');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, 430);
+
+  for (let s of stars) {
+    let bright = 0.5 + 0.5 * Math.sin((frame + s.twinkle) * 0.05);
+    ctx.globalAlpha = bright * 0.8;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  for (let cl of clouds) {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.ellipse(cl.x, cl.y, cl.w/2, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cl.x - cl.w*0.25, cl.y + 5, cl.w*0.35, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cl.x + cl.w*0.25, cl.y + 3, cl.w*0.3, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawGround() {
+  let g = ctx.createLinearGradient(0, 430, 0, H);
+  g.addColorStop(0, '#2d1b69');
+  g.addColorStop(0.3, '#1a1a4e');
+  g.addColorStop(1, '#0c0c1d');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 430, W, 70);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = -bgOffset; i < W; i += 20) {
+    ctx.beginPath(); ctx.moveTo(i, 430); ctx.lineTo(i - 10, H); ctx.stroke();
+  }
+}
+
+function drawTrains() {
+  for (let t of trains) {
+    ctx.shadowColor = t.color;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = t.color;
+    ctx.beginPath();
+    ctx.roundRect(t.x, t.y, t.w, t.h, 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(t.x + 4, t.y + 4, t.w - 8, t.h * 0.3);
+
+    ctx.fillStyle = '#222';
+    for (let wx of t.wheels) {
+      ctx.beginPath(); ctx.arc(wx + 5, t.y + t.h + 6, 6, 0, Math.PI * 2); ctx.fill();
+      let wc = wheelColors[Math.floor(Math.random() * wheelColors.length)];
+      ctx.fillStyle = wc;
+      ctx.beginPath(); ctx.arc(wx + 5, t.y + t.h + 6, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#222';
+    }
+
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(t.x + 2, t.y + 2, 6, t.h - 4);
+    ctx.fillRect(t.x + t.w - 8, t.y + 2, 6, t.h - 4);
+  }
+}
+
+function drawPlayer() {
+  let p = player;
+  ctx.shadowColor = '#ffd93d';
+  ctx.shadowBlur = 10;
+
+  let bodyGrad = ctx.createLinearGradient(p.x, p.y, p.x + p.w, p.y + p.h);
+  bodyGrad.addColorStop(0, '#4fc3f7');
+  bodyGrad.addColorStop(0.5, '#29b6f6');
+  bodyGrad.addColorStop(1, '#0288d1');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.roundRect(p.x, p.y, p.w, p.h, 5);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#ffcc80';
+  ctx.beginPath();
+  ctx.arc(p.x + p.w/2, p.y - 4, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(p.x + p.w/2 - 4, p.y - 6, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p.x + p.w/2 + 4, p.y - 6, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(p.x + p.w/2 - 4, p.y - 6, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p.x + p.w/2 + 4, p.y - 6, 1.2, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = '#e94560';
+  ctx.beginPath();
+  ctx.moveTo(p.x + p.w/2 - 8, p.y - 1);
+  ctx.lineTo(p.x + p.w/2, p.y + 6);
+  ctx.lineTo(p.x + p.w/2 + 8, p.y - 1);
+  ctx.fill();
+
+  if (p.vy < -2) {
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(p.x - 8, p.y + p.h/2, 12, 6, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawParticles() {
+  for (let p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+}
+
+function drawUI() {
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 4;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.roundRect(10, 10, 180, 50, 8); ctx.fill();
+
+  ctx.fillStyle = '#ffd93d';
+  ctx.font = 'bold 22px "Segoe UI", sans-serif';
+  ctx.fillText('⭐ ' + Math.floor(score / 10), 22, 45);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '12px "Segoe UI", sans-serif';
+  ctx.fillText('🏆 ' + highScore, 120, 45);
+
+  ctx.shadowBlur = 0;
+
+  if (!gameOver && player.grounded && frame % 20 < 10) {
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.fillText('⌨ Space / ↑', 14, H - 12);
+  }
+
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.shadowColor = '#e94560';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#e94560';
+    ctx.font = 'bold 52px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', W/2, 200);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = '24px "Segoe UI", sans-serif';
+    ctx.fillText('Score: ' + Math.floor(score / 10), W/2, 260);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '18px "Segoe UI", sans-serif';
+    ctx.fillText('🔄 Press R to restart', W/2, 320);
+
+    ctx.textAlign = 'left';
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawSky();
+  drawGround();
+  drawTrains();
+  drawParticles();
+  drawPlayer();
+  drawUI();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+    e.preventDefault();
+    if (player.grounded) {
+      player.vy = JUMP; player.grounded = false;
+      spawnParticles(player.x + player.w/2, player.y + player.h, '#7ed321', 10, 3);
+    } else {
+      player.jumpBuffered = true;
+    }
+  }
+  if ((e.key === 'r' || e.key === 'R') && gameOver) {
+    gameOver = false; score = 0; frame = 0;
+    player = { x: 180, y: 300, vy: 0, w: 28, h: 34, grounded: false, jumpBuffered: false };
+    trains = []; particles = [];
+    for (let c of clouds) { c.x = Math.random() * W; }
+  }
+});
+
+canvas.addEventListener('click', () => {
+  if (gameOver) return;
+  if (player.grounded) {
+    player.vy = JUMP; player.grounded = false;
+    spawnParticles(player.x + player.w/2, player.y + player.h, '#7ed321', 10, 3);
+  }
+});
+
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (r > w/2) r = w/2;
+    if (r > h/2) r = h/2;
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.lineTo(x + w, y + h - r);
+    this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.lineTo(x + r, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.lineTo(x, y + r);
+    this.quadraticCurveTo(x, y, x + r, y);
+    return this;
+  };
+}
+
+spawnTrain();
+spawnTrain();
+setInterval(() => { update(); draw(); }, 1000 / 60);
+</script>
+</body>
+</html>

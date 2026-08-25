@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Заводоград — Логистическая Фабрика</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a12; color:#ccc; font-family:'Segoe UI',Tahoma,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column; }
+#topbar { height:42px; background:#111122; border-bottom:1px solid #333; display:flex; align-items:center; padding:0 12px; gap:16px; z-index:10; }
+#topbar h1 { font-size:15px; color:#e8c84a; white-space:nowrap; }
+.res-bar { display:flex; gap:8px; flex:1; overflow-x:auto; }
+.res-item { background:#1a1a2e; border:1px solid #333; border-radius:4px; padding:2px 8px; font-size:11px; white-space:nowrap; }
+.res-item span { color:#e8c84a; }
+#main { flex:1; display:flex; overflow:hidden; }
+#canvas-wrap { flex:1; position:relative; overflow:hidden; cursor:crosshair; }
+canvas { position:absolute; top:0; left:0; }
+#sidebar { width:260px; background:#0d0d1a; border-left:1px solid #333; overflow-y:auto; display:flex; flex-direction:column; }
+.panel { border-bottom:1px solid #222; padding:8px 10px; }
+.panel-title { font-size:11px; color:#e8c84a; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.build-btn { display:inline-flex; align-items:center; gap:5px; background:#1a1a2e; border:1px solid #444; border-radius:4px; padding:4px 8px; margin:2px; cursor:pointer; font-size:10px; color:#ccc; transition:all .15s; }
+.build-btn:hover { background:#2a2a4e; border-color:#e8c84a; color:#fff; }
+.build-btn.active { background:#2a3a2e; border-color:#4a4; color:#8f8; }
+.build-btn canvas { border-radius:2px; }
+.recipe { background:#1a1a2e; border:1px solid #333; border-radius:4px; padding:5px 8px; margin:3px 0; font-size:10px; cursor:pointer; }
+.recipe:hover { border-color:#e8c84a; }
+.recipe-name { color:#e8c84a; font-weight:bold; }
+.recipe-arrow { color:#666; }
+.recipe-out { color:#8f8; }
+#info-panel { position:absolute; bottom:0; left:0; right:260px; height:0; background:rgba(10,10,18,0.95); border-top:1px solid #e8c84a; transition:height .2s; overflow:hidden; z-index:5; }
+#info-panel.open { height:180px; padding:10px; }
+#info-panel .close-btn { position:absolute; top:4px; right:8px; cursor:pointer; color:#888; font-size:14px; }
+#info-panel .close-btn:hover { color:#fff; }
+.info-title { color:#e8c84a; font-size:13px; margin-bottom:6px; }
+.info-stats { font-size:11px; line-height:1.6; }
+.info-stats b { color:#aaa; }
+.tooltip { position:absolute; background:#111122ee; border:1px solid #e8c84a; border-radius:4px; padding:6px 10px; font-size:11px; pointer-events:none; z-index:20; max-width:220px; }
+.tooltip .tt-name { color:#e8c84a; font-weight:bold; margin-bottom:3px; }
+.tooltip .tt-desc { color:#aaa; font-size:10px; }
+.bonus-btn { display:inline-flex; align-items:center; gap:4px; background:#1a2a1e; border:1px solid #4a4; border-radius:4px; padding:4px 8px; margin:2px; cursor:pointer; font-size:10px; color:#8f8; }
+.bonus-btn:hover { background:#2a4a2e; border-color:#8f8; }
+.bonus-btn.disabled { opacity:0.4; cursor:default; border-color:#333; color:#666; }
+#minimap { width:100%; height:100px; background:#0a0a12; border-bottom:1px solid #222; cursor:pointer; }
+#speed-controls { display:flex; gap:4px; align-items:center; }
+#speed-controls button { background:#1a1a2e; border:1px solid #444; border-radius:3px; color:#ccc; padding:2px 8px; cursor:pointer; font-size:11px; }
+#speed-controls button:hover { border-color:#e8c84a; }
+#speed-controls button.active { background:#2a2a4e; color:#e8c84a; border-color:#e8c84a; }
+.jam-indicator { color:#f44; font-size:10px; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <h1>⚙ Заводоград</h1>
+  <div class="res-bar" id="res-bar"></div>
+  <div id="speed-controls">
+    <button onclick="setSpeed(0)" id="sp0">⏸</button>
+    <button onclick="setSpeed(1)" id="sp1" class="active">▶</button>
+    <button onclick="setSpeed(2)" id="sp2">▶▶</button>
+    <button onclick="setSpeed(3)" id="sp3">▶▶▶</button>
+  </div>
+</div>
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="gc"></canvas>
+    <div id="info-panel">
+      <span class="close-btn" onclick="closeInfo()">✕</span>
+      <div id="info-content"></div>
+    </div>
+    <div id="tooltip" class="tooltip" style="display:none"></div>
+  </div>
+  <div id="sidebar">
+    <canvas id="minimap"></canvas>
+    <div class="panel">
+      <div class="panel-title">Постройки</div>
+      <div id="build-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Рецепты сборки</div>
+      <div id="recipe-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Бонусы</div>
+      <div id="bonus-list"></div>
+    </div>
+  </div>
+</div>
+<script>
+const CELL=48, GRID_W=50, GRID_H=40;
+const DIR={N:{x:0,y:-1},S:{x:0,y:1},E:{x:1,y:0},W:{x:-1,y:0}};
+const DIR_LIST=['N','S','E','W'];
+
+const RES_TYPES=[
+  {id:'ore',name:'Руда',color:'#b87333',icon:'⛏'},
+  {id:'metal',name:'Металл',color:'#a8a8b0',icon:'🔩'},
+  {id:'plastic',name:'Пластик',color:'#66cc88',icon:'📦'},
+  {id:'energy',name:'Энергия',color:'#ffcc00',icon:'⚡'},
+  {id:'nanochip',name:'Наночип',color:'#00ddff',icon:'💎'},
+  {id:'components',name:'Компоненты',color:'#dd8844',icon:'🔧'},
+  {id:'laser_elem',name:'Лазерный элемент',color:'#cc44ff',icon:'◈'},
+  {id:'drones',name:'Дроны',color:'#88bbee',icon:'✈'},
+  {id:'police_badge',name:'Щит',color:'#4466cc',icon:'🛡'},
+  {id:'robots',name:'Роботы',color:'#44dd66',icon:'🤖'},
+];
+
+const BUILD_TYPES=[
+  {id:'mine',name:'Рудник',w:1,h:1,color:'#8B6914',prod:['ore'],prodRate:1.5,needs:[],desc:'Добывает руду из недр земли. Источник сырья.'},
+  {id:'smelter',name:'Плавильня',w:1,h:1,color:'#CC4400',prod:['metal'],prodRate:1,needs:[{res:'ore',amt:2}],desc:'Переплавляет руду в чистый металл. Потребляет 2 руды.'},
+  {id:'plasticworks',name:'Пластиковый завод',w:1,h:1,color:'#44aa66',prod:['plastic'],prodRate:1.2,needs:[{res:'energy',amt:1}],desc:'Производит пластик. Требует энергию.'},
+  {id:'powerplant',name:'Электростанция',w:1,h:1,color:'#cccc22',prod:['energy'],prodRate:2,needs:[],desc:'Генерирует энергию для всех заводов.'},
+  {id:'factory',name:'Завод',w:2,h:1,color:'#7788aa',prod:['components'],prodRate:0.8,needs:[{res:'metal',amt:1},{res:'plastic',amt:2}],desc:'Собирает компоненты из металла и пластика.'},
+  {id:'lab',name:'Лаборатория',w:1,h:1,color:'#00bbdd',prod:['nanochip'],prodRate:0.5,needs:[{res:'metal',amt:1},{res:'energy',amt:2}],desc:'Производит наночипы высокой точности.'},
+  {id:'laserlab',name:'Лазерная лаборатория',w:1,h:1,color:'#aa33dd',prod:['laser_elem'],prodRate:0.4,needs:[{res:'nanochip',amt:1},{res:'energy',amt:3}],desc:'Генерирует лазерные элементы. Очень энергоёмко.'},
+  {id:'airfield',name:'Аэродром',w:3,h:1,color:'#99aabb',prod:['drones'],prodRate:0.3,needs:[{res:'components',amt:3},{res:'nanochip',amt:1}],desc:'Собирает дроны из компонентов и чипов. Самолёты вылетают!'},
+  {id:'police',name:'Полицейский участок',w:1,h:1,color:'#2244aa',prod:['police_badge'],prodRate:0.5,needs:[{res:'metal',amt:1}],desc:'Производит щиты. Роботы-полицейские предотвращают пробки.'},
+  {id:'robotstation',name:'Робостанция',w:1,h:1,color:'#22aa55',prod:['robots'],prodRate:0.6,needs:[{res:'components',amt:2},{res:'nanochip',amt:1}],desc:'Собирает роботов. Роботы ускоряют соседние здания.'},
+  {id:'warehouse',name:'Склад',w:1,h:1,color:'#55aa55',prod:[],prodRate:0,needs:[],quota:50,desc:'Хранит ресурсы. Квота: 50 ед. Можно настроить приём.'},
+  {id:'regulator',name:'Регулятор',w:1,h:1,color:'#ccaa22',prod:[],prodRate:0,needs:[],desc:'Распределяет поток ресурсов. Кликните для настройки направлений.'},
+];
+
+const RECIPES=[
+  {name:'Дрон-разведчик',out:'drones',amt:1,needs:[{res:'components',amt:5},{res:'nanochip',amt:2},{res:'laser_elem',amt:1}],bonus:'radar'},
+  {name:'Боевой дрон',out:'drones',amt:2,needs:[{res:'components',amt:8},{res:'laser_elem',amt:3}],bonus:'attack'},
+  {name:'Полицейский робот',out:'robots',amt:1,needs:[{res:'robots',amt:2},{res:'police_badge',amt:3}],bonus:'patrol'},
+  {name:'Лазерная турель',out:'laser_elem',amt:5,needs:[{res:'laser_elem',amt:3},{res:'components',amt:4},{res:'energy',amt:10}],bonus:'turret'},
+  {name:'Нано-ускоритель',out:'nanochip',amt:5,needs:[{res:'nanochip',amt:3},{res:'energy',amt:8}],bonus:'speed'},
+  {name:'Энерго-щит',out:'police_badge',amt:3,needs:[{res:'police_badge',amt:2},{res:'energy',amt:15}],bonus:'shield'},
+];
+
+let game={
+  grid:[],
+  buildings:[],
+  roads:[],
+  resources:[], // {res,x,y,tx,ty,speed,from,to}
+  scrollX:0,scrollY:0,
+  mouse:{x:0,y:0,gx:0,gy:0},
+  selected:null,
+  hovered:null,
+  selectedCell:null,
+  placing:null,
+  placingDir:'E',
+  speed:1,
+  time:0,
+  resStock:{},
+  totalProd:{},
+  jams:[],
+  bonuses:{radar:0,attack:0,patrol:0,turret:0,speed:0,shield:0},
+  robotBoosts:{},
+  score:0,
+  dragStart:null,
+  isDragging:false,
+  canvasW:0,canvasH:0,
+  mouseDown:false,
+  mouseX:0,mouseY:0,
+  rightMouseDown:false,
+};
+
+RES_TYPES.forEach(r=>{game.resStock[r.id]=0;game.totalProd[r.id]=0;});
+
+for(let y=0;y<GRID_H;y++){
+  game.grid[y]=[];
+  for(let x=0;x<GRID_W;x++){
+    game.grid[y][x]={building:null,road:false,roadDir:{N:false,S:false,E:false,W:false}};
+  }
+}
+
+const gc=document.getElementById('gc');
+const ctx=gc.getContext('2d');
+const mm=document.getElementById('minimap');
+const mctx=mm.getContext('2d');
+const wrap=document.getElementById('canvas-wrap');
+
+function resize(){
+  game.canvasW=wrap.clientWidth;
+  game.canvasH=wrap.clientHeight;
+  gc.width=game.canvasW;
+  gc.height=game.canvasH;
+  mm.width=wrap.clientWidth;
+  mm.height=100;
+}
+window.addEventListener('resize',resize);
+resize();
+
+function getBuildingAt(gx,gy){
+  for(let b of game.buildings){
+    if(gx>=b.x&&gx<b.x+b.w&&gy>=b.y&&gy<b.y+b.h) return b;
+  }
+  return null;
+}
+
+function canPlace(gx,gy,w,h){
+  if(gx<0||gy<0||gx+w>GRID_W||gy+h>GRID_H) return false;
+  for(let dy=0;dy<h;dy++){
+    for(let dx=0;dx<w;dx++){
+      let c=game.grid[gy+dy][gx+dx];
+      if(c.building||c.road) return false;
+    }
+  }
+  return true;
+}
+
+function placeBuilding(typeId,gx,gy){
+  let bt=BUILD_TYPES.find(b=>b.id===typeId);
+  if(!bt||!canPlace(gx,gy,bt.w,bt.h)) return false;
+  let b={id:typeId,type:bt,x:gx,y:gy,w:bt.w,h:bt.h,storage:{},quota:bt.quota||999,sendDir:'E',active:true,level:1,robotBoost:0,acceptAll:true,acceptFilter:null,totalIn:0,totalOut:0,jamTimer:0};
+  RES_TYPES.forEach(r=>b.storage[r.id]=0);
+  game.buildings.push(b);
+  for(let dy=0;dy<bt.h;dy++){
+    for(let dx=0;dx<bt.w;dx++){
+      game.grid[gy+dy][gx+dx].building=b;
+    }
+  }
+  return true;
+}
+
+function placeRoad(gx,gy){
+  if(gx<0||gy<0||gx>=GRID_W||gy>=GRID_H) return false;
+  let c=game.grid[gy][gx];
+  if(c.building||c.road) return false;
+  c.road=true;
+  updateRoadConnections(gx,gy);
+  // update neighbors
+  DIR_LIST.forEach(d=>{
+    let nx=gx+DIR[d].x,ny=gy+DIR[d].y;
+    if(nx>=0&&ny>=0&&nx<GRID_W&&ny<GRID_H&&game.grid[ny][nx].road) updateRoadConnections(nx,ny);
+  });
+  game.roads.push({x:gx,y:gy});
+  return true;
+}
+
+function updateRoadConnections(gx,gy){
+  let c=game.grid[gy][gx];
+  DIR_LIST.forEach(d=>{
+    let nx=gx+DIR[d].x,ny=gy+DIR[d].y;
+    if(nx>=0&&ny>=0&&nx<GRID_W&&ny<GRID_H){
+      let nc=game.grid[ny][nx];
+      c.roadDir[d]=nc.road||nc.building?true:false;
+    }
+  });
+}
+
+function connectBuildingToRoads(b){
+  for(let dy=-1;dy<=b.h;dy++){
+    for(let dx=-1;dx<=b.w;dx++){
+      let gx=b.x+dx,gy=b.y+dy;
+      if(dx>=0&&dx<b.w&&dy>=0&&dy<b.h) continue;
+      if(gx<0||gy<0||gx>=GRID_W||gy>=GRID_H) continue;
+      let c=game.grid[gy][gx];
+      if(c.road){
+        updateRoadConnections(gx,gy);
+      }
+    }
+  }
+}
+
+function findPath(sx,sy,ex,ey){
+  let queue=[[sx,sy]];
+  let visited={};
+  let parent={};
+  visited[`${sx},${sy}`]=true;
+  while(queue.length>0){
+    let [cx,cy]=queue.shift();
+    if(cx===ex&&cy===ey){
+      let path=[];
+      let key=`${cx},${cy}`;
+      while(key){
+        let [px,py]=key.split(',').map(Number);
+        path.unshift({x:px,y:py});
+        key=parent[key];
+      }
+      return path;
+    }
+    DIR_LIST.forEach(d=>{
+      let nx=cx+DIR[d].x,ny=cy+DIR[d].y;
+      let k=`${nx},${ny}`;
+      if(nx>=0&&ny>=0&&nx<GRID_W&&ny<GRID_H&&!visited[k]){
+        let c=game.grid[ny][nx];
+        if(c.road||c.building){
+          visited[k]=true;
+          parent[k]=`${cx},${cy}`;
+          queue.push([nx,ny]);
+        }
+      }
+    });
+  }
+  return null;
+}
+
+function sendResource(building,resId,targetBuilding){
+  let b=building;
+  if(!b.storage[resId]||b.storage[resId]<=0) return;
+  
+  // find exit point
+  let ex=b.x+Math.floor(b.w/2);
+  let ey=b.y+Math.floor(b.h/2);
+  
+  // find target entry
+  let tx=targetBuilding.x+Math.floor(targetBuilding.w/2);
+  let ty=targetBuilding.y+Math.floor(targetBuilding.h/2);
+  
+  let path=findPath(ex,ey,tx,ty);
+  if(!path||path.length<2){
+    // no path, try adjacent
+    path=[{x:ex,y:ey},{x:tx,y:ty}];
+  }
+  
+  b.storage[resId]--;
+  b.totalOut++;
+  game.resources.push({
+    res:resId,
+    path:path,
+    pathIdx:0,
+    progress:0,
+    speed:0.03+Math.random()*0.02,
+    from:building,
+    to:targetBuilding,
+    color:RES_TYPES.find(r=>r.id===resId).color
+  });
+}
+
+function dispatchResources(b){
+  if(!b.active) return;
+  
+  // find connected consumers
+  let consumers=[];
+  // BFS from building edges to find connected buildings
+  let visited={};
+  let queue=[];
+  
+  for(let dy=0;dy<b.h;dy++){
+    for(let dx=0;dx<b.w;dx++){
+      DIR_LIST.forEach(d=>{
+        let nx=b.x+dx+DIR[d].x;
+        let ny=b.y+dy+DIR[d].y;
+        if(nx>=0&&ny>=0&&nx<GRID_W&&ny<GRID_H){
+          let c=game.grid[ny][nx];
+          if(c.road) queue.push({x:nx,y:ny,dist:1});
+        }
+      });
+    }
+  }
+  
+  // BFS through roads
+  let found=[];
+  while(queue.length>0){
+    let cur=queue.shift();
+    let k=`${cur.x},${cur.y}`;
+    if(visited[k]) continue;
+    visited[k]=true;
+    let c=game.grid[cur.y][cur.x];
+    if(c.building&&c.building!==b){
+      found.push({building:c.building,dist:cur.dist});
+    }
+    if(c.road||(!c.building)){
+      DIR_LIST.forEach(d=>{
+        let nx=cur.x+DIR[d].x;
+        let ny=cur.y+DIR[d].y;
+        let nk=`${nx},${ny}`;
+        if(nx>=0&&ny>=0&&nx<GRID_W&&ny<GRID_H&&!visited[nk]){
+          let nc=game.grid[ny][nx];
+          if(nc.road||(nc.building)){
+            queue.push({x:nx,y:ny,dist:cur.dist+1});
+          }
+        }
+      });
+    }
+  }
+  
+  // sort by distance
+  found.sort((a,b)=>a.dist-b.dist);
+  
+  // send resources to consumers that need them
+  for(let r of RES_TYPES){
+    if(b.storage[r.id]<=0) continue;
+    for(let f of found){
+      let consumer=f.building;
+      if(consumer.type.needs&&consumer.type.needs.some(n=>n.res===r.id)){
+        let hasNeed=consumer.type.needs.some(n=>n.res===r.id&&consumer.storage[n.res]<n.amt*3);
+        if(hasNeed&&consumer.storage[r.id]<(consumer.quota||50)){
+          sendResource(b,r.id,consumer);
+          break;
+        }
+      }
+    }
+    // also send to warehouses
+    if(b.storage[r.id]>0){
+      for(let f of found){
+        if(f.building.type.id==='warehouse'&&f.building.storage[r.id]<f.building.quota){
+          sendResource(b,r.id,f.building);
+          break;
+        }
+      }
+    }
+  }
+}
+
+function updateBuildings(dt){
+  let speedMul=game.speed*(1+game.bonuses.speed*0.2);
+  let dt2=dt*speedMul;
+  
+  game.jams=[];
+  
+  for(let b of game.buildings){
+    let boost=1+b.robotBoost*0.3;
+    
+    // production
+    if(b.type.prod.length>0&&b.type.needs.length>0){
+      let canProduce=true;
+      let consumed={};
+      for(let n of b.type.needs){
+        if(b.storage[n.res]<n.amt){
+          canProduce=false;
+          break;
+        }
+        consumed[n.res]=n.amt;
+      }
+      if(canProduce){
+        let rate=b.type.prodRate*boost*dt2*0.05;
+        for(let r of b.type.prod){
+          let space=b.quota-(b.storage[r]||0);
+          if(space>0){
+            let produced=Math.min(rate,space);
+            b.storage[r]=(b.storage[r]||0)+produced;
+            game.totalProd[r]=(game.totalProd[r]||0)+produced;
+          }
+        }
+        for(let res in consumed){
+          b.storage[res]-=consumed[res];
+        }
+      }
+    } else if(b.type.prod.length>0&&b.type.needs.length===0){
+      // free production (mine, powerplant)
+      let rate=b.type.prodRate*boost*dt2*0.05;
+      for(let r of b.type.prod){
+        let space=b.quota-(b.storage[r]||0);
+        if(space>0){
+          let produced=Math.min(rate,space);
+          b.storage[r]=(b.storage[r]||0)+produced;
+          game.totalProd[r]=(game.totalProd[r]||0)+produced;
+        }
+      }
+    }
+    
+    // dispatch (if has resources and has send timer)
+    if(!b._sendTimer) b._sendTimer=0;
+    b._sendTimer+=dt2*0.05;
+    if(b._sendTimer>=1){
+      b._sendTimer=0;
+      dispatchResources(b);
+    }
+    
+    // robot boost from neighbors
+    b.robotBoost=0;
+  }
+  
+  // apply robot boosts
+  for(let b of game.buildings){
+    if(b.type.id==='robotstation'&&b.storage.robots>0){
+      let neighbors=getBuildingsInRange(b.x,b.y,3);
+      for(let nb of neighbors){
+        if(nb!==b) nb.robotBoost++;
+      }
+      b.storage.robots-=dt2*0.002;
+      if(b.storage.robots<0) b.storage.robots=0;
+    }
+    
+    // police patrol reduces jams
+    if(b.type.id==='police'&&b.storage.police_badge>0){
+      b.jamTimer=0;
+    }
+  }
+}
+
+function getBuildingsInRange(x,y,range){
+  let result=[];
+  for(let b of game.buildings){
+    let bx=b.x+b.w/2;
+    let by=b.y+b.h/2;
+    let dist=Math.abs(bx-x)+Math.abs(by-y);
+    if(dist<=range) result.push(b);
+  }
+  return result;
+}
+
+function updateResources(dt){
+  let speedMul=game.speed;
+  let toRemove=[];
+  
+  for(let i=0;i<game.resources.length;i++){
+    let r=game.resources[i];
+    r.progress+=r.speed*dt*speedMul;
+    
+    if(r.progress>=1){
+      r.pathIdx++;
+      r.progress=0;
+      if(r.pathIdx>=r.path.length-1){
+        // arrived
+        if(r.to){
+          let space=r.to.quota-(r.to.storage[r.res]||0);
+          if(space>0){
+            r.to.storage[r.res]=(r.to.storage[r.res]||0)+1;
+            r.to.totalIn++;
+          } else {
+            // overproduction - resource lost
+            game.jams.push({x:r.to.x,y:r.to.y,text:'Перепроизводство!',timer:60});
+          }
+        }
+        toRemove.push(i);
+      }
+    }
+  }
+  
+  for(let i=toRemove.length-1;i>=0;i--){
+    game.resources.splice(toRemove[i],1);
+  }
+}
+
+function updateBonuses(dt){
+  for(let key in game.bonuses){
+    // bonuses deplete over time
+  }
+}
+
+// ===== RENDERING =====
+function drawBuilding(b,ox,oy){
+  let px=b.x*CELL-ox;
+  let py=b.y*CELL-oy;
+  let pw=b.w*CELL;
+  let ph=b.h*CELL;
+  let bt=b.type;
+  
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.fillRect(px+3,py+3,pw,ph);
+  
+  // base shape with 3D effect
+  let grad=ctx.createLinearGradient(px,py,px,py+ph);
+  grad.addColorStop(0,bt.color);
+  grad.addColorStop(1,darken(bt.color,0.5));
+  ctx.fillStyle=grad;
+  
+  // main body - different shapes per building type
+  ctx.save();
+  ctx.beginPath();
+  
+  switch(bt.id){
+    case 'mine':
+      // pyramid shape
+      ctx.moveTo(px+pw/2,py+4);
+      ctx.lineTo(px+pw-4,py+ph-4);
+      ctx.lineTo(px+4,py+ph-4);
+      ctx.closePath();
+      break;
+    case 'smelter':
+      // furnace shape with chimney
+      roundRect(ctx,px+4,py+10,pw-8,ph-14,3);
+      ctx.fill();
+      ctx.fillStyle=darken(bt.color,0.3);
+      ctx.fillRect(px+pw/2-4,py+2,8,12);
+      // flames
+      ctx.fillStyle='#ff6600';
+      ctx.fillRect(px+pw/2-3,py+14,6,4);
+      ctx.fillStyle='#ffcc00';
+      ctx.fillRect(px+pw/2-2,py+16,4,3);
+      break;
+    case 'factory':
+      // factory with smokestacks
+      roundRect(ctx,px+4,py+8,pw-8,ph-12,2);
+      ctx.fill();
+      // smokestacks
+      ctx.fillStyle='#555';
+      ctx.fillRect(px+8,py-2,6,14);
+      ctx.fillRect(px+pw-14,py-2,6,14);
+      // conveyor belt
+      ctx.fillStyle='#666';
+      ctx.fillRect(px+4,py+ph-8,pw-8,4);
+      ctx.fillStyle='#888';
+      for(let i=0;i<4;i++){
+        ctx.fillRect(px+8+i*10,py+ph-7,6,2);
+      }
+      break;
+    case 'plasticworks':
+      roundRect(ctx,px+4,py+6,pw-8,ph-10,4);
+      ctx.fill();
+      // tubes
+      ctx.fillStyle='#33cc77';
+      ctx.fillRect(px+pw-8,py+10,6,ph-20);
+      ctx.fillStyle='#22aa55';
+      ctx.fillRect(px+6,py+10,6,ph-20);
+      break;
+    case 'powerplant':
+      roundRect(ctx,px+4,py+8,pw-8,ph-12,3);
+      ctx.fill();
+      // lightning bolt
+      ctx.fillStyle='#ffee00';
+      ctx.beginPath();
+      ctx.moveTo(px+pw/2,py+4);
+      ctx.lineTo(px+pw/2+6,py+ph/2);
+      ctx.lineTo(px+pw/2+1,py+ph/2);
+      ctx.lineTo(px+pw/2,py+ph-4);
+      ctx.lineTo(px+pw/2-6,py+ph/2);
+      ctx.lineTo(px+pw/2-1,py+ph/2);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'lab':
+      // dome shape
+      ctx.arc(px+pw/2,py+ph/2+4,pw/2-4,Math.PI,0);
+      ctx.lineTo(px+pw-4,py+ph-4);
+      ctx.lineTo(px+4,py+ph-4);
+      ctx.closePath();
+      ctx.fill();
+      // flask
+      ctx.fillStyle='#ffffff44';
+      ctx.fillRect(px+pw/2-3,py+12,6,16);
+      ctx.beginPath();
+      ctx.arc(px+pw/2,py+30,6,0,Math.PI*2);
+      ctx.fill();
+      break;
+    case 'laserlab':
+      roundRect(ctx,px+4,py+8,pw-8,ph-12,2);
+      ctx.fill();
+      // laser emitter
+      ctx.fillStyle='#dd66ff';
+      ctx.fillRect(px+pw/2-2,py+4,4,12);
+      // beam
+      ctx.strokeStyle='#ff00ff';
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(px+pw/2,py+16);
+      ctx.lineTo(px+pw/2,py-10);
+      ctx.stroke();
+      ctx.strokeStyle='#ff88ff88';
+      ctx.lineWidth=6;
+      ctx.beginPath();
+      ctx.moveTo(px+pw/2,py+16);
+      ctx.lineTo(px+pw/2,py-10);
+      ctx.stroke();
+      break;
+    case 'airfield':
+      // runway
+      ctx.fillStyle='#556';
+      roundRect(ctx,px+2,py+ph/2-6,pw-4,12,2);
+      ctx.fill();
+      // plane silhouettes
+      ctx.fillStyle='#aabbcc';
+      drawPlane(px+pw*0.2,py+ph/2,8);
+      drawPlane(px+pw*0.5,py+ph/2,10);
+      drawPlane(px+pw*0.8,py+ph/2,8);
+      // control tower
+      ctx.fillStyle='#889';
+      ctx.fillRect(px+pw/2-4,py+4,8,ph/2-2);
+      ctx.fillStyle='#aaccff';
+      ctx.fillRect(px+pw/2-5,py+4,10,4);
+      break;
+    case 'police':
+      // shield shape
+      ctx.moveTo(px+pw/2,py+4);
+      ctx.lineTo(px+pw-4,py+10);
+      ctx.lineTo(px+pw-4,py+ph/2);
+      ctx.quadraticCurveTo(px+pw-4,py+ph-4,px+pw/2,py+ph-4);
+      ctx.quadraticCurveTo(px+4,py+ph-4,px+4,py+ph/2);
+      ctx.lineTo(px+4,py+10);
+      ctx.closePath();
+      ctx.fill();
+      // badge
+      ctx.fillStyle='#ffdd44';
+      ctx.beginPath();
+      ctx.arc(px+pw/2,py+ph/2,6,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle=bt.color;
+      ctx.font='bold 8px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('P',px+pw/2,py+ph/2+3);
+      break;
+    case 'robotstation':
+      roundRect(ctx,px+4,py+8,pw-8,ph-12,3);
+      ctx.fill();
+      // antenna
+      ctx.fillStyle='#66dd88';
+      ctx.fillRect(px+pw/2-1,py+0,2,12);
+      ctx.beginPath();
+      ctx.arc(px+pw/2,py+0,3,0,Math.PI*2);
+      ctx.fill();
+      // arms
+      ctx.fillStyle='#33aa55';
+      ctx.fillRect(px+6,py+ph/2,8,3);
+      ctx.fillRect(px+pw-14,py+ph/2,8,3);
+      ctx.fillRect(px+6,py+ph/2+6,8,3);
+      ctx.fillRect(px+pw-14,py+ph/2+6,8,3);
+      break;
+    case 'warehouse':
+      // box shape
+      roundRect(ctx,px+4,py+6,pw-8,ph-10,2);
+      ctx.fill();
+      // crates
+      ctx.fillStyle='#448844';
+      ctx.fillRect(px+8,py+10,10,10);
+      ctx.fillRect(px+22,py+10,10,10);
+      ctx.fillRect(px+15,py+22,10,10);
+      ctx.fillStyle='#336633';
+      ctx.fillRect(px+8,py+22,6,10);
+      ctx.fillRect(px+30,py+22,6,10);
+      break;
+    case 'regulator':
+      // traffic light
+      roundRect(ctx,px+pw/2-6,py+4,12,ph-8,2);
+      ctx.fill();
+      ctx.fillStyle='#ff3333';
+      ctx.beginPath(); ctx.arc(px+pw/2,py+12,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ffcc00';
+      ctx.beginPath(); ctx.arc(px+pw/2,py+22,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#33ff33';
+      ctx.beginPath(); ctx.arc(px+pw/2,py+32,4,0,Math.PI*2); ctx.fill();
+      break;
+    default:
+      roundRect(ctx,px+4,py+4,pw-8,ph-8,3);
+      ctx.fill();
+  }
+  ctx.restore();
+  
+  // robot boost indicator
+  if(b.robotBoost>0){
+    ctx.fillStyle='rgba(0,255,100,0.15)';
+    ctx.fillRect(px,py,pw,ph);
+    ctx.fillStyle='#44ff66';
+    ctx.font='10px sans-serif';
+    ctx.fillText('🤖x'+b.robotBoost,px+2,py+ph-3);
+  }
+  
+  // storage indicators (small bars)
+  let barY=py+ph-3;
+  let barIdx=0;
+  for(let r of RES_TYPES){
+    if(b.storage[r.id]>0){
+      let pct=Math.min(b.storage[r.id]/(b.quota||50),1);
+      let bw=(pw-4)*pct;
+      ctx.fillStyle=r.color+'88';
+      ctx.fillRect(px+2+barIdx*(pw-4)/10,barY-1,(pw-4)/10-1,3);
+      barIdx++;
+    }
+  }
+  
+  // name
+  ctx.fillStyle='#fff';
+  ctx.font='bold 9px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(bt.name,px+pw/2,py+ph-4);
+  ctx.textAlign='left';
+}
+
+function drawPlane(cx,cy,size){
+  ctx.beginPath();
+  ctx.moveTo(cx-size,cy);
+  ctx.lineTo(cx-size/2,cy-size/3);
+  ctx.lineTo(cx+size/2,cy-size/3);
+  ctx.lineTo(cx+size,cy);
+  ctx.lineTo(cx+size/2,cy+size/3);
+  ctx.lineTo(cx-size/2,cy+size/3);
+  ctx.closePath();
+  ctx.fill();
+  // tail
+  ctx.fillRect(cx-size,cy-size/4,3,size/2);
+}
+
+function drawRoad(gx,gy,ox,oy){
+  let px=gx*CELL-ox;
+  let py=gy*CELL-oy;
+  let c=game.grid[gy][gx];
+  
+  ctx.fillStyle='#2a2a3a';
+  ctx.fillRect(px+2,py+2,CELL-4,CELL-4);
+  
+  ctx.fillStyle='#3a3a4a';
+  // road markings
+  if(c.roadDir.N||c.roadDir.S){
+    ctx.fillRect(px+CELL/2-1,py+2,2,CELL-4);
+  }
+  if(c.roadDir.E||c.roadDir.W){
+    ctx.fillRect(px+2,py+CELL/2-1,CELL-4,2);
+  }
+  
+  // road dots
+  ctx.fillStyle='#4a4a5a';
+  ctx.fillRect(px+CELL/2-2,py+CELL/2-2,4,4);
+}
+
+function drawGrid(ox,oy){
+  let startX=Math.max(0,Math.floor(ox/CELL));
+  let startY=Math.max(0,Math.floor(oy/CELL));
+  let endX=Math.min(GRID_W,Math.ceil((ox+game.canvasW)/CELL)+1);
+  let endY=Math.min(GRID_H,Math.ceil((oy+game.canvasH)/CELL)+1);
+  
+  // grid lines
+  ctx.strokeStyle='#1a1a2a';
+  ctx.lineWidth=0.5;
+  for(let x=startX;x<=endX;x++){
+    ctx.beginPath();
+    ctx.moveTo(x*CELL-ox,0);
+    ctx.lineTo(x*CELL-ox,game.canvasH);
+    ctx.stroke();
+  }
+  for(let y=startY;y<=endY;y++){
+    ctx.beginPath();
+    ctx.moveTo(0,y*CELL-oy);
+    ctx.lineTo(game.canvasW,y*CELL-oy);
+    ctx.stroke();
+  }
+}
+
+function drawResources(ox,oy){
+  for(let r of game.resources){
+    if(r.pathIdx>=r.path.length-1) continue;
+    let from=r.path[r.pathIdx];
+    let to=r.path[r.pathIdx+1];
+    let px=(from.x+(to.x-from.x)*r.progress)*CELL-ox+CELL/2;
+    let py=(from.y+(to.y-from.y)*r.progress)*CELL-oy+CELL/2;
+    
+    // trail
+    ctx.globalAlpha=0.3;
+    ctx.fillStyle=r.color;
+    ctx.beginPath();
+    ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha=1;
+    
+    // resource dot
+    ctx.fillStyle=r.color;
+    ctx.beginPath();
+    ctx.arc(px,py,3,0,Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle='#fff';
+    ctx.lineWidth=0.5;
+    ctx.stroke();
+  }
+}
+
+function drawJams(){
+  for(let j of game.jams){
+    let px=j.x*CELL-game.scrollX;
+    let py=j.y*CELL-game.scrollY;
+    ctx.fillStyle='#ff4444';
+    ctx.font='bold 10px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(j.text,px+CELL/2,py-8);
+    j.timer--;
+    ctx.textAlign='left';
+  }
+  game.jams=game.jams.filter(j=>j.timer>0);
+}
+
+function drawPlacingPreview(ox,oy){
+  if(!game.placing) return;
+  let bt=BUILD_TYPES.find(b=>b.id===game.placing);
+  if(!bt) return;
+  let gx=game.mouse.gx;
+  let gy=game.mouse.gy;
+  let ok=canPlace(gx,gy,bt.w,bt.h);
+  ctx.globalAlpha=0.5;
+  ctx.fillStyle=ok?'#44ff44':'#ff4444';
+  ctx.fillRect(gx*CELL-ox,gy*CELL-oy,bt.w*CELL,bt.h*CELL);
+  ctx.globalAlpha=1;
+  ctx.strokeStyle=ok?'#44ff44':'#ff4444';
+  ctx.lineWidth=2;
+  ctx.strokeRect(gx*CELL-ox,gy*CELL-oy,bt.w*CELL,bt.h*CELL);
+}
+
+function drawMinimap(){
+  let mw=mm.width,mh=mm.height;
+  mctx.fillStyle='#0a0a12';
+  mctx.fillRect(0,0,mw,mh);
+  
+  let scaleX=mw/(GRID_W*CELL);
+  let scaleY=mh/(GRID_H*CELL);
+  let scale=Math.min(scaleX,scaleY)*0.9;
+  let offX=(mw-GRID_W*CELL*scale)/2;
+  let offY=(mh-GRID_H*CELL*scale)/2;
+  
+  // roads
+  mctx.fillStyle='#2a2a3a';
+  for(let r of game.roads){
+    mctx.fillRect(r.x*CELL*scale+offX,r.y*CELL*scale+offY,CELL*scale,CELL*scale);
+  }
+  
+  // buildings
+  for(let b of game.buildings){
+    mctx.fillStyle=b.type.color;
+    mctx.fillRect(b.x*CELL*scale+offX,b.y*CELL*scale+offY,b.w*CELL*scale,b.h*CELL*scale);
+  }
+  
+  // viewport
+  let vx=game.scrollX*scale+offX;
+  let vy=game.scrollY*scale+offY;
+  let vw=game.canvasW*scale;
+  let vh=game.canvasH*scale;
+  mctx.strokeStyle='#e8c84a';
+  mctx.lineWidth=1;
+  mctx.strokeRect(vx,vy,vw,vh);
+}
+
+function render(){
+  ctx.fillStyle='#0a0a12';
+  ctx.fillRect(0,0,game.canvasW,game.canvasH);
+  
+  let ox=game.scrollX;
+  let oy=game.scrollY;
+  
+  drawGrid(ox,oy);
+  
+  // roads
+  for(let r of game.roads){
+    drawRoad(r.x,r.y,ox,oy);
+  }
+  
+  // buildings
+  for(let b of game.buildings){
+    drawBuilding(b,ox,oy);
+  }
+  
+  // resources in transit
+  drawResources(ox,oy);
+  
+  // jams
+  drawJams();
+  
+  // placing preview
+  drawPlacingPreview(ox,oy);
+  
+  // selection highlight
+  if(game.selected){
+    let b=game.selected;
+    ctx.strokeStyle='#e8c84a';
+    ctx.lineWidth=2;
+    ctx.setLineDash([4,4]);
+    ctx.strokeRect(b.x*CELL-ox-1,b.y*CELL-oy-1,b.w*CELL+2,b.h*CELL+2);
+    ctx.setLineDash([]);
+  }
+  
+  drawMinimap();
+}
+
+function darken(hex,amt){
+  let r=parseInt(hex.slice(1,3),16);
+  let g=parseInt(hex.slice(3,5),16);
+  let b=parseInt(hex.slice(5,7),16);
+  r=Math.floor(r*(1-amt));
+  g=Math.floor(g*(1-amt));
+  b=Math.floor(b*(1-amt));
+  return `rgb(${r},${g},${b})`;
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ===== UI =====
+function updateResourceBar(){
+  let bar=document.getElementById('res-bar');
+  bar.innerHTML='';
+  for(let r of RES_TYPES){
+    let d=document.createElement('div');
+    d.className='res-item';
+    let val=Math.floor(game.resStock[r.id]);
+    let prod=Math.floor(game.totalProd[r.id]);
+    d.innerHTML=`${r.icon} ${r.name}: <span>${val}</span> <small>(+${prod})</small>`;
+    bar.appendChild(d);
+  }
+}
+
+function initBuildList(){
+  let list=document.getElementById('build-list');
+  list.innerHTML='';
+  for(let bt of BUILD_TYPES){
+    let btn=document.createElement('div');
+    btn.className='build-btn'+(game.placing===bt.id?' active':'');
+    btn.innerHTML=`<span style="color:${bt.color}">■</span> ${bt.name}`;
+    btn.title=bt.desc;
+    btn.onclick=()=>{
+      if(game.placing===bt.id){
+        game.placing=null;
+      } else {
+        game.placing=bt.id;
+      }
+      initBuildList();
+    };
+    list.appendChild(btn);
+  }
+}
+
+function initRecipeList(){
+  let list=document.getElementById('recipe-list');
+  list.innerHTML='';
+  for(let rec of RECIPES){
+    let d=document.createElement('div');
+    d.className='recipe';
+    let needs=rec.needs.map(n=>{
+      let rt=RES_TYPES.find(r=>r.id===n.res);
+      return `<span style="color:${rt?rt.color:'#fff'}">${rt?rt.icon:''} ${n.amt}</span>`;
+    }).join(' + ');
+    d.innerHTML=`<div class="recipe-name">${rec.name}</div>
+      <div>${needs} <span class="recipe-arrow">→</span> <span class="recipe-out">${rec.amt}x ${RES_TYPES.find(r=>r.id===rec.out)?.icon||''} ${RES_TYPES.find(r=>r.id===rec.out)?.name||rec.out}</span></div>
+      <small style="color:#888">Бонус: ${rec.bonus}</small>`;
+    d.onclick=()=>{
+      game.selectedRecipe=rec;
+      showRecipeCraft(rec);
+    };
+    list.appendChild(d);
+  }
+}
+
+function showRecipeCraft(rec){
+  let info=document.getElementById('info-content');
+  let canCraft=true;
+  let rows=rec.needs.map(n=>{
+    let rt=RES_TYPES.find(r=>r.id===n.res);
+    let have=game.resStock[n.res]||0;
+    let ok=have>=n.amt;
+    if(!ok) canCraft=false;
+    return `<div><b>${rt?.name||n.res}:</b> ${have}/${n.amt} ${ok?'✓':'✗'}</div>`;
+  }).join('');
+  
+  info.innerHTML=`<div class="info-title">Сборка: ${rec.name}</div>
+    <div class="info-stats">
+      <b>Нужно:</b><br>${rows}
+      <b>Результат:</b> ${rec.amt}x ${RES_TYPES.find(r=>r.id===rec.out)?.name||rec.out}
+      <br><button onclick="craftRecipe('${rec.name}')" ${canCraft?'':'disabled'}
+        style="margin-top:6px;padding:4px 12px;background:${canCraft?'#2a4a2e':'#333'};color:${canCraft?'#8f8':'#666'};border:1px solid ${canCraft?'#4a4':'#444'};border-radius:4px;cursor:${canCraft?'pointer':'default'}">
+        Собрать</button>
+    </div>`;
+  document.getElementById('info-panel').classList.add('open');
+}
+
+window.craftRecipe=function(name){
+  let rec=RECIPES.find(r=>r.name===name);
+  if(!rec) return;
+  let canCraft=true;
+  for(let n of rec.needs){
+    if((game.resStock[n.res]||0)<n.amt){canCraft=false;break;}
+  }
+  if(!canCraft) return;
+  for(let n of rec.needs){
+    game.resStock[n.res]-=n.amt;
+  }
+  game.resStock[rec.out]=(game.resStock[rec.out]||0)+rec.amt;
+  game.bonuses[rec.bonus]=(game.bonuses[rec.bonus]||0)+1;
+  game.score+=rec.amt*10;
+  showRecipeCraft(rec);
+  updateResourceBar();
+};
+
+function initBonusList(){
+  let list=document.getElementById('bonus-list');
+  list.innerHTML='';
+  let bonusNames={radar:'Радар',attack:'Атака',patrol:'Патруль',turret:'Турель',speed:'Ускорение',shield:'Щит'};
+  let bonusDescs={radar:'Увеличивает обзор на карте',attack:'Увеличивает урон дронов',patrol:'Роботы-полицейские патрулируют',turret:'Лазерная турель защищает',speed:'Все здания работают быстрее',shield:'Увеличивает квоту складов'};
+  for(let key in game.bonuses){
+    let d=document.createElement('div');
+    d.className='bonus-btn'+(game.bonuses[key]>0?'':' disabled');
+    d.innerHTML=`${bonusNames[key]||key}: x${game.bonuses[key]}`;
+    d.title=bonusDescs[key]||'';
+    list.appendChild(d);
+  }
+}
+
+function showBuildingInfo(b){
+  game.selected=b;
+  let info=document.getElementById('info-content');
+  let storage=RES_TYPES.map(r=>{
+    if(b.storage[r.id]>0){
+      let pct=Math.floor(b.storage[r.id]/(b.quota||50)*100);
+      return `<span style="color:${r.color}">${r.icon} ${r.name}: ${Math.floor(b.storage[r.id])} (${pct}%)</span>`;
+    }
+    return '';
+  }).filter(Boolean).join(' | ');
+  
+  let needs=b.type.needs.map(n=>{
+    let rt=RES_TYPES.find(r=>r.id===n.res);
+    return `<span style="color:${rt?.color||'#fff'}">${rt?.icon||''} ${rt?.name||n.res} x${n.amt}</span>`;
+  }).join(', ')||'нет';
+  
+  let prod=b.type.prod.map(r=>{
+    let rt=RES_TYPES.find(res=>res.id===r);
+    return `<span style="color:${rt?.color||'#fff'}">${rt?.icon||''} ${rt?.name||r}</span>`;
+  }).join(', ')||'нет';
+  
+  info.innerHTML=`<div class="info-title" style="color:${b.type.color}">${b.type.name}</div>
+    <div class="info-stats">
+      <b>Описание:</b> ${b.type.desc}<br>
+      <b>Уровень:</b> ${b.level} | <b>Робот-буст:</b> x${b.robotBoost}<br>
+      <b>Производство:</b> ${prod}<br>
+      <b>Потребление:</b> ${needs}<br>
+      <b>Склад:</b> ${storage||'пусто'}<br>
+      <b>Вход/Выход:</b> ${Math.floor(b.totalIn)} / ${Math.floor(b.totalOut)}<br>
+      <b>Квота:</b> ${b.quota} | <b>Направление отправки:</b> ${b.sendDir}
+      <br><button onclick="cycleSendDir()" style="margin-top:4px;padding:3px 8px;background:#1a1a2e;color:#ccc;border:1px solid #444;border-radius:3px;cursor:pointer">Сменить направление</button>
+    </div>`;
+  document.getElementById('info-panel').classList.add('open');
+}
+
+window.cycleSendDir=function(){
+  if(!game.selected) return;
+  let dirs=['N','S','E','W','NE','NW','SE','SW'];
+  let idx=dirs.indexOf(game.selected.sendDir);
+  game.selected.sendDir=dirs[(idx+1)%dirs.length];
+  showBuildingInfo(game.selected);
+};
+
+function closeInfo(){
+  document.getElementById('info-panel').classList.remove('open');
+  game.selected=null;
+}
+
+// ===== INPUT =====
+wrap.addEventListener('mousedown',e=>{
+  if(e.target===mm) return;
+  
+  let rect=wrap.getBoundingClientRect();
+  let mx=e.clientX-rect.left;
+  let my=e.clientY-rect.top;
+  
+  game.mouseDown=true;
+  game.mouseX=mx;
+  game.mouseY=my;
+  
+  if(e.button===2){
+    // right click - drag scroll
+    game.rightMouseDown=true;
+    game.dragStart={x:e.clientX+game.scrollX,y:e.clientY+game.scrollY};
+    e.preventDefault();
+    return;
+  }
+  
+  let gx=Math.floor((mx+game.scrollX)/CELL);
+  let gy=Math.floor((my+game.scrollY)/CELL);
+  
+  if(game.placing){
+    // place building
+    let bt=BUILD_TYPES.find(b=>b.id===game.placing);
+    if(bt&&canPlace(gx,gy,bt.w,bt.h)){
+      placeBuilding(game.placing,gx,gy);
+      // don't cancel placing - allow multiple
+    }
+  } else if(e.shiftKey){
+    // shift+click = place road
+    placeRoad(gx,gy);
+  } else {
+    // select building
+    let b=getBuildingAt(gx,gy);
+    if(b){
+      showBuildingInfo(b);
+    } else if(game.grid[gy]&&game.grid[gy][gx]&&game.grid[gy][gx].road){
+      // clicked road - start road building
+      game.roadBuilding=true;
+      placeRoad(gx,gy);
+    } else {
+      closeInfo();
+    }
+  }
+});
+
+wrap.addEventListener('mousemove',e=>{
+  let rect=wrap.getBoundingClientRect();
+  let mx=e.clientX-rect.left;
+  let my=e.clientY-rect.top;
+  
+  game.mouse.x=mx;
+  game.mouse.y=my;
+  game.mouse.gx=Math.floor((mx+game.scrollX)/CELL);
+  game.mouse.gy=Math.floor((my+game.scrollY)/CELL);
+  
+  if(game.rightMouseDown&&game.dragStart){
+    game.scrollX=game.dragStart.x-e.clientX;
+    game.scrollY=game.dragStart.y-e.clientY;
+    clampScroll();
+  }
+  
+  // road building with mouse held
+  if(game.mouseDown&&!game.placing&&!game.rightMouseDown&&e.shiftKey){
+    let gx=Math.floor((mx+game.scrollX)/CELL);
+    let gy=Math.floor((my+game.scrollY)/CELL);
+    placeRoad(gx,gy);
+  }
+  
+  // tooltip
+  let b=getBuildingAt(game.mouse.gx,game.mouse.gy);
+  let tt=document.getElementById('tooltip');
+  if(b&&!game.placing){
+    tt.style.display='block';
+    tt.style.left=(mx+12)+'px';
+    tt.style.top=(my+12)+'px';
+    let storageStr=RES_TYPES.filter(r=>b.storage[r.id]>0).map(r=>`${r.icon}${Math.floor(b.storage[r.id])}`).join(' ');
+    tt.innerHTML=`<div class="tt-name" style="color:${b.type.color}">${b.type.name}</div>
+      <div class="tt-desc">${b.type.desc}</div>
+      <div class="tt-desc">${storageStr||'Пусто'}</div>`;
+  } else {
+    tt.style.display='none';
+  }
+  
+  // hover
+  game.hovered=b;
+});
+
+wrap.addEventListener('mouseup',e=>{
+  game.mouseDown=false;
+  game.rightMouseDown=false;
+  game.dragStart=null;
+  game.roadBuilding=false;
+});
+
+wrap.addEventListener('mouseleave',()=>{
+  game.mouseDown=false;
+  game.rightMouseDown=false;
+  document.getElementById('tooltip').style.display='none';
+});
+
+wrap.addEventListener('wheel',e=>{
+  // scroll zoom or scroll
+  if(e.shiftKey){
+    // horizontal scroll
+    game.scrollX+=e.deltaY;
+  } else {
+    game.scrollY+=e.deltaY;
+    game.scrollX+=e.deltaX;
+  }
+  clampScroll();
+  e.preventDefault();
+},{passive:false});
+
+wrap.addEventListener('contextmenu',e=>e.preventDefault());
+
+// minimap click
+mm.addEventListener('mousedown',e=>{
+  let rect=mm.getBoundingClientRect();
+  let mx=e.clientX-rect.left;
+  let my=e.clientY-rect.top;
+  
+  let mw=mm.width,mh=mm.height;
+  let scaleX=mw/(GRID_W*CELL);
+  let scaleY=mh/(GRID_H*CELL);
+  let scale=Math.min(scaleX,scaleY)*0.9;
+  let offX=(mw-GRID_W*CELL*scale)/2;
+  let offY=(mh-GRID_H*CELL*scale)/2;
+  
+  game.scrollX=(mx-offX)/scale-game.canvasW/2;
+  game.scrollY=(my-offY)/scale-game.canvasH/2;
+  clampScroll();
+});
+
+function clampScroll(){
+  game.scrollX=Math.max(0,Math.min(GRID_W*CELL-game.canvasW,game.scrollX));
+  game.scrollY=Math.max(0,Math.min(GRID_H*CELL-game.canvasH,game.scrollY));
+}
+
+// keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    game.placing=null;
+    closeInfo();
+    initBuildList();
+  }
+  if(e.key===' '){
+    game.speed=game.speed===0?1:0;
+    updateSpeedButtons();
+    e.preventDefault();
+  }
+  if(e.key==='1') setSpeed(1);
+  if(e.key==='2') setSpeed(2);
+  if(e.key==='3') setSpeed(3);
+  if(e.key==='0') setSpeed(0);
+  
+  // arrow keys scroll
+  let scrollAmt=CELL*3;
+  if(e.key==='ArrowLeft') game.scrollX-=scrollAmt;
+  if(e.key==='ArrowRight') game.scrollX+=scrollAmt;
+  if(e.key==='ArrowUp') game.scrollY-=scrollAmt;
+  if(e.key==='ArrowDown') game.scrollY+=scrollAmt;
+  clampScroll();
+});
+
+window.setSpeed=function(s){
+  game.speed=s;
+  updateSpeedButtons();
+};
+
+function updateSpeedButtons(){
+  document.getElementById('sp0').className=game.speed===0?'active':'';
+  document.getElementById('sp1').className=game.speed===1?'active':'';
+  document.getElementById('sp2').className=game.speed===2?'active':'';
+  document.getElementById('sp3').className=game.speed===3?'active':'';
+}
+
+// ===== SCENARIOS =====
+function loadScenario(){
+  // Pre-build a starter layout
+  // Row of mines
+  for(let i=0;i<5;i++){
+    placeBuilding('mine',2,5+i*2);
+  }
+  // Roads from mines to smelter
+  for(let i=0;i<5;i++){
+    for(let x=3;x<10;x++){
+      placeRoad(x,5+i*2);
+    }
+  }
+  // Smelters
+  placeBuilding('smelter',10,5);
+  placeBuilding('smelter',10,9);
+  placeBuilding('smelter',10,13);
+  
+  // Power plant
+  placeBuilding('powerplant',2,16);
+  for(let x=3;x<12;x++) placeRoad(x,16);
+  
+  // Plastic works
+  placeBuilding('plasticworks',12,16);
+  
+  // Roads connecting
+  for(let y=5;y<=16;y++){
+    placeRoad(10,y);
+    placeRoad(11,y);
+  }
+  placeRoad(12,5);
+  placeRoad(12,6);
+  placeRoad(12,7);
+  placeRoad(12,8);
+  placeRoad(12,9);
+  placeRoad(12,10);
+  placeRoad(12,11);
+  placeRoad(12,12);
+  placeRoad(12,13);
+  placeRoad(12,14);
+  placeRoad(12,15);
+  
+  // Factory
+  placeBuilding('factory',14,8);
+  for(let x=13;x<18;x++){
+    placeRoad(x,8);
+    placeRoad(x,9);
+  }
+  
+  // Lab
+  placeBuilding('lab',14,5);
+  for(let x=13;x<16;x++) placeRoad(x,5);
+  
+  // Warehouse
+  placeBuilding('warehouse',20,8);
+  for(let x=18;x<22;x++){
+    placeRoad(x,8);
+    placeRoad(x,9);
+  }
+  
+  // Airfield
+  placeBuilding('airfield',22,12);
+  for(let x=20;x<25;x++){
+    placeRoad(x,12);
+    placeRoad(x,13);
+  }
+  
+  // Police
+  placeBuilding('police',20,5);
+  
+  // Robot station
+  placeBuilding('robotstation',14,12);
+  
+  // Laser lab
+  placeBuilding('laserlab',17,5);
+  
+  // Regulator
+  placeBuilding('regulator',14,15);
+  
+  // Connect more
+  for(let y=5;y<=15;y++){
+    placeRoad(14,y);
+    placeRoad(15,y);
+  }
+  placeRoad(16,5);
+  placeRoad(16,6);
+  placeRoad(16,7);
+  placeRoad(16,8);
+  placeRoad(16,9);
+  placeRoad(16,10);
+  placeRoad(16,11);
+  placeRoad(16,12);
+  placeRoad(16,13);
+  placeRoad(16,14);
+  placeRoad(16,15);
+  
+  placeRoad(17,6);
+  placeRoad(17,7);
+  placeRoad(17,8);
+  placeRoad(17,9);
+  placeRoad(17,10);
+  placeRoad(17,11);
+  placeRoad(17,12);
+  placeRoad(17,13);
+  placeRoad(17,14);
+  placeRoad(17,15);
+  
+  placeRoad(18,5);
+  placeRoad(18,6);
+  placeRoad(18,7);
+  placeRoad(18,8);
+  placeRoad(18,9);
+  placeRoad(18,10);
+  placeRoad(18,11);
+  placeRoad(18,12);
+  placeRoad(18,13);
+  placeRoad(18,14);
+  placeRoad(18,15);
+  
+  placeRoad(19,5);
+  placeRoad(19,6);
+  placeRoad(19,7);
+  placeRoad(19,8);
+  placeRoad(19,9);
+  placeRoad(19,10);
+  placeRoad(19,11);
+  placeRoad(19,12);
+  placeRoad(19,13);
+  placeRoad(19,14);
+  placeRoad(19,15);
+  
+  // Second warehouse
+  placeBuilding('warehouse',20,15);
+  
+  // Connect to second warehouse
+  for(let x=18;x<22;x++) placeRoad(x,15);
+  
+  // Scroll to center of map
+  game.scrollX=0;
+  game.scrollY=2*CELL;
+}
+
+// ===== MAIN LOOP =====
+let lastTime=0;
+let uiTimer=0;
+
+function gameLoop(time){
+  let dt=Math.min(time-lastTime,50);
+  lastTime=time;
+  
+  if(game.speed>0){
+    updateBuildings(dt);
+    updateResources(dt);
+    updateBonuses(dt);
+    
+    // collect resources at warehouses into global stock
+    for(let b of game.buildings){
+      if(b.type.id==='warehouse'){
+        for(let r of RES_TYPES){
+          if(b.storage[r.id]>0){
+            let transfer=Math.min(b.storage[r.id],dt*0.01);
+            game.resStock[r.id]+=transfer;
+            b.storage[r.id]-=transfer;
+          }
+        }
+      }
+    }
+    
+    game.time+=dt*game.speed*0.001;
+  }
+  
+  render();
+  
+  uiTimer+=dt;
+  if(uiTimer>500){
+    uiTimer=0;
+    updateResourceBar();
+    initBonusList();
+  }
+  
+  requestAnimationFrame(gameLoop);
+}
+
+// ===== INIT =====
+loadScenario();
+initBuildList();
+initRecipeList();
+initBonusList();
+updateResourceBar();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

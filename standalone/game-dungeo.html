@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Подземелья Тьмы — Roguelike</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; color: #c0c0c0; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+#header { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: #111118; border-bottom: 1px solid #2a2a3a; flex-shrink: 0; flex-wrap: wrap; }
+#header .stat { margin: 0 8px; font-size: 13px; white-space: nowrap; }
+#header .stat b { color: #e0e0e0; }
+.bar { display: inline-block; width: 100px; height: 10px; background: #333; border: 1px solid #555; border-radius: 3px; vertical-align: middle; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.hp-fill { background: #c33; }
+.xp-fill { background: #3a8; }
+.sp-fill { background: #48e; }
+.status-icons { display: inline-flex; gap: 4px; margin-left: 8px; }
+.status-icon { font-size: 11px; padding: 1px 4px; border-radius: 3px; }
+#game { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; }
+canvas { image-rendering: pixelated; }
+#log { height: 110px; overflow-y: auto; padding: 6px 16px; background: #0d0d14; border-top: 1px solid #2a2a3a; font-size: 12px; flex-shrink: 0; }
+#log div { margin: 1px 0; }
+.log-damage { color: #e44; } .log-heal { color: #4c8; } .log-info { color: #88a; }
+.log-loot { color: #da2; } .log-level { color: #f82; } .log-trap { color: #e8e; }
+.log-spell { color: #8af; } .log-shop { color: #ae8; } .log-boss { color: #f4f; font-weight: bold; }
+.log-death { color: #f22; font-weight: bold; font-size: 14px; }
+#overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.88); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
+#overlay h1 { font-size: 34px; color: #e44; margin-bottom: 6px; }
+#overlay h2 { font-size: 26px; color: #da2; margin-bottom: 16px; }
+#overlay p { font-size: 13px; color: #aaa; margin: 3px 0; }
+#overlay .start-btn { margin-top: 16px; padding: 12px 32px; font-size: 18px; background: #c33; color: #fff; border: none; cursor: pointer; font-family: inherit; border-radius: 4px; }
+#overlay .start-btn:hover { background: #e44; }
+#overlay .stats-block { background: #1a1a24; border: 1px solid #333; border-radius: 6px; padding: 14px 24px; margin: 10px 0; text-align: left; }
+#overlay .stats-block div { margin: 3px 0; color: #bbb; }
+#overlay .stats-block b { color: #e0e0e0; }
+#minimap { position: absolute; top: 8px; right: 8px; border: 1px solid #333; background: #0a0a0f; }
+#abilities { position: absolute; bottom: 8px; left: 8px; display: flex; gap: 6px; }
+.ability-btn { width: 56px; height: 56px; background: rgba(10,10,20,0.92); border: 2px solid #333; border-radius: 6px; color: #ccc; font-family: inherit; font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: border-color 0.2s; position: relative; }
+.ability-btn:hover { border-color: #666; }
+.ability-btn.on-cd { opacity: 0.5; }
+.ability-btn .cd-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #e44; font-size: 14px; font-weight: bold; text-align: center; border-radius: 0 0 4px 4px; }
+.ability-btn .key { font-size: 9px; color: #666; }
+.ability-btn .icon { font-size: 20px; }
+</style>
+</head>
+<body>
+<div id="header">
+  <div>
+    <span class="stat">Ур: <b id="s-level">1</b></span>
+    <span class="stat">HP: <b id="s-hp">20/20</b> <span class="bar"><span class="bar-fill hp-fill" id="hp-bar" style="width:100%"></span></span></span>
+    <span class="stat">XP: <b id="s-xp">0/20</b> <span class="bar"><span class="bar-fill xp-fill" id="xp-bar" style="width:0%"></span></span></span>
+    <span class="stat">MP: <b id="s-mp">10/10</b> <span class="bar"><span class="bar-fill sp-fill" id="mp-bar" style="width:100%"></span></span></span>
+    <span class="stat">Ат: <b id="s-atk">3</b></span>
+    <span class="stat">Зщ: <b id="s-def">1</b></span>
+    <span class="status-icons" id="s-status"></span>
+  </div>
+  <div>
+    <span class="stat">Этаж: <b id="s-floor">1</b></span>
+    <span class="stat">Золото: <b id="s-gold">0</b></span>
+  </div>
+</div>
+<div id="game">
+  <canvas id="canvas"></canvas>
+  <canvas id="minimap" width="140" height="140"></canvas>
+  <div id="abilities">
+    <button class="ability-btn" id="ab-fire" title="Огненный шар (1)">
+      <span class="key">1</span><span class="icon">🔥</span><span>MP:3</span>
+    </button>
+    <button class="ability-btn" id="ab-heal" title="Исцеление (2)">
+      <span class="key">2</span><span class="icon">💚</span><span>MP:4</span>
+    </button>
+    <button class="ability-btn" id="ab-rage" title="Ярость (3)">
+      <span class="key">3</span><span class="icon">⚡</span><span>MP:5</span>
+    </button>
+    <button class="ability-btn" id="ab-tele" title="Телепорт (4)">
+      <span class="key">4</span><span class="icon">🌀</span><span>MP:6</span>
+    </button>
+  </div>
+  <div id="overlay">
+    <h1>Подземелья Тьмы</h1>
+    <p>WASD / Стрелки — движение</p>
+    <p>Пробел — атака / взаимодействие</p>
+    <p>1-4 — способности</p>
+    <p>E — купить у торговца, F — говорить с NPC</p>
+    <p>Собирай зелья, убивай монстров, спускайся глубже</p>
+    <button class="start-btn" id="start-btn">Начать игру</button>
+  </div>
+</div>
+<div id="log"></div>
+
+<script>
+const TILE = 28;
+const MAP_W = 50;
+const MAP_H = 50;
+const MINIMAP_SCALE = 140 / Math.max(MAP_W, MAP_H);
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap');
+const mctx = minimapCanvas.getContext('2d');
+
+const T = { VOID:0, FLOOR:1, WALL:2, DOOR:3, STAIRS_DOWN:4, CHEST:5, TRAP:6, SHOP_FLOOR:7 };
+const COLORS = {
+  [T.VOID]:'#06060a', [T.FLOOR]:'#1a1a24', [T.WALL]:'#2a2a3a',
+  [T.DOOR]:'#8a6a30', [T.STAIRS_DOWN]:'#2a6a9a', [T.CHEST]:'#ba9a30',
+  [T.TRAP]:'#1a1a24', [T.SHOP_FLOOR]:'#14241a',
+};
+
+const ENEMY_DEFS = [
+  { name:'Крыса', ch:'r', color:'#a87', hp:5, atk:1, def:0, xp:3, gold:2, ability:null },
+  { name:'Гоблин', ch:'g', color:'#5a5', hp:10, atk:2, def:1, xp:6, gold:5, ability:null },
+  { name:'Скелет', ch:'s', color:'#ccc', hp:15, atk:3, def:2, xp:10, gold:8, ability:null },
+  { name:'Паук', ch:'S', color:'#8a5', hp:12, atk:2, def:1, xp:8, gold:6, ability:'poison' },
+  { name:'Орк', ch:'o', color:'#a55', hp:25, atk:5, def:3, xp:18, gold:12, ability:null },
+  { name:'Нежить', ch:'z', color:'#8b8', hp:18, atk:4, def:2, xp:14, gold:10, ability:'drain' },
+  { name:'Тёмный маг', ch:'M', color:'#a3f', hp:20, atk:7, def:1, xp:25, gold:20, ability:'fireball' },
+  { name:'Демон', ch:'&', color:'#f33', hp:35, atk:8, def:4, xp:40, gold:30, ability:'rage' },
+  { name:'Дракон', ch:'D', color:'#f42', hp:60, atk:10, def:5, xp:80, gold:50, ability:'fireball' },
+];
+
+const BOSS_DEFS = [
+  { name:'Король Крыс', ch:'R', color:'#fa4', hp:40, atk:6, def:2, xp:50, gold:60, ability:'summon', boss:true },
+  { name:'Лич', ch:'L', color:'#a8f', hp:80, atk:9, def:3, xp:100, gold:100, ability:'drain', boss:true },
+  { name:'Дракон Огня', ch:'F', color:'#f62', hp:120, atk:12, def:6, xp:200, gold:200, ability:'fireball', boss:true },
+  { name:'Тёмный Лорд', ch:'K', color:'#f0f', hp:200, atk:15, def:8, xp:500, gold:500, ability:'rage', boss:true },
+];
+
+const ITEMS = [
+  { name:'Зелье здоровья', type:'heal', val:12, color:'#e44', ch:'!' },
+  { name:'Зелье силы', type:'atk', val:1, color:'#e82', ch:'!' },
+  { name:'Зелье защиты', type:'def', val:1, color:'#48e', ch:'!' },
+  { name:'Хлеб', type:'heal', val:6, color:'#ca8', ch:'%' },
+  { name:'Зелье маны', type:'mana', val:6, color:'#88f', ch:'!' },
+  { name:'Зелье яда', type:'poison', val:3, color:'#3c3', ch:'!' },
+  { name:'Кольцо защиты', type:'def', val:2, color:'#8cf', ch:'=' },
+  { name:'Амулет силы', type:'atk', val:2, color:'#fa4', ch:'\'' },
+];
+
+const SHOP_ITEMS = [
+  { name:'Зелье здоровья', type:'heal', val:15, color:'#e44', ch:'!', price:15 },
+  { name:'Зелье маны', type:'mana', val:8, color:'#88f', ch:'!', price:12 },
+  { name:'Зелье силы', type:'atk', val:1, color:'#e82', ch:'!', price:25 },
+  { name:'Зелье защиты', type:'def', val:1, color:'#48e', ch:'!', price:25 },
+  { name:'Арканум', type:'heal', val:30, color:'#f4f', ch:'*', price:40 },
+];
+
+let game = null;
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playSound(freq, dur, type='square', vol=0.08) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur);
+}
+
+function sfxHit() { playSound(200, 0.1, 'sawtooth', 0.06); setTimeout(() => playSound(150, 0.08, 'square', 0.04), 50); }
+function sfxKill() { playSound(400, 0.15, 'square', 0.06); setTimeout(() => playSound(600, 0.1, 'square', 0.05), 80); }
+function sfxPickup() { playSound(800, 0.08, 'sine', 0.06); setTimeout(() => playSound(1200, 0.08, 'sine', 0.05), 60); }
+function sfxHeal() { playSound(523, 0.12, 'sine', 0.05); setTimeout(() => playSound(659, 0.12, 'sine', 0.05), 100); setTimeout(() => playSound(784, 0.15, 'sine', 0.05), 200); }
+function sfxSpell() { playSound(300, 0.2, 'sawtooth', 0.05); playSound(450, 0.15, 'sine', 0.04); }
+function sfxTrap() { playSound(100, 0.2, 'sawtooth', 0.07); }
+function sfxLevel() { [523,659,784,1047].forEach((f,i) => setTimeout(() => playSound(f, 0.15, 'sine', 0.05), i*100)); }
+function sfxShop() { playSound(440, 0.1, 'sine', 0.04); setTimeout(() => playSound(554, 0.1, 'sine', 0.04), 80); }
+function sfxDeath() { playSound(200, 0.3, 'sawtooth', 0.08); setTimeout(() => playSound(100, 0.5, 'sawtooth', 0.06), 200); }
+
+class Game {
+  constructor() {
+    this.floor = 1;
+    this.turn = 0;
+    this.map = [];
+    this.rooms = [];
+    this.enemies = [];
+    this.items = [];
+    this.effects = [];
+    this.traps = [];
+    this.particles = [];
+    this.shopItems = [];
+    this.npcs = [];
+    this.player = {
+      x:0, y:0, hp:20, maxHp:20, atk:3, def:1,
+      level:1, xp:0, xpNext:20, gold:0, mp:10, maxMp:10,
+      statuses: [], // {type, turns}
+      cooldowns: { fire:0, heal:0, rage:0, tele:0 },
+      stats: { kills:0, floorsCleared:0, goldEarned:0, damageDealt:0, damageTaken:0, spellsCast:0, trapsFound:0, bossesKilled:0 }
+    };
+    this.camera = { x:0, y:0 };
+    this.revealed = [];
+    this.explored = [];
+    this.animating = false;
+    this.generateFloor();
+    this.centerCamera();
+    this.revealAround();
+  }
+
+  generateFloor() {
+    this.map = Array.from({length:MAP_H}, () => Array(MAP_W).fill(T.VOID));
+    this.revealed = Array.from({length:MAP_H}, () => Array(MAP_W).fill(false));
+    this.explored = Array.from({length:MAP_H}, () => Array(MAP_W).fill(false));
+    this.rooms = [];
+    this.enemies = [];
+    this.items = [];
+    this.traps = [];
+    this.npcs = [];
+    this.shopItems = [];
+
+    const numRooms = 8 + Math.floor(Math.random()*5);
+    for (let i = 0; i < numRooms*4 && this.rooms.length < numRooms; i++) {
+      const w = 5+Math.floor(Math.random()*8);
+      const h = 5+Math.floor(Math.random()*7);
+      const x = 2+Math.floor(Math.random()*(MAP_W-w-4));
+      const y = 2+Math.floor(Math.random()*(MAP_H-h-4));
+      if (!this.rooms.some(r => x<r.x+r.w+2 && x+w+2>r.x && y<r.y+r.h+2 && y+h+2>r.y))
+        this.rooms.push({x,y,w,h});
+    }
+
+    for (const room of this.rooms)
+      for (let ry=room.y; ry<room.y+room.h; ry++)
+        for (let rx=room.x; rx<room.x+room.w; rx++)
+          this.map[ry][rx] = T.FLOOR;
+
+    for (let i=1; i<this.rooms.length; i++) {
+      const a=this.rooms[i-1], b=this.rooms[i];
+      const ax=Math.floor(a.x+a.w/2), ay=Math.floor(a.y+a.h/2);
+      const bx=Math.floor(b.x+b.w/2), by=Math.floor(b.y+b.h/2);
+      let cx=ax, cy=ay;
+      while(cx!==bx){this.map[cy][cx]=T.FLOOR; cx+=cx<bx?1:-1;}
+      while(cy!==by){this.map[cy][cx]=T.FLOOR; cy+=cy<by?1:-1;}
+    }
+
+    for (let y=0; y<MAP_H; y++)
+      for (let x=0; x<MAP_W; x++)
+        if (this.map[y][x]===T.FLOOR) {
+          let adj=false;
+          for (let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+            const ny=y+dy,nx=x+dx;
+            if(ny>=0&&ny<MAP_H&&nx>=0&&nx<MAP_W) if(this.map[ny][nx]===T.VOID) adj=true;
+          }
+          if(adj) this.map[y][x]=T.WALL;
+        }
+
+    for (const room of this.rooms) {
+      const wx=room.x-1, wy=room.y-1;
+      for(let dx=0;dx<=room.w;dx++){
+        if(wy>=0&&wy<MAP_H&&wx+dx>=0&&wx+dx<MAP_W) if(this.map[wy][wx+dx]===T.VOID) this.map[wy][wx+dx]=T.WALL;
+        if(wy+room.h+1>=0&&wy+room.h+1<MAP_H&&wx+dx>=0&&wx+dx<MAP_W) if(this.map[wy+room.h+1][wx+dx]===T.VOID) this.map[wy+room.h+1][wx+dx]=T.WALL;
+      }
+      for(let dy=0;dy<=room.h;dy++){
+        if(wy+dy>=0&&wy+dy<MAP_H&&wx>=0&&wx<MAP_W) if(this.map[wy+dy][wx]===T.VOID) this.map[wy+dy][wx]=T.WALL;
+        if(wy+dy>=0&&wy+dy<MAP_H&&wx+room.w+1>=0&&wx+room.w+1<MAP_W) if(this.map[wy+dy][wx+room.w+1]===T.VOID) this.map[wy+dy][wx+room.w+1]=T.WALL;
+      }
+    }
+
+    const spawnRoom = this.rooms[0];
+    this.player.x = Math.floor(spawnRoom.x+spawnRoom.w/2);
+    this.player.y = Math.floor(spawnRoom.y+spawnRoom.h/2);
+
+    const lastRoom = this.rooms[this.rooms.length-1];
+    const sx=Math.floor(lastRoom.x+lastRoom.w/2);
+    const sy=Math.floor(lastRoom.y+lastRoom.h/2);
+    this.map[sy][sx] = T.STAIRS_DOWN;
+
+    const isBossFloor = this.floor % 5 === 0;
+    const diff = Math.min(this.floor, 8);
+
+    if (isBossFloor) {
+      const bossIdx = Math.min(Math.floor(this.floor/5)-1, BOSS_DEFS.length-1);
+      const d = BOSS_DEFS[bossIdx];
+      const scale = 1+(this.floor-1)*0.1;
+      this.enemies.push({
+        x:sx-1, y:sy, boss:true,
+        name:d.name, ch:d.ch, color:d.color,
+        hp:Math.floor(d.hp*scale), maxHp:Math.floor(d.hp*scale),
+        atk:Math.floor(d.atk*scale), def:Math.floor(d.def*scale),
+        xp:Math.floor(d.xp*scale), gold:Math.floor(d.gold*scale),
+        ability:d.ability
+      });
+      log(`⚠ БОСС: ${d.name} появляется!`, 'boss');
+      sfxSpell();
+    } else {
+      const maxEnemyIdx = Math.min(Math.floor(diff*0.8), ENEMY_DEFS.length-1);
+      for (let i=1; i<this.rooms.length; i++) {
+        const room = this.rooms[i];
+        const numE = Math.floor(Math.random()*(1+Math.floor(diff/2)))+1;
+        for(let j=0;j<numE;j++){
+          const ex=room.x+1+Math.floor(Math.random()*(room.w-2));
+          const ey=room.y+1+Math.floor(Math.random()*(room.h-2));
+          if(this.map[ey][ex]===T.FLOOR && !(ex===this.player.x&&ey===this.player.y)){
+            const idx=Math.floor(Math.random()*(maxEnemyIdx+1));
+            const d=ENEMY_DEFS[idx];
+            const scale=1+(this.floor-1)*0.12;
+            this.enemies.push({
+              x:ex,y:ey,boss:false,
+              name:d.name,ch:d.ch,color:d.color,
+              hp:Math.floor(d.hp*scale),maxHp:Math.floor(d.hp*scale),
+              atk:Math.floor(d.atk*scale),def:Math.floor(d.def*scale),
+              xp:Math.floor(d.xp*scale),gold:Math.floor(d.gold*scale),
+              ability:d.ability
+            });
+          }
+        }
+      }
+    }
+
+    for(let i=0;i<this.rooms.length;i++){
+      const room=this.rooms[i];
+      if(Math.random()<0.4){
+        const ix=room.x+1+Math.floor(Math.random()*(room.w-2));
+        const iy=room.y+1+Math.floor(Math.random()*(room.h-2));
+        if(this.map[iy][ix]===T.FLOOR){
+          const itemDef=ITEMS[Math.floor(Math.random()*ITEMS.length)];
+          this.items.push({x:ix,y:iy,...itemDef});
+        }
+      }
+      if(Math.random()<0.25){
+        const cx=room.x+1+Math.floor(Math.random()*(room.w-2));
+        const cy=room.y+1+Math.floor(Math.random()*(room.h-2));
+        if(this.map[cy][cx]===T.FLOOR) this.map[cy][cx]=T.CHEST;
+      }
+      if(!isBossFloor && Math.random()<0.18 && i>0 && i<this.rooms.length-1){
+        const tx=room.x+1+Math.floor(Math.random()*(room.w-2));
+        const ty=room.y+1+Math.floor(Math.random()*(room.h-2));
+        if(this.map[ty][tx]===T.FLOOR){
+          this.traps.push({x:tx,y:ty,type:Math.random()<0.5?'spike':'poison',triggered:false});
+        }
+      }
+    }
+
+    if(!isBossFloor && Math.random()<0.4 && this.floor>=2) {
+      const shopRoom = this.rooms[Math.floor(this.rooms.length/2)];
+      const shopX=Math.floor(shopRoom.x+shopRoom.w/2);
+      const shopY=Math.floor(shopRoom.y+shopRoom.h/2);
+      this.npcs.push({x:shopX,y:shopY,type:'merchant',ch:'$',color:'#ae8',name:'Торговец'});
+      for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
+        if(this.map[shopY+dy]&&this.map[shopY+dy][shopX+dx]===T.FLOOR)
+          this.map[shopY+dy][shopX+dx]=T.SHOP_FLOOR;
+      }
+      this.shopItems = SHOP_ITEMS.map(si => ({...si, price:si.price+Math.floor(this.floor*2)}));
+    }
+  }
+
+  revealAround() {
+    const r=6;
+    for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++){
+      if(dx*dx+dy*dy<=r*r){
+        const nx=this.player.x+dx, ny=this.player.y+dy;
+        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H){
+          if(this.hasLineOfSight(this.player.x,this.player.y,nx,ny)){
+            this.revealed[ny][nx]=true;
+            this.explored[ny][nx]=true;
+          }
+        }
+      }
+    }
+  }
+
+  hasLineOfSight(x0,y0,x1,y1) {
+    let dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
+    let sx=x0<x1?1:-1,sy=y0<y1?1:-1;
+    let err=dx-dy,x=x0,y=y0;
+    while(true){
+      if(x===x1&&y===y1) return true;
+      if(this.map[y]&&this.map[y][x]===T.WALL&&!(x===x0&&y===y0)) return false;
+      let e2=2*err;
+      if(e2>-dy){err-=dy;x+=sx;}
+      if(e2<dx){err+=dx;y+=sy;}
+    }
+  }
+
+  centerCamera() {
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight-150;
+    this.camera.x=this.player.x*TILE-canvas.width/2+TILE/2;
+    this.camera.y=this.player.y*TILE-canvas.height/2+TILE/2;
+  }
+
+  movePlayer(dx,dy) {
+    if(this.animating||this.player.hp<=0) return;
+    const nx=this.player.x+dx, ny=this.player.y+dy;
+    if(nx<0||nx>=MAP_W||ny<0||ny>=MAP_H) return;
+    if(this.map[ny][nx]===T.WALL||this.map[ny][nx]===T.VOID) return;
+
+    const enemy=this.enemies.find(e=>e.x===nx&&e.y===ny);
+    if(enemy){this.attackEnemy(enemy);this.afterTurn();return;}
+
+    const npc=this.npcs.find(n=>n.x===nx&&n.y===ny);
+    if(npc){this.talkNPC(npc);return;}
+
+    this.player.x=nx;
+    this.player.y=ny;
+    this.revealAround();
+
+    const itemIdx=this.items.findIndex(it=>it.x===nx&&it.y===ny);
+    if(itemIdx>=0) this.pickupItem(itemIdx);
+
+    if(this.map[ny][nx]===T.STAIRS_DOWN) log('Нажми пробел чтобы спуститься...','info');
+    if(this.map[ny][nx]===T.CHEST) this.openChest(nx,ny);
+
+    const trap=this.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
+    if(trap) this.triggerTrap(trap);
+
+    this.addAmbientParticles(nx,ny,'#334',4);
+    this.afterTurn();
+  }
+
+  attack() {
+    if(this.animating||this.player.hp<=0) return;
+    const dirs=[[0,-1],[0,1],[-1,0],[1,0]];
+    let attacked=false;
+    for(const[dx,dy] of dirs){
+      const e=this.enemies.find(en=>en.x===this.player.x+dx&&en.y===this.player.y+dy);
+      if(e){this.attackEnemy(e);attacked=true;break;}
+    }
+    if(!attacked){
+      if(this.map[this.player.y][this.player.x]===T.STAIRS_DOWN){
+        this.player.stats.floorsCleared++;
+        this.floor++;
+        log(`Спуск на этаж ${this.floor}...`,'info');
+        this.generateFloor();
+        this.centerCamera();
+        this.revealAround();
+        return;
+      }
+      const merchant=this.npcs.find(n=>n.x===this.player.x&&n.y===this.player.y&&n.type==='merchant');
+      if(merchant) this.openShop();
+    }
+    this.afterTurn();
+  }
+
+  attackEnemy(enemy) {
+    let atk=this.player.atk;
+    const rageStatus=this.player.statuses.find(s=>s.type==='rage');
+    if(rageStatus) atk=Math.floor(atk*1.5);
+    const crit=Math.random()<0.12;
+    let dmg=Math.max(1,atk-enemy.def+Math.floor(Math.random()*3)-1);
+    if(crit) dmg=Math.floor(dmg*1.8);
+    enemy.hp-=dmg;
+    this.player.stats.damageDealt+=dmg;
+    this.effects.push({x:enemy.x,y:enemy.y,text:crit?`-${dmg}!`:`-${dmg}`,color:crit?'#ff4':'#f44',time:30});
+    sfxHit();
+    log(`Вы наносите ${enemy.name} ${dmg} урона${crit?' (крит!)':''}`, crit?'loot':'damage');
+    if(enemy.hp<=0){
+      sfxKill();
+      log(`${enemy.name} повержен! (+${enemy.xp}xp, +${enemy.gold}г)`,'loot');
+      this.player.xp+=enemy.xp;
+      this.player.gold+=enemy.gold;
+      this.player.stats.goldEarned+=enemy.gold;
+      this.player.stats.kills++;
+      if(enemy.boss) this.player.stats.bossesKilled++;
+      this.addDeathParticles(enemy.x,enemy.y,enemy.color);
+      this.enemies=this.enemies.filter(e=>e!==enemy);
+      this.checkLevelUp();
+    }
+  }
+
+  enemyTurn() {
+    for(const e of this.enemies){
+      const dx=this.player.x-e.x, dy=this.player.y-e.y;
+      const dist=Math.abs(dx)+Math.abs(dy);
+      if(dist<=1){
+        const defStatus=this.player.statuses.find(s=>s.type==='shield');
+        let def=this.player.def+(defStatus?3:0);
+        const dmg=Math.max(1,e.atk-def+Math.floor(Math.random()*3)-1);
+        this.player.hp-=dmg;
+        this.player.stats.damageTaken+=dmg;
+        this.effects.push({x:this.player.x,y:this.player.y,text:`-${dmg}`,color:'#f82',time:30});
+        sfxHit();
+        log(`${e.name} атакует вас на ${dmg} урона`,'damage');
+        if(e.ability==='poison'&&Math.random()<0.3){
+          this.addStatus('poison',3);
+          log(`${e.name} вас отравил!`,'trap');
+        }
+        if(e.ability==='drain'&&Math.random()<0.25){
+          const heal=Math.min(dmg,e.maxHp-e.hp);
+          e.hp+=heal;
+          log(`${e.name} высасывает ${heal} HP!`,'damage');
+        }
+        if(e.ability==='fireball'&&Math.random()<0.2){
+          const fbDmg=Math.floor(e.atk*0.6);
+          this.player.hp-=fbDmg;
+          this.effects.push({x:this.player.x,y:this.player.y,text:`🔥-${fbDmg}`,color:'#f62',time:30});
+          log(`${e.name} кидает огненный шар! ${fbDmg} урона!`,'spell');
+        }
+        if(this.player.hp<=0){this.player.hp=0;log('Вы погибли!','death');}
+      } else if(dist<=8&&Math.random()<0.6){
+        if(e.ability==='summon'&&Math.random()<0.08&&this.enemies.length<15){
+          const sx=e.x+(Math.random()<0.5?-1:1);
+          const sy=e.y+(Math.random()<0.5?-1:1);
+          if(sx>=0&&sx<MAP_W&&sy>=0&&sy<MAP_H&&this.map[sy][sx]===T.FLOOR&&!this.enemies.some(o=>o.x===sx&&o.y===sy)){
+            const minion=ENEMY_DEFS[0];
+            this.enemies.push({x:sx,y:sy,boss:false,name:minion.name,ch:minion.ch,color:'#fa4',hp:minion.hp,atk:minion.atk,def:minion.def,xp:minion.xp,gold:minion.gold,ability:null});
+            log(`${e.name} призывает крысу!`,'boss');
+          }
+        }
+        const mx=dx!==0?Math.sign(dx):0;
+        const my=dy!==0?Math.sign(dy):0;
+        const nx=e.x+mx, ny=e.y+my;
+        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&this.map[ny][nx]===T.FLOOR&&!this.enemies.some(o=>o!==e&&o.x===nx&&o.y===ny)&&!(nx===this.player.x&&ny===this.player.y)){
+          e.x=nx;e.y=ny;
+        }
+      }
+    }
+  }
+
+  processStatuses() {
+    for(let i=this.player.statuses.length-1;i>=0;i--){
+      const s=this.player.statuses[i];
+      if(s.type==='poison'){
+        const dmg=2+Math.floor(this.player.level*0.5);
+        this.player.hp-=dmg;
+        this.effects.push({x:this.player.x,y:this.player.y,text:`☠-${dmg}`,color:'#3c3',time:25});
+        log(`Отравление наносит ${dmg} урона`,'trap');
+        if(this.player.hp<=0){this.player.hp=0;log('Вы погибли от яда!','death');}
+      }
+      if(s.type==='burn'){
+        const dmg=3;
+        this.player.hp-=dmg;
+        this.effects.push({x:this.player.x,y:this.player.y,text:`🔥-${dmg}`,color:'#f62',time:25});
+        log(`Горение наносит ${dmg} урона`,'trap');
+        if(this.player.hp<=0){this.player.hp=0;log('Вы погибли в пламени!','death');}
+      }
+      s.turns--;
+      if(s.turns<=0){
+        log(`${s.type==='poison'?'Отравление':'Горение'} проходит`,'info');
+        this.player.statuses.splice(i,1);
+      }
+    }
+  }
+
+  addStatus(type, turns) {
+    const existing=this.player.statuses.find(s=>s.type===type);
+    if(existing) existing.turns=Math.max(existing.turns,turns);
+    else this.player.statuses.push({type,turns});
+  }
+
+  triggerTrap(trap) {
+    trap.triggered=true;
+    this.player.stats.trapsFound++;
+    sfxTrap();
+    if(trap.type==='spike'){
+      const dmg=3+this.floor;
+      this.player.hp-=dmg;
+      this.effects.push({x:trap.x,y:trap.y,text:`⚠-${dmg}`,color:'#e8e',time:30});
+      log(`Ловушка! Шипы наносят ${dmg} урона!`,'trap');
+    } else {
+      this.addStatus('poison',3+Math.floor(this.floor/2));
+      this.effects.push({x:trap.x,y:trap.y,text:'☠',color:'#3c3',time:30});
+      log(`Ловушка! Ядовитые газы!`,'trap');
+    }
+    if(this.player.hp<=0){this.player.hp=0;log('Вы погибли на ловушке!','death');}
+  }
+
+  castFireball() {
+    if(this.player.cooldowns.fire>0||this.player.mp<3) return;
+    this.player.mp-=3;
+    this.player.cooldowns.fire=4;
+    this.player.stats.spellsCast++;
+    sfxSpell();
+    const dirs=[[0,-1],[0,1],[-1,0],[1,0]];
+    const rageBonus=this.player.statuses.find(s=>s.type==='rage')?1.5:1;
+    const baseDmg=Math.floor((5+this.player.level*2)*rageBonus);
+    let hit=false;
+    for(const[dx,dy] of dirs){
+      for(let dist=1;dist<=5;dist++){
+        const tx=this.player.x+dx*dist;
+        const ty=this.player.y+dy*dist;
+        if(tx<0||tx>=MAP_W||ty<0||ty>=MAP_H) break;
+        if(this.map[ty][tx]===T.WALL) break;
+        for(let p=0;p<=dist;p++){
+          this.addAmbientParticles(this.player.x+dx*p,this.player.y+dy*p,'#f62',2);
+        }
+        const enemy=this.enemies.find(e=>e.x===tx&&e.y===ty);
+        if(enemy){
+          enemy.hp-=baseDmg;
+          this.player.stats.damageDealt+=baseDmg;
+          this.effects.push({x:tx,y:ty,text:`🔥-${baseDmg}`,color:'#f62',time:30});
+          log(`Огненный шар поражает ${enemy.name} на ${baseDmg}!`,'spell');
+          if(enemy.hp<=0){
+            sfxKill();
+            log(`${enemy.name} сожжён! (+${enemy.xp}xp)`,'loot');
+            this.player.xp+=enemy.xp;
+            this.player.gold+=enemy.gold;
+            this.player.stats.goldEarned+=enemy.gold;
+            this.player.stats.kills++;
+            this.addDeathParticles(enemy.x,enemy.y,'#f62');
+            this.enemies=this.enemies.filter(e=>e!==enemy);
+          }
+          hit=true;
+          break;
+        }
+      }
+    }
+    if(!hit) log('Огненный шар dissipates...','spell');
+    this.afterTurn();
+  }
+
+  castHeal() {
+    if(this.player.cooldowns.heal>0||this.player.mp<4) return;
+    this.player.mp-=4;
+    this.player.cooldowns.heal=5;
+    this.player.stats.spellsCast++;
+    sfxHeal();
+    const heal=Math.floor(8+this.player.level*2+this.player.maxHp*0.15);
+    const actual=Math.min(heal,this.player.maxHp-this.player.hp);
+    this.player.hp+=actual;
+    this.effects.push({x:this.player.x,y:this.player.y,text:`+${actual}`,color:'#4c8',time:30});
+    log(`Исцеление: +${actual} HP`,'heal');
+    for(let i=0;i<8;i++) this.addAmbientParticles(this.player.x,this.player.y,'#4c8',1);
+    this.afterTurn();
+  }
+
+  castRage() {
+    if(this.player.cooldowns.rage>0||this.player.mp<5) return;
+    this.player.mp-=5;
+    this.player.cooldowns.rage=8;
+    this.player.stats.spellsCast++;
+    sfxSpell();
+    this.addStatus('rage',6);
+    this.effects.push({x:this.player.x,y:this.player.y,text:'RAGE!',color:'#f82',time:35});
+    log('Ярость! Атака x1.5 на 6 ходов!','spell');
+    for(let i=0;i<12;i++) this.addAmbientParticles(this.player.x,this.player.y,'#f82',2);
+    this.afterTurn();
+  }
+
+  castTeleport() {
+    if(this.player.cooldowns.tele>0||this.player.mp<6) return;
+    this.player.mp-=6;
+    this.player.cooldowns.tele=6;
+    this.player.stats.spellsCast++;
+    sfxSpell();
+    const room=this.rooms[Math.floor(Math.random()*this.rooms.length)];
+    const tx=room.x+1+Math.floor(Math.random()*(room.w-2));
+    const ty=room.y+1+Math.floor(Math.random()*(room.h-2));
+    if(this.map[ty][tx]===T.FLOOR){
+      this.addAmbientParticles(this.player.x,this.player.y,'#88f',6);
+      this.player.x=tx;
+      this.player.y=ty;
+      this.revealAround();
+      this.addAmbientParticles(tx,ty,'#88f',6);
+      this.effects.push({x:tx,y:ty,text:'WARP',color:'#88f',time:30});
+      log('Телепортация!','spell');
+    }
+    this.afterTurn();
+  }
+
+  talkNPC(npc) {
+    if(npc.type==='merchant'){
+      log(`${npc.name}: "Добро пожаловать! Нажми E чтобы открыть лавку."`,'shop');
+      sfxShop();
+    }
+  }
+
+  openShop() {
+    const overlay=document.getElementById('overlay');
+    overlay.style.display='flex';
+    overlay.innerHTML=`<h2 style="color:#ae8">Лавка Торговца</h2>
+      <p>Ваше золото: <b style="color:#da2">${this.player.gold}</b></p>
+      <div id="shop-list"></div>
+      <button class="start-btn" onclick="closeShop()" style="margin-top:12px;background:#555">Закрыть (E)</button>`;
+    const list=document.getElementById('shop-list');
+    this.shopItems.forEach((item,i)=>{
+      const canBuy=this.player.gold>=item.price;
+      const div=document.createElement('div');
+      div.style.cssText=`margin:6px 0;padding:8px 16px;background:#1a1a24;border:1px solid ${canBuy?'#484':'#444'};border-radius:4px;cursor:${canBuy?'pointer':'default'};opacity:${canBuy?1:0.5}`;
+      div.innerHTML=`<span style="color:${item.color}">${item.name}</span> — <b style="color:#da2">${item.price}г</b> <span style="color:#888">(+${item.val} ${item.type==='heal'?'HP':item.type==='mana'?'MP':item.type==='atk'?'Атк':'Зщ'})</span>`;
+      if(canBuy) div.onclick=()=>{this.buyItem(i);};
+      list.appendChild(div);
+    });
+  }
+
+  buyItem(idx) {
+    const item=this.shopItems[idx];
+    if(this.player.gold<item.price) return;
+    this.player.gold-=item.price;
+    sfxPickup();
+    if(item.type==='heal'){
+      const h=Math.min(item.val,this.player.maxHp-this.player.hp);
+      this.player.hp+=h;
+      log(`Куплено ${item.name} (+${h} HP)`,'shop');
+    } else if(item.type==='mana'){
+      const m=Math.min(item.val,this.player.maxMp-this.player.mp);
+      this.player.mp+=m;
+      log(`Куплено ${item.name} (+${m} MP)`,'shop');
+    } else if(item.type==='atk'){
+      this.player.atk+=item.val;
+      log(`Куплено ${item.name} (+${item.val} Атака永久)`,'shop');
+    } else if(item.type==='def'){
+      this.player.def+=item.val;
+      log(`Куплено ${item.name} (+${item.val} Защита永久)`,'shop');
+    }
+    this.updateUI();
+    this.openShop();
+  }
+
+  addAmbientParticles(tx,ty,color,count) {
+    for(let i=0;i<count;i++){
+      this.particles.push({
+        x:tx*TILE+Math.random()*TILE,
+        y:ty*TILE+Math.random()*TILE,
+        vx:(Math.random()-0.5)*2,
+        vy:-Math.random()*2-0.5,
+        life:20+Math.floor(Math.random()*20),
+        maxLife:40,
+        color,
+        size:1+Math.random()*2
+      });
+    }
+  }
+
+  addDeathParticles(tx,ty,color) {
+    for(let i=0;i<15;i++){
+      this.particles.push({
+        x:tx*TILE+TILE/2,
+        y:ty*TILE+TILE/2,
+        vx:(Math.random()-0.5)*6,
+        vy:(Math.random()-0.5)*6,
+        life:20+Math.floor(Math.random()*20),
+        maxLife:40,
+        color,
+        size:2+Math.random()*3
+      });
+    }
+  }
+
+  afterTurn() {
+    this.turn++;
+    this.processStatuses();
+    this.enemyTurn();
+    for(const k in this.player.cooldowns) if(this.player.cooldowns[k]>0) this.player.cooldowns[k]--;
+    this.player.mp=Math.min(this.player.mp+1,this.player.maxMp);
+    if(this.turn%10===0&&this.player.hp<this.player.maxHp) this.player.hp=Math.min(this.player.hp+1,this.player.maxHp);
+    this.centerCamera();
+    this.updateUI();
+    this.updateAbilities();
+  }
+
+  checkLevelUp() {
+    while(this.player.xp>=this.player.xpNext){
+      this.player.xp-=this.player.xpNext;
+      this.player.level++;
+      this.player.xpNext=Math.floor(this.player.xpNext*1.5);
+      this.player.maxHp+=6;
+      this.player.hp=Math.min(this.player.hp+12,this.player.maxHp);
+      this.player.maxMp+=2;
+      this.player.mp=Math.min(this.player.mp+4,this.player.maxMp);
+      this.player.atk+=1;
+      this.player.def+=1;
+      sfxLevel();
+      log(`Уровень ${this.player.level}! HP+6, MP+2, Атк+1, Зщ+1`,'level');
+      this.effects.push({x:this.player.x,y:this.player.y,text:'LEVEL UP!',color:'#f82',time:40});
+      for(let i=0;i<20;i++) this.addAmbientParticles(this.player.x,this.player.y,'#f82',2);
+    }
+  }
+
+  pickupItem(idx) {
+    const item=this.items[idx];
+    this.items.splice(idx,1);
+    sfxPickup();
+    if(item.type==='heal'){
+      const h=Math.min(item.val,this.player.maxHp-this.player.hp);
+      this.player.hp+=h;
+      log(`+${item.name} (+${h} HP)`,'heal');
+    } else if(item.type==='mana'){
+      const m=Math.min(item.val,this.player.maxMp-this.player.mp);
+      this.player.mp+=m;
+      log(`+${item.name} (+${m} MP)`,'spell');
+    } else if(item.type==='atk'){
+      this.player.atk+=item.val;
+      log(`+${item.name} (+${item.val} Атака永久)`,'loot');
+    } else if(item.type==='def'){
+      this.player.def+=item.val;
+      log(`+${item.name} (+${item.val} Защита永久)`,'loot');
+    } else if(item.type==='poison'){
+      this.addStatus('poison',4);
+      log(`${item.name} — яд на 4 хода!`,'trap');
+    }
+  }
+
+  openChest(x,y) {
+    this.map[y][x]=T.FLOOR;
+    sfxPickup();
+    const r=Math.random();
+    if(r<0.25){
+      const gold=5+Math.floor(Math.random()*15*this.floor);
+      this.player.gold+=gold;
+      this.player.stats.goldEarned+=gold;
+      log(`Сундук: ${gold} золота!`,'loot');
+    } else if(r<0.45){
+      const itemDef=ITEMS[Math.floor(Math.random()*ITEMS.length)];
+      this.items.push({x,y,...itemDef});
+      log(`Сундук: ${itemDef.name}!`,'loot');
+    } else if(r<0.6){
+      this.player.atk+=1;
+      log('Сундук: Клинок! (+1 Атака永久)','loot');
+    } else if(r<0.75){
+      this.player.def+=1;
+      log('Сундук: Панцирь! (+1 Защита永久)','loot');
+    } else if(r<0.88){
+      const heal=15+this.floor*2;
+      this.player.hp=Math.min(this.player.hp+heal,this.player.maxHp);
+      log(`Сундук: Эликсир! (+${heal} HP)`,'heal');
+    } else {
+      this.player.maxMp+=3;
+      this.player.mp=Math.min(this.player.mp+5,this.player.maxMp);
+      log('Сундук: Кристалл маны! (+3 max MP)','spell');
+    }
+  }
+
+  updateAbilities() {
+    ['fire','heal','rage','tele'].forEach(k=>{
+      const cd=this.player.cooldowns[k];
+      const btn=document.getElementById('ab-'+k);
+      if(!btn) return;
+      const existing=btn.querySelector('.cd-overlay');
+      if(existing) existing.remove();
+      if(cd>0){
+        btn.classList.add('on-cd');
+        const ov=document.createElement('div');
+        ov.className='cd-overlay';
+        ov.textContent=cd;
+        btn.appendChild(ov);
+      } else btn.classList.remove('on-cd');
+    });
+  }
+
+  updateUI() {
+    const p=this.player;
+    document.getElementById('s-level').textContent=p.level;
+    document.getElementById('s-hp').textContent=`${p.hp}/${p.maxHp}`;
+    document.getElementById('hp-bar').style.width=`${(p.hp/p.maxHp)*100}%`;
+    document.getElementById('s-xp').textContent=`${p.xp}/${p.xpNext}`;
+    document.getElementById('xp-bar').style.width=`${(p.xp/p.xpNext)*100}%`;
+    document.getElementById('s-mp').textContent=`${p.mp}/${p.maxMp}`;
+    document.getElementById('mp-bar').style.width=`${(p.mp/p.maxMp)*100}%`;
+    document.getElementById('s-atk').textContent=p.atk;
+    document.getElementById('s-def').textContent=p.def;
+    document.getElementById('s-floor').textContent=this.floor;
+    document.getElementById('s-gold').textContent=p.gold;
+    const sdiv=document.getElementById('s-status');
+    sdiv.innerHTML='';
+    p.statuses.forEach(s=>{
+      const el=document.createElement('span');
+      el.className='status-icon';
+      el.style.background=s.type==='poison'?'#331':s.type==='rage'?'#531':s.type==='burn'?'#531':'#113';
+      el.style.color=s.type==='poison'?'#3c3':s.type==='rage'?'#f82':s.type==='burn'?'#f62':'#48e';
+      el.textContent=`${s.type==='poison'?'☠':s.type==='rage'?'⚡':s.type==='burn'?'🔥':'🛡'}${s.turns}`;
+      sdiv.appendChild(el);
+    });
+    this.updateAbilities();
+  }
+
+  getDeathStats() {
+    const p=this.player;
+    return `
+      <div class="stats-block">
+        <div>Уровень: <b>${p.level}</b></div>
+        <div>Этажей пройдено: <b>${p.stats.floorsCleared}</b></div>
+        <div>Врагов убито: <b>${p.stats.kills}</b></div>
+        <div>Боссов убито: <b>${p.stats.bossesKilled}</b></div>
+        <div>Урона нанесено: <b>${p.stats.damageDealt}</b></div>
+        <div>Урона получено: <b>${p.stats.damageTaken}</b></div>
+        <div>Золото заработано: <b>${p.stats.goldEarned}</b></div>
+        <div>Заклинаний: <b>${p.stats.spellsCast}</b></div>
+        <div>Ловушек найдено: <b>${p.stats.trapsFound}</b></div>
+        <div>Ходов прожито: <b>${this.turn}</b></div>
+      </div>`;
+  }
+}
+
+function closeShop() {
+  if(game){
+    document.getElementById('overlay').style.display='none';
+    game.centerCamera();
+  }
+}
+
+function log(msg,type='info') {
+  const logDiv=document.getElementById('log');
+  const d=document.createElement('div');
+  d.className=`log-${type}`;
+  d.textContent=msg;
+  logDiv.appendChild(d);
+  logDiv.scrollTop=logDiv.scrollHeight;
+}
+
+function render() {
+  if(!game){requestAnimationFrame(render);return;}
+  ctx.fillStyle=COLORS[T.VOID];
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  const startTX=Math.floor(game.camera.x/TILE)-1;
+  const startTY=Math.floor(game.camera.y/TILE)-1;
+  const endTX=startTX+Math.ceil(canvas.width/TILE)+3;
+  const endTY=startTY+Math.ceil(canvas.height/TILE)+3;
+
+  for(let ty=startTY;ty<endTY;ty++){
+    for(let tx=startTX;tx<endTX;tx++){
+      if(tx<0||tx>=MAP_W||ty<0||ty>=MAP_H) continue;
+      if(!game.explored[ty][tx]) continue;
+      const sx=tx*TILE-game.camera.x;
+      const sy=ty*TILE-game.camera.y;
+      const tile=game.map[ty][tx];
+      const visible=game.revealed[ty][tx];
+      ctx.fillStyle=visible?COLORS[tile]:'#0e0e14';
+      ctx.fillRect(sx,sy,TILE,TILE);
+      if(tile===T.WALL&&visible){
+        ctx.strokeStyle='#3a3a4a';
+        ctx.strokeRect(sx+0.5,sy+0.5,TILE-1,TILE-1);
+        if(Math.random()<0.01){
+          ctx.fillStyle='#3a3a4a';
+          ctx.fillRect(sx+4+Math.random()*TILE-8,sy+4+Math.random()*TILE-8,2,2);
+        }
+      }
+      if(tile===T.STAIRS_DOWN&&visible){
+        ctx.fillStyle='#2a6a9a';
+        ctx.fillRect(sx+4,sy+4,TILE-8,TILE-8);
+        ctx.fillStyle='#fff';
+        ctx.font='16px Courier New';
+        ctx.textAlign='center';
+        ctx.fillText('>',sx+TILE/2,sy+TILE/2+6);
+      }
+      if(tile===T.CHEST&&visible){
+        ctx.fillStyle='#ba9a30';
+        ctx.fillRect(sx+6,sy+8,TILE-12,TILE-14);
+        ctx.fillStyle='#da2';
+        ctx.fillRect(sx+8,sy+6,TILE-16,4);
+      }
+      if(tile===T.SHOP_FLOOR&&visible){
+        ctx.fillStyle='#1a3a24';
+        ctx.fillRect(sx+1,sy+1,TILE-2,TILE-2);
+      }
+      if(tile===T.TRAP&&visible){
+        ctx.fillStyle='#1a1a24';
+        ctx.fillRect(sx,sy,TILE,TILE);
+      }
+    }
+  }
+
+  if(game){
+    for(const trap of game.traps){
+      if(!game.revealed[trap.y][trap.x]) continue;
+      if(trap.triggered) continue;
+      const sx=trap.x*TILE-game.camera.x;
+      const sy=trap.y*TILE-game.camera.y;
+      if(game.revealed[trap.y][trap.x]){
+        ctx.fillStyle='rgba(80,40,40,0.3)';
+        ctx.fillRect(sx+2,sy+2,TILE-4,TILE-4);
+      }
+    }
+
+    for(const npc of game.npcs){
+      if(!game.revealed[npc.y][npc.x]) continue;
+      const sx=npc.x*TILE-game.camera.x;
+      const sy=npc.y*TILE-game.camera.y;
+      ctx.fillStyle=npc.color;
+      ctx.font='bold 22px Courier New';
+      ctx.textAlign='center';
+      ctx.fillText(npc.ch,sx+TILE/2,sy+TILE/2+7);
+    }
+
+    for(const item of game.items){
+      if(!game.revealed[item.y][item.x]) continue;
+      const sx=item.x*TILE-game.camera.x;
+      const sy=item.y*TILE-game.camera.y;
+      ctx.fillStyle=item.color;
+      ctx.font='bold 18px Courier New';
+      ctx.textAlign='center';
+      ctx.fillText(item.ch,sx+TILE/2,sy+TILE/2+6);
+    }
+
+    for(const e of game.enemies){
+      if(!game.revealed[e.y][e.x]) continue;
+      const sx=e.x*TILE-game.camera.x;
+      const sy=e.y*TILE-game.camera.y;
+      if(e.boss){
+        ctx.fillStyle='rgba(100,0,0,0.3)';
+        ctx.fillRect(sx-2,sy-2,TILE+4,TILE+4);
+        ctx.shadowColor=e.color;
+        ctx.shadowBlur=8;
+      }
+      ctx.fillStyle=e.color;
+      ctx.font=`bold ${e.boss?26:20}px Courier New`;
+      ctx.textAlign='center';
+      ctx.fillText(e.ch,sx+TILE/2,sy+TILE/2+7);
+      ctx.shadowBlur=0;
+      if(e.hp<e.maxHp){
+        const bw=TILE+(e.boss?4:0);
+        const bx=sx+(e.boss?-2:2);
+        ctx.fillStyle='#400';
+        ctx.fillRect(bx,sy-3,bw,4);
+        ctx.fillStyle=e.boss?'#f4f':'#e44';
+        ctx.fillRect(bx,sy-3,bw*(e.hp/e.maxHp),4);
+      }
+      if(e.boss){
+        ctx.fillStyle='#f4f';
+        ctx.font='10px Courier New';
+        ctx.fillText(e.name,sx+TILE/2,sy-8);
+      }
+    }
+
+    const psx=game.player.x*TILE-game.camera.x;
+    const psy=game.player.y*TILE-game.camera.y;
+    const rageActive=game.player.statuses.some(s=>s.type==='rage');
+    ctx.fillStyle=rageActive?'#f82':'#4df';
+    ctx.font='bold 22px Courier New';
+    ctx.textAlign='center';
+    if(rageActive){ctx.shadowColor='#f82';ctx.shadowBlur=10;}
+    ctx.fillText('@',psx+TILE/2,psy+TILE/2+7);
+    ctx.shadowBlur=0;
+
+    for(let i=game.effects.length-1;i>=0;i--){
+      const fx=game.effects[i];
+      const sx=fx.x*TILE-game.camera.x+TILE/2;
+      const sy=fx.y*TILE-game.camera.y-(30-fx.time)*0.8;
+      ctx.fillStyle=fx.color;
+      ctx.font='bold 14px Courier New';
+      ctx.textAlign='center';
+      ctx.globalAlpha=fx.time/30;
+      ctx.fillText(fx.text,sx,sy);
+      ctx.globalAlpha=1;
+      fx.time--;
+      if(fx.time<=0) game.effects.splice(i,1);
+    }
+
+    for(let i=game.particles.length-1;i>=0;i--){
+      const p=game.particles[i];
+      p.x+=p.vx;
+      p.y+=p.vy;
+      p.vy+=0.05;
+      p.life--;
+      const sx=p.x-game.camera.x;
+      const sy=p.y-game.camera.y;
+      ctx.fillStyle=p.color;
+      ctx.globalAlpha=p.life/p.maxLife;
+      ctx.fillRect(sx,sy,p.size,p.size);
+      ctx.globalAlpha=1;
+      if(p.life<=0) game.particles.splice(i,1);
+    }
+
+    const fogTime=Date.now()*0.001;
+    for(let i=0;i<3;i++){
+      const fx=(Math.sin(fogTime*0.3+i*2.1)+1)/2*canvas.width;
+      const fy=(Math.cos(fogTime*0.2+i*1.7)+1)/2*canvas.height;
+      const grad=ctx.createRadialGradient(fx,fy,0,fx,fy,80);
+      grad.addColorStop(0,'rgba(30,10,30,0.03)');
+      grad.addColorStop(1,'rgba(30,10,30,0)');
+      ctx.fillStyle=grad;
+      ctx.fillRect(fx-80,fy-80,160,160);
+    }
+  }
+
+  renderMinimap();
+  requestAnimationFrame(render);
+}
+
+function renderMinimap() {
+  if(!game) return;
+  mctx.fillStyle='#06060a';
+  mctx.fillRect(0,0,140,140);
+  for(let y=0;y<MAP_H;y++){
+    for(let x=0;x<MAP_W;x++){
+      if(!game.explored[y][x]) continue;
+      const tile=game.map[y][x];
+      if(tile===T.FLOOR||tile===T.CHEST||tile===T.TRAP) mctx.fillStyle='#2a2a3a';
+      else if(tile===T.WALL) mctx.fillStyle='#444';
+      else if(tile===T.STAIRS_DOWN) mctx.fillStyle='#2a6a9a';
+      else if(tile===T.SHOP_FLOOR) mctx.fillStyle='#2a4a3a';
+      else continue;
+      mctx.fillRect(x*MINIMAP_SCALE,y*MINIMAP_SCALE,Math.ceil(MINIMAP_SCALE),Math.ceil(MINIMAP_SCALE));
+    }
+  }
+  for(const e of game.enemies){
+    if(!game.revealed[e.y][e.x]) continue;
+    mctx.fillStyle=e.boss?'#f4f':'#f44';
+    const s=e.boss?3:2;
+    mctx.fillRect(e.x*MINIMAP_SCALE-s/2,e.y*MINIMAP_SCALE-s/2,s,s);
+  }
+  for(const n of game.npcs){
+    if(!game.revealed[n.y][n.x]) continue;
+    mctx.fillStyle='#ae8';
+    mctx.fillRect(n.x*MINIMAP_SCALE,n.y*MINIMAP_SCALE,2,2);
+  }
+  mctx.fillStyle='#4df';
+  mctx.fillRect(game.player.x*MINIMAP_SCALE-1,game.player.y*MINIMAP_SCALE-1,3,3);
+}
+
+document.addEventListener('keydown',(e)=>{
+  if(!game) return;
+  const overlay=document.getElementById('overlay');
+  if(overlay.style.display==='flex'){
+    if(e.key.toLowerCase()==='e'||e.key==='Escape') closeShop();
+    return;
+  }
+  if(game.player.hp<=0){
+    game=null;
+    document.getElementById('log').innerHTML='';
+    overlay.style.display='flex';
+    overlay.innerHTML=`
+      <h1>Вы погибли!</h1>
+      <p style="color:#aaa;font-size:13px">Подземелье поглотило ещё одну душу...</p>
+      ${game?game.getDeathStats():''}
+      <button class="start-btn" onclick="startGame()">Начать заново</button>`;
+    sfxDeath();
+    return;
+  }
+  const key=e.key.toLowerCase();
+  if(key==='w'||key==='ц'||key==='arrowup') game.movePlayer(0,-1);
+  else if(key==='s'||key==='ы'||key==='arrowdown') game.movePlayer(0,1);
+  else if(key==='a'||key==='ф'||key==='arrowleft') game.movePlayer(-1,0);
+  else if(key==='d'||key==='в'||key==='arrowright') game.movePlayer(1,0);
+  else if(key===' '){e.preventDefault();game.attack();}
+  else if(key==='1') game.castFireball();
+  else if(key==='2') game.castHeal();
+  else if(key==='3') game.castRage();
+  else if(key==='4') game.castTeleport();
+  else if(key==='e'){
+    const merchant=game.npcs.find(n=>n.x===game.player.x&&n.y===game.player.y&&n.type==='merchant');
+    if(merchant) game.openShop();
+  }
+});
+
+function startGame() {
+  initAudio();
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('log').innerHTML='';
+  game=new Game();
+  game.updateUI();
+  log('Добро пожаловать в Подземелья Тьмы!','info');
+  log('Исследуйте подземелье, собирайте добычу.','info');
+  log('Способности: 1-Огонь 2-Исцеление 3-Ярость 4-Телепорт','info');
+}
+
+document.getElementById('start-btn').addEventListener('click',startGame);
+window.addEventListener('resize',()=>{if(game)game.centerCamera();});
+render();
+</script>
+</body>
+</html>

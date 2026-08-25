@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>TerraConquest — Завоевание Земель</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;overflow:hidden;font-family:'Courier New',monospace;color:#c0c0c0}
+canvas{display:block;cursor:crosshair;pointer-events:none}
+#ui{position:fixed;top:12px;left:12px;z-index:10;display:flex;flex-direction:column;gap:3px}
+#ui button{background:#0a0a2acc;color:#00ffaa;border:1px solid #00ffaa44;padding:5px 12px;cursor:pointer;font:11px 'Courier New',monospace;border-radius:4px;transition:all .2s}
+#ui button:hover{background:#00ffaa22;border-color:#00ffaa}
+#ui button.active{background:#00ffaa33;border-color:#00ffaa;box-shadow:0 0 8px #00ffaa44}
+#ui2{position:fixed;top:12px;left:180px;z-index:10;display:flex;flex-direction:column;gap:3px}
+#ui2 button{background:#1a0a2acc;color:#ff88ff;border:1px solid #ff88ff44;padding:5px 12px;cursor:pointer;font:11px 'Courier New',monospace;border-radius:4px;transition:all .2s}
+#ui2 button:hover{background:#ff88ff22;border-color:#ff88ff}
+#ui2 button.active{background:#ff88ff33;border-color:#ff88ff}
+#hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;background:#0a0a2acc;padding:6px 18px;border-radius:20px;border:1px solid #00ffaa44;font-size:12px;color:#00ffaa;white-space:nowrap}
+#info{position:fixed;bottom:12px;left:12px;z-index:10;background:#0a0a2add;padding:12px 16px;border-radius:8px;border:1px solid #ffffff11;max-width:420px;font-size:11px;line-height:1.6}
+#story{position:fixed;top:12px;right:12px;z-index:10;background:#0a0a2add;padding:12px 16px;border-radius:8px;border:1px solid #ffaa0044;max-width:360px;font-size:11px;line-height:1.6;max-height:300px;overflow-y:auto}
+#story .t{color:#ffaa00;font-size:13px;margin-bottom:6px;font-weight:bold}
+#minimap{position:fixed;bottom:12px;right:12px;z-index:10;border:1px solid #ffffff22;border-radius:4px}
+#overlay{position:fixed;inset:0;z-index:200;background:#000000ee;display:flex;align-items:center;justify-content:center}
+#overlay .box{background:#0f0f2a;border:2px solid #00ffaa44;border-radius:12px;padding:40px;text-align:center;max-width:560px}
+#overlay h1{color:#00ffaa;font-size:32px;margin-bottom:8px}
+#overlay .sub{color:#ffaa00;font-size:14px;margin-bottom:16px}
+#overlay p{margin:6px 0;line-height:1.6;font-size:13px}
+#overlay .start{margin-top:24px;background:#00ffaa22;color:#00ffaa;border:2px solid #00ffaa;padding:12px 36px;font-size:16px;cursor:pointer;border-radius:8px;font-family:inherit}
+#overlay .start:hover{background:#00ffaa44}
+#diplomacy-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:300;background:#0a0a2af0;padding:24px;border-radius:12px;border:2px solid #ffaa0044;max-width:480px;display:none}
+#diplomacy-panel h2{color:#ffaa00;margin-bottom:12px;font-size:16px}
+#diplomacy-panel .faction-row{display:flex;justify-content:space-between;align-items:center;padding:8px;margin:4px 0;background:#ffffff08;border-radius:6px}
+#diplomacy-panel .faction-row .fname{font-size:12px}
+#diplomacy-panel .faction-row button{padding:4px 10px;font-size:10px;cursor:pointer;border-radius:4px;font-family:inherit;border:1px solid #ffffff22;background:#1a1a3a;color:#ccc}
+#diplomacy-panel .faction-row button:hover{background:#ffffff22}
+#diplomacy-panel .close{position:absolute;top:8px;right:12px;cursor:pointer;color:#ff4444;font-size:18px}
+#tech-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:300;background:#0a0a2af0;padding:24px;border-radius:12px;border:2px solid #4488ff44;max-width:500px;display:none}
+#tech-panel h2{color:#4488ff;margin-bottom:12px;font-size:16px}
+#tech-panel .tech-row{display:flex;justify-content:space-between;align-items:center;padding:8px;margin:4px 0;background:#ffffff08;border-radius:6px;font-size:11px}
+#tech-panel .tech-row button{padding:4px 10px;font-size:10px;cursor:pointer;border-radius:4px;font-family:inherit;border:1px solid #4488ff44;background:#1a1a3a;color:#4488ff}
+#tech-panel .tech-row button:hover{background:#4488ff22}
+#tech-panel .tech-row button:disabled{opacity:.4;cursor:default}
+#tech-panel .tech-row .unlocked{color:#00ffaa}
+#tech-panel .close{position:absolute;top:8px;right:12px;cursor:pointer;color:#ff4444;font-size:18px}
+#campaign-select{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:300;background:#0a0a2af0;padding:24px;border-radius:12px;border:2px solid #ff44ff44;max-width:480px;display:none}
+#campaign-select h2{color:#ff44ff;margin-bottom:12px;font-size:16px}
+#campaign-select .c-row{padding:10px;margin:6px 0;background:#ffffff08;border-radius:6px;cursor:pointer;font-size:12px;border:1px solid transparent}
+#campaign-select .c-row:hover{border-color:#ff44ff;background:#ff44ff11}
+#campaign-select .c-row .cname{color:#ff44ff;font-weight:bold}
+#campaign-select .c-row .cdesc{color:#888;font-size:10px;margin-top:4px}
+#campaign-select .close{position:absolute;top:8px;right:12px;cursor:pointer;color:#ff4444;font-size:18px}
+#event-log{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:10;background:#0a0a2acc;padding:6px 16px;border-radius:8px;border:1px solid #ff444444;font-size:11px;color:#ff8888;max-width:600px;text-align:center;opacity:0;transition:opacity .5s}
+#tutorial{display:none}
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="box">
+    <h1>TerraConquest</h1>
+    <div class="sub">Завоевание Земель с орбиты</div>
+    <p>Ты на орбитальной станции. Внизу — планета, покрытая гексами.</p>
+    <p>Пять фракций. Ни одна не рада твоему присутствию.</p>
+    <p style="color:#ff4444">Бои вспыхивают как всполохи под облаками —<br>вид с космической станции.</p>
+    <p style="color:#ffaa00;font-size:12px;margin-top:16px;border-left:3px solid #ffaa00;padding-left:10px;text-align:left">
+      Шаг 1: Осмотрись (колёсико + ПКМ)<br>
+      Шаг 2: Кликни по своему гексу<br>
+      Шаг 3: Нажми «Захватить» → клик на чужой<br>
+      Шаг 4: Нажми «Башня» → укрепи захваченное<br>
+      Шаг 5: Нажми «Ход ▶» → жди реакции<br>
+      Шаг 6: Окружи. Захвати. Поставь башню.<br>
+      <span style="color:#888">А потом? Читай USER_STORY.md — там 20 шагов.</span>
+    </p>
+    <button class="start" id="startBtn">Начать завоевание</button>
+  </div>
+</div>
+
+<canvas id="gc"></canvas>
+<div id="ui" style="display:none">
+  <button onclick="setMode('select')" id="bm-select" class="active">Выбрать</button>
+  <button onclick="setMode('conquer')" id="bm-conquer">Захватить</button>
+  <button onclick="setMode('tower')" id="bm-tower">Башня</button>
+  <button onclick="setMode('attack')" id="bm-attack">Атака</button>
+  <button onclick="setMode('move')" id="bm-move">Перемещение</button>
+  <button onclick="toggleSpeed()" id="bm-speed">x1</button>
+  <button onclick="toggleWeather()" id="bm-weather">Погода</button>
+  <button onclick="nextTurn()">Ход ▶</button>
+</div>
+<div id="ui2" style="display:none">
+  <button onclick="openDiplomacy()" id="bm-diplo">Дипломатия</button>
+  <button onclick="openTech()" id="bm-tech">Технологии</button>
+  <button onclick="openCampaign()" id="bm-campaign">Кампания</button>
+</div>
+<div id="hud" style="display:none"></div>
+<div id="info" style="display:none">Кликните по территории.</div>
+<div id="story" style="display:none"><div class="t">История</div><div id="story-text">Кликните по территории.</div></div>
+<div id="event-log"></div>
+<canvas id="minimap" width="160" height="120" style="display:none"></canvas>
+
+<div id="diplomacy-panel">
+  <span class="close" onclick="closeDiplomacy()">&times;</span>
+  <h2>Дипломатия</h2>
+  <div id="diplo-list"></div>
+</div>
+
+<div id="tech-panel">
+  <span class="close" onclick="closeTech()">&times;</span>
+  <h2>Дерево технологий</h2>
+  <div id="tech-list"></div>
+</div>
+
+<div id="campaign-select">
+  <span class="close" onclick="closeCampaign()">&times;</span>
+  <h2>Выбор кампании</h2>
+  <div id="campaign-list"></div>
+</div>
+
+<script>
+const C=document.getElementById('gc'),X=C.getContext('2d');
+const MC=document.getElementById('minimap'),MX=MC.getContext('2d');
+C.width=innerWidth;C.height=innerHeight;
+onresize=()=>{C.width=innerWidth;C.height=innerHeight};
+
+const HS=34,MW=28,MH=20;
+let cam={x:0,y:0,z:1},spd=1,wth=false,mode='sel',turn=0,sel=null,parts=[],started=false;
+let audioCtx=null;
+
+const T={
+  PLAIN:{n:'Равнина',c:'#1e3a1e',mc:1,res:2},
+  FOREST:{n:'Лес',c:'#152e15',mc:2,res:3},
+  MOUNTAIN:{n:'Гора',c:'#3e3e2e',mc:3,res:5},
+  DESERT:{n:'Пустыня',c:'#4e3e1e',mc:2,res:1},
+  WATER:{n:'Вода',c:'#0a1e3e',mc:99,res:0},
+  SWAMP:{n:'Болото',c:'#1e2e1e',mc:3,res:1},
+  TUNDRA:{n:'Тундра',c:'#2e3e4e',mc:2,res:2},
+  VOLCANO:{n:'Вулкан',c:'#4e1a0a',mc:4,res:8},
+};
+
+const UNIT_TYPES={
+  SCOUT:{n:'Разведчик',atk:1,def:1,cost:3,speed:2,icon:'🔍'},
+  infantry:{n:'Пехота',atk:2,def:2,cost:5,speed:1,icon:'⚔️'},
+  CAVALRY:{n:'Кавалерия',atk:3,def:1,cost:8,speed:2,icon:'🐴'},
+  SIEGE:{n:'Осада',atk:5,def:0,cost:12,speed:1,icon:'💣'},
+  FLEET:{n:'Флот',atk:3,def:3,cost:15,speed:1,icon:'🚢',water:true},
+};
+
+const F=[
+  {id:0,n:'Вы',c:'#00ffaa',ai:false},
+  {id:1,n:'Северная Империя',c:'#ff4444',ai:true,s:8},
+  {id:2,n:'Западный Альянс',c:'#4488ff',ai:true,s:6},
+  {id:3,n:'Пустынные Кланы',c:'#ffaa00',ai:true,s:5},
+  {id:4,n:'Восточный Орден',c:'#ff44ff',ai:true,s:7},
+  {id:5,n:'Дикие Земли',c:'#88ff44',ai:true,s:4},
+];
+
+const TECH_TREE=[
+  {id:'fortification',n:'Укрепления',desc:'Башни дают +2 вместо +1',cost:20,researched:false,requires:[]},
+  {id:'logistics',n:'Логистика',desc:'+1 к перемещению войск',cost:25,researched:false,requires:[]},
+  {id:'espionage',n:'Разведка',desc:'Видно войска врага на 2 хода',cost:15,researched:false,requires:[]},
+  {id:'siegecraft',n:'Осадное дело',desc:'Осада -2 к стоимости',cost:30,researched:false,requires:['fortification']},
+  {id:'diplomacy_t',n:'Дипломатия',desc:'Стоимость союза -50%',cost:20,researched:false,requires:[]},
+  {id:'economics',n:'Экономика',desc:'+50% ресурсов',cost:35,researched:false,requires:['logistics']},
+  {id:'tactics',n:'Тактика',desc:'Атака +20% урона',cost:25,researched:false,requires:['espionage']},
+  {id:'engineering',n:'Инженерия',desc:'Башни строятся за 1 ход',cost:40,researched:false,requires:['fortification','economics']},
+  {id:'total_war',n:'Тотальная война',desc:'Все юниты +1 ATK',cost:50,researched:false,requires:['tactics','siegecraft']},
+];
+
+const CAMPAIGNS=[
+  {id:'conquest',n:'Завоевание',desc:'Захвати 75% карты',goal:'percent',value:75,icon:'👑'},
+  {id:'surround',n:'Окружение',desc:'Окружи 3 вражеских столицы',goal:'surround',value:3,icon:'🎯'},
+  {id:'towers',n:'Башенный мастер',desc:'Построй 30 эфелевых башен',goal:'towers',value:30,icon:'🗼'},
+  {id:'speed',n:'Молниеносная война',desc:'Победи за 50 ходов',goal:'speed',value:50,icon:'⚡'},
+  {id:'diplomat',n:'Дипломат',desc:'Заключи 3 союза и победи',goal:'alliances',value:3,icon:'🤝'},
+];
+
+let activeCampaign=null;
+let diplomacy={};
+let researchPoints=0;
+let eventLog=[];
+
+F.forEach(f1=>{
+  diplomacy[f1.id]={};
+  F.forEach(f2=>{if(f1.id!==f2.id)diplomacy[f1.id][f2.id]={status:'war',truce:0,alliance:false}});
+});
+
+const LS=[
+  'Здесь когда-то стоял древний город. Теперь — ветер и чаяния.',
+  'Местные шепчут: по ночам из-под земли доносится мелодия.',
+  'Великая битва. Вспышка была видна с орбиты.',
+  'Легенды — о скрытых ресурсах под этим ландшафтом.',
+  'Координаты удалены из всех карт... до сегодня.',
+  'Призраки прошлых завоеваний бродят среди руин.',
+  'Эта земля пятижды меняла хозяина за месяц.',
+  'Климат так суров, что облака обходят стороной.',
+  'Спутник засёк аномальную активность. Что это?',
+  'Древний пророк: именно эта точка станет центром мира.',
+  'Под этим гексом — руины древнего технологического центра.',
+  'Туземцы утверждают, что земля здесь помнит каждый шаг.',
+];
+
+const BS=[
+  'Вспышка на орбите — армии столкнулись. Дым до облаков.',
+  'Три всполоха за секунду. Эпично.',
+  '"Похоже на салют, только кто-то очень недоволен."',
+  'Облака расступились — внизу ожесточённая схватка.',
+  'Взрыв такой силы, что приливы на соседней планете изменились.',
+  '"Это не война, это искусство!" — крик в рацию.',
+  'С орбиты видно: свет фонарей сражается с тенями.',
+  '"Если бы не война, это было бы красиво." — аналитик.',
+  'Два генерала одновременно: "Тактический отход". Ирония.',
+  'Битва длилась 47 секунд. Рекорд региона.',
+  'Космическая станция зафиксировала вспышку ярче сверхновой.',
+  'Наблюдатель: "Это было... красиво." Аналитик: "Это было дорого."',
+];
+
+const HA=[
+  'Перспективы: 60% победы, 30% хаоса, 10% тишины.',
+  '"Может, поговорим?" — "Нет." — Военный совет.',
+  'Потери минимальны. Настроение — максимальное.',
+  'Захвачено: {h} гексов. Башен: {t}. Враги в панике: {p}%.',
+  'Анализ: противник читает ту же инструкцию.',
+  'Рекомендация: больше башен. Везде. Всегда.',
+  'Стратегия: "Окружить и уничтожить". Название — в разработке.',
+  'Моральный дух: высокий. Особенно после вспышки на горизонте.',
+  'План не работает? План был хорош, execution сломался.',
+  'Шахматная партия, где все фигуры — пушки.',
+  'Технологический отрыв: {tech}. Это как стрелять по танкам из лука.',
+  'Дипломатический статус: {diplo}. Друзья — это те, кого ещё не предали.',
+];
+
+const NATURAL_EVENTS=[
+  {n:'Землетрясение',msg:'Земля содрогнулась! Гексы вокруг [q,r] разрушены.',effect:'quake',color:'#ff8844'},
+  {n:'Извержение вулкана',msg:'Вулкан [q,r] пробудился! Лава уничтожает окрестности.',effect:'eruption',color:'#ff2200'},
+  {n:'Наводнение',msg:'Цунами обрушилось на [q,r]! Войска смыты.',effect:'flood',color:'#2244ff'},
+  {n:'Метеорит',msg:'Метеорит врезался в [q,r]! Кратер размером с гекс.',effect:'meteor',color:'#ffffff'},
+  {n:'Эпидемия',msg:'Чума в [q,r]! Войска ослаблены на 50%.',effect:'plague',color:'#44ff44'},
+];
+
+const DIPLOMACY_TEXTS=[
+  'Переговоры с {f}: "Мы предлагаем мир... за территории."',
+  '{f} предлагает союз: "Вместе мы — сила. По отдельности — цели."',
+  'Перемирие с {f}: "Пока стрелять не будем. Пока."',
+  'Торговый договор с {f}: "Ваши ресурсы — наши самолёты."',
+  '{f} нарушает перемирие! "Извини, не сдержался."',
+];
+
+const UNIT_MOVE_HISTORIES=[
+  'Разведчик докладывает: "Вижу врага. Он тоже меня видит. Неловко."',
+  'Кавалерия мчится через равнины. Пыль видна с орбиты.',
+  'Осадные орудия прибывают. "Это не катапульта, это произведение искусства."',
+  'Флот пересекает водные просторы. "Море спокойно. Пока."',
+  'Пехота марширует: "Лево! Право! Лево! Куда вообще идём?"',
+];
+
+function h2p(q,r){return{x:HS*(Math.sqrt(3)*q+Math.sqrt(3)/2*r),y:HS*(3/2*r)}}
+function p2h(px,py){const x=px/HS,y=py/HS;const q=Math.sqrt(3)/3*x-1/3*y,r=2/3*y;return hr(q,r)}
+function hr(q,r){let s=-q-r,rq=Math.round(q),rr=Math.round(r),rs=Math.round(s);const dq=Math.abs(rq-q),dr=Math.abs(rr-r),ds=Math.abs(rs-s);if(dq>dr&&dq>ds)rq=-rr-rs;else if(dr>ds)rr=-rq-rs;return{q:rq,r:rr}}
+function hd(a,b){return(Math.abs(a.q-b.q)+Math.abs(a.q+a.r-b.q-b.r)+Math.abs(a.r-b.r))/2}
+function nb(q,r){const d=[{q:1,r:0},{q:1,r:-1},{q:0,r:-1},{q:-1,r:0},{q:-1,r:1},{q:0,r:1}];return d.map(v=>({q:q+v.q,r:r+v.r})).filter(h=>h.q>=0&&h.q<MW&&h.r>=0&&h.r<MH)}
+
+const H=[];
+function initMap(){
+  for(let r=0;r<MH;r++)for(let q=0;q<MW;q++){
+    let t='PLAIN';const rn=Math.random();
+    if(rn<.15)t='FOREST';else if(rn<.22)t='MOUNTAIN';else if(rn<.30)t='DESERT';
+    else if(rn<.34)t='WATER';else if(rn<.38)t='SWAMP';else if(rn<.43)t='TUNDRA';else if(rn<.45)t='VOLCANO';
+    H.push({q,r,t,o:-1,tw:false,tr:0,fl:0,ct:false,units:[]});
+  }
+  const ps={q:Math.floor(MW/2),r:Math.floor(MH/2)};
+  const ph=gH(ps.q,ps.r);if(ph){ph.o=0;ph.tr=10;ph.tw=true;ph.units=[{type:'infantry',count:5}]}
+  F.filter(f=>f.ai).forEach(f=>{
+    let at=0;
+    while(at++<200){
+      const q=Math.floor(Math.random()*MW),r=Math.floor(Math.random()*MH);
+      const h=gH(q,r);
+      if(h&&h.t!=='WATER'&&h.o===-1&&hd(ps,{q,r})>5){
+        h.o=f.id;h.tr=f.s;h.tw=true;
+        h.units=[{type:'infantry',count:f.s}];
+        nb(q,r).forEach(n=>{const nh=gH(n.q,n.r);if(nh&&nh.t!=='WATER'&&Math.random()<.5){nh.o=f.id;nh.tr=Math.floor(f.s*.5);nh.units=[{type:'infantry',count:Math.floor(f.s*.5)}]}});
+        break;
+      }
+    }
+  });
+}
+
+function gH(q,r){return H.find(h=>h.q===q&&h.r===r)}
+
+function drawH(cx,cy,sz,fc,sc,sw){
+  X.beginPath();
+  for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);const x=cx+sz*Math.cos(a),y=cy+sz*Math.sin(a);i===0?X.moveTo(x,y):X.lineTo(x,y)}
+  X.closePath();if(fc){X.fillStyle=fc;X.fill()}if(sc){X.strokeStyle=sc;X.lineWidth=sw||1;X.stroke()}
+}
+
+function htr(h){return T[h.t].c}
+function fbl(base,fc,a){const r=parseInt(base.slice(1,3),16),g=parseInt(base.slice(3,5),16),b=parseInt(base.slice(5,7),16);const cr=parseInt(fc.slice(1,3),16),cg=parseInt(fc.slice(3,5),16),cb=parseInt(fc.slice(5,7),16);return`rgb(${r+(cr-r)*a|0},${g+(cg-g)*a|0},${b+(cb-b)*a|0})`}
+
+function playSound(freq,dur,type){
+  if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)}catch(e){return}
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type||'sine';o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+  g.gain.setValueAtTime(.15,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+  o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);
+}
+
+function playBattleSound(){playSound(200+Math.random()*300,.3,'sawtooth');setTimeout(()=>playSound(100+Math.random()*200,.5,'square'),100)}
+function playConquerSound(){playSound(400,.15,'sine');setTimeout(()=>playSound(600,.2,'sine'),100)}
+function playTowerSound(){playSound(500,.1,'sine');setTimeout(()=>playSound(700,.15,'sine'),80);setTimeout(()=>playSound(900,.2,'sine'),160)}
+function playEventSound(){playSound(80,.8,'sawtooth');setTimeout(()=>playSound(60,1,'sine'),200)}
+
+function render(){
+  X.fillStyle='#050510';X.fillRect(0,0,C.width,C.height);
+  const tm=Date.now()/1000;
+
+  H.forEach(h=>{
+    const p=h2p(h.q,h.r);
+    const sx=(p.x-cam.x)*cam.z+C.width/2,sy=(p.y-cam.y)*cam.z+C.height/2;
+    if(sx<-HS*3||sx>C.width+HS*3||sy<-HS*3||sy>C.height+HS*3)return;
+    const sz=HS*cam.z*.95;
+    let bc=htr(h);
+    if(h.o>=0)bc=fbl(bc,F[h.o].c,.35);
+    let sc='#ffffff11',sw=1;
+    if(sel&&sel.q===h.q&&sel.r===h.r){sc='#00ffaa';sw=2.5}
+    else if(h.ct){sc='#ff4444';sw=2}
+    else if(h.o>=0){
+      const dStatus=diplomacy[0]&&diplomacy[0][h.o]?diplomacy[0][h.o].status:'war';
+      sc=dStatus==='alliance'?F[h.o].c+'88':dStatus==='peace'?F[h.o].c+'44':F[h.o].c+'55';
+      sw=dStatus==='alliance'?2:1.5;
+    }
+    drawH(sx,sy,sz,bc,sc,sw);
+
+    if(h.ev&&h.ev>0){
+      X.globalAlpha=h.ev*.6;
+      drawH(sx,sy,sz*1.12,h.evColor||'#ff4444');
+      X.globalAlpha=1;
+      h.ev*=.93;if(h.ev<.01)h.ev=0;
+    }
+
+    if(h.fl>.01){
+      const fc=['#ff4444','#ffaa00','#ff00ff','#00ffff','#fff'][Math.random()*5|0];
+      X.globalAlpha=h.fl*.7;drawH(sx,sy,sz*1.08,fc);X.globalAlpha=1;
+      for(let i=0;i<3;i++)parts.push({x:sx+(Math.random()-.5)*sz,y:sy+(Math.random()-.5)*sz,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5-2,l:1,c:['#ff4444','#ffaa00','#ff00ff','#00ffff','#fff'][Math.random()*5|0],s:Math.random()*4+1});
+      h.fl*=.94;if(h.fl<.01)h.fl=0;
+    }
+
+    if(h.tw){
+      const tc=h.o>=0?F[h.o].c:'#888';
+      const tsz=sz*.25;
+      X.fillStyle=tc;X.globalAlpha=.9;
+      X.beginPath();X.moveTo(sx,sy-tsz*2.5);X.lineTo(sx-tsz*.8,sy-tsz*.5);X.lineTo(sx+tsz*.8,sy-tsz*.5);X.closePath();X.fill();
+      X.fillRect(sx-tsz*.3,sy-tsz*.5,tsz*.6,tsz*.8);
+      if(h.o===0){X.globalAlpha=.25+Math.sin(tm*2+h.q+h.r)*.15;X.beginPath();X.arc(sx,sy-tsz*2.5,tsz*.5,0,Math.PI*2);X.fill()}
+      X.globalAlpha=1;
+    }
+
+    if(h.units&&h.units.length>0&&cam.z>.4){
+      X.fillStyle='#ffffffcc';X.font=`${Math.max(7,9*cam.z)}px Courier New`;X.textAlign='center';X.textBaseline='middle';
+      const total=h.units.reduce((s,u)=>s+u.count,0);
+      X.fillText(total,sx,sy+sz*.35);
+      if(cam.z>1&&h.units.length>1){
+        X.font=`${Math.max(6,7*cam.z)}px Courier New`;X.fillStyle='#ffffff88';
+        X.fillText(h.units.length+'типов',sx,sy+sz*.55);
+      }
+    } else if(h.tr>0&&cam.z>.5){
+      X.fillStyle='#fff';X.font=`${Math.max(8,10*cam.z)}px Courier New`;X.textAlign='center';X.textBaseline='middle';X.fillText(h.tr,sx,sy+sz*.3);
+    }
+  });
+
+  parts.forEach(p=>{X.globalAlpha=p.l;X.fillStyle=p.c;X.fillRect(p.x-p.s/2,p.y-p.s/2,p.s,p.s);p.x+=p.vx;p.y+=p.vy;p.vy+=.05;p.l-=.025});
+  parts=parts.filter(p=>p.l>0);
+
+  if(wth){
+    X.globalAlpha=.12;
+    for(let i=0;i<25;i++){
+      const wx=((i*137+tm*15)%(C.width+200))-100,wy=((i*89+tm*8)%(C.height+100))-50;
+      X.fillStyle=i%3===0?'#aaccff':'#8899bb';
+      X.beginPath();X.ellipse(wx,wy,40+i%20,8+i%6,0,0,Math.PI*2);X.fill();
+    }
+    X.globalAlpha=1;
+  }
+
+  drawMinimap();
+  updateHUD();
+  requestAnimationFrame(render);
+}
+
+function drawMinimap(){
+  MX.fillStyle='#0a0a1a';MX.fillRect(0,0,160,120);
+  const sx=160/MW,sy=120/MH;
+  H.forEach(h=>{MX.fillStyle=h.o>=0?F[h.o].c:T[h.t].c;MX.fillRect(h.q*sx,h.r*sy,sx+.5,sy+.5)});
+  MX.strokeStyle='#00ffaa';MX.lineWidth=1;
+  const vx=(-cam.x+MW*HS/2)/(MW*HS)*160,vy=(-cam.y+MH*HS/2)/(MH*HS)*120;
+  MX.strokeRect(vx-10,vy-8,20,16);
+}
+
+function updateHUD(){
+  const pr=H.filter(h=>h.o===0).reduce((s,h)=>s+T[h.t].res,0);
+  const pc=H.filter(h=>h.o===0).length;
+  const tc=H.filter(h=>h.o===0&&h.tw).length;
+  const techCount=TECH_TREE.filter(t=>t.researched).length;
+  const allianceCount=diplomacy[0]?Object.values(diplomacy[0]).filter(d=>d.alliance).length:0;
+  let goalText='';
+  if(activeCampaign){
+    const g=getCampaignProgress();
+    goalText=` | ${activeCampaign.icon} ${activeCampaign.n}: ${g}/${activeCampaign.value}`;
+  }
+  document.getElementById('hud').textContent=`Ход:${turn} Рес:${pr} Гексы:${pc}/${H.length} Башни:${tc} Техн:${techCount} Союзы:${allianceCount} Науч:${researchPoints}${goalText}`;
+
+  if(sel){
+    const h=gH(sel.q,sel.r);
+    if(h){
+      const ow=h.o>=0?F[h.o].n:'Нет';
+      let unitStr='';
+      if(h.units&&h.units.length>0){
+        unitStr='<br>Юниты: '+h.units.map(u=>`${UNIT_TYPES[u.type].icon}${UNIT_TYPES[u.type].n}:${u.count}`).join(', ');
+      }
+      let diploStr='';
+      if(h.o>=0&&diplomacy[0]&&diplomacy[0][h.o]){
+        const ds=diplomacy[0][h.o].status;
+        const dsText={war:'⚔️ Война',peace:'🕊️ Мир',alliance:'🤝 Союз'};
+        diploStr=`<br>Отношения: ${dsText[ds]||ds}`;
+      }
+      document.getElementById('info').innerHTML=`<b>${T[h.t].n}</b> [${h.q},${h.r}]<br>Владелец: ${ow} ${F[h.o]?F[h.o].c:''}<br>Войска: ${h.tr}${unitStr}<br>Башня: ${h.tw?'Да':'Нет'}<br>Стоимость: ${T[h.t].mc}${diploStr}`;
+      document.getElementById('info').style.display='block';
+    }
+  }
+}
+
+C.addEventListener('click',e=>{
+  if(!started)return;
+  const wx=(e.clientX-C.width/2)/cam.z+cam.x,wy=(e.clientY-C.height/2)/cam.z+cam.y;
+  const hex=p2h(wx,wy);
+  if(mode==='select'||mode==='sel'){sel=hex;addStory(hex,LS[Math.random()*LS.length|0])}
+  else if(mode==='conquer'&&sel)tryConquer(sel,hex);
+  else if(mode==='tower')tryTower(sel||hex);
+  else if(mode==='attack'&&sel)tryAttack(sel,hex);
+  else if(mode==='move'&&sel)tryMove(sel,hex);
+  sel=hex;
+});
+
+let drag=false,ds={x:0,y:0};
+C.addEventListener('mousedown',e=>{if(e.button===2||e.button===1){drag=true;ds={x:e.clientX,y:e.clientY}}});
+C.addEventListener('mousemove',e=>{if(drag){cam.x-=(e.clientX-ds.x)/cam.z;cam.y-=(e.clientY-ds.y)/cam.z;ds={x:e.clientX,y:e.clientY}}});
+C.addEventListener('mouseup',()=>drag=false);
+C.addEventListener('contextmenu',e=>e.preventDefault());
+C.addEventListener('wheel',function(e){cam.z=Math.max(.3,Math.min(3,cam.z*(e.deltaY>0?0.9:1.1)));});
+
+function tryConquer(a,b){
+  const fh=gH(a.q,a.r),th=gH(b.q,b.r);
+  if(!fh||!th||fh.o!==0||th.o===0||th.t==='WATER'||fh.tr<2||hd(a,b)>1)return;
+  if(diplomacy[0]&&diplomacy[0][th.o]&&diplomacy[0][th.o].alliance){
+    showEvent('Нельзя атаковать союзника! Сначала разорвите союз.');
+    return;
+  }
+  if(diplomacy[0]&&diplomacy[0][th.o]&&diplomacy[0][th.o].status==='peace'&&diplomacy[0][th.o].truce>0){
+    showEvent(`Перемирие с ${F[th.o].n} ещё ${diplomacy[0][th.o].truce} ходов!`);
+    return;
+  }
+  const _tac=TECH_TREE.find(function(t){return t.id==='tactics'&&t.researched});
+  const tacticBonus=_tac?0.2:0;
+  const atk=Math.floor(fh.tr*(.6+tacticBonus)),def=th.tr+(th.tw?(TECH_TREE.find(t=>t.id==='fortification'&&t.researched)?3:2):0);
+  if(atk>def){
+    th.o=0;th.tr=atk-def;th.tw=false;th.fl=1;th.units=[{type:'infantry',count:atk-def}];
+    fh.tr-=atk;fh.units=[{type:'infantry',count:fh.tr}];
+    playConquerSound();
+    addStory(b,BS[Math.random()*BS.length|0]);
+    researchPoints+=2;
+  } else {
+    fh.tr-=atk;th.tr-=Math.floor(atk*.5);th.fl=.5;fh.fl=.3;
+    playBattleSound();
+    addStory(b,'Неудачная атака. Войска отступают, огонь на земле.');
+    researchPoints+=1;
+  }
+  checkCampaignWin();
+}
+
+function tryTower(h){
+  const hx=gH(h.q,h.r);if(!hx||hx.o!==0||hx.tw)return;
+  const engBonus=TECH_TREE.find(t=>t.id==='engineering'&&t.researched);
+  hx.tw=true;hx.tr+=2;
+  playTowerSound();
+  const towerBonus=TECH_TREE.find(t=>t.id==='fortification'&&t.researched)?'+2defense':'+1defense';
+  addStory(h,`Эфелева башня возведена! [${h.q},${h.r}] ваш навсегда... ну, пока что. (${towerBonus})`);
+  researchPoints+=1;
+  checkCampaignWin();
+}
+
+function tryAttack(a,b){
+  const fh=gH(a.q,a.r),th=gH(b.q,b.r);
+  if(!fh||!th||fh.o!==0||th.o===0||th.t==='WATER'||hd(a,b)>1||fh.tr<3)return;
+  if(diplomacy[0]&&diplomacy[0][th.o]&&diplomacy[0][th.o].alliance){
+    showEvent('Нельзя атаковать союзника!');return;
+  }
+  if(diplomacy[0]&&diplomacy[0][th.o]&&diplomacy[0][th.o].status==='peace'&&diplomacy[0][th.o].truce>0){
+    showEvent(`Перемирие с ${F[th.o].n} ещё ${diplomacy[0][th.o].truce} ходов!`);return;
+  }
+  const _tac=TECH_TREE.find(function(t){return t.id==='tactics'&&t.researched});
+  const tacticBonus=_tac?0.2:0;
+  var _tw=th.tw?0.3:0;
+  const pw=fh.tr*(1+Math.random()*.5+tacticBonus),ep=th.tr*(1+_tw);
+  const fl=Math.min(1,pw/(ep+1));
+  th.fl=fl;fh.fl=fl*.4;
+  playBattleSound();
+  for(let i=0;i<20;i++){
+    const p=h2p(b.q,b.r),sx=(p.x-cam.x)*cam.z+C.width/2,sy=(p.y-cam.y)*cam.z+C.height/2;
+    parts.push({x:sx+(Math.random()-.5)*HS*cam.z,y:sy+(Math.random()-.5)*HS*cam.z,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8-3,l:1,c:['#ff4444','#ffaa00','#ff00ff','#00ffff','#fff'][Math.random()*5|0],s:Math.random()*6+2});
+  }
+  if(pw>ep){th.o=0;th.tr=Math.floor((pw-ep)/2);th.tw=false;th.units=[{type:'infantry',count:th.tr}];fh.tr-=Math.floor(fh.tr*.4);fh.units=[{type:'infantry',count:fh.tr}];addStory(b,BS[Math.random()*BS.length|0]);researchPoints+=3}
+  else{fh.tr-=Math.floor(fh.tr*.3);th.tr-=Math.floor(pw*.3);addStory(b,'Атака отбита, но небо горит.');researchPoints+=1}
+  checkCampaignWin();
+}
+
+function tryMove(a,b){
+  const fh=gH(a.q,a.r),th=gH(b.q,b.r);
+  if(!fh||!th||fh.o!==0||th.o!==0||hd(a,b)>1)return;
+  const logBonus=TECH_TREE.find(t=>t.id==='logistics'&&t.researched)?0:0;
+  const moveTroops=Math.floor(fh.tr*.7);
+  fh.tr-=moveTroops;th.tr+=moveTroops;
+  fh.units=([{type:'infantry',count:fh.tr}]);
+  th.units=([{type:'infantry',count:th.tr}]);
+  addStory(b,UNIT_MOVE_HISTORIES[Math.random()*UNIT_MOVE_HISTORIES.length|0]);
+}
+
+function spawnUnit(hex,type){
+  const h=gH(hex.q,hex.r);
+  if(!h||h.o!==0)return;
+  const ut=UNIT_TYPES[type];
+  const pr=H.filter(hh=>hh.o===0).reduce((s,hh)=>s+T[hh.t].res,0);
+  const siegeReduction=type==='SIEGE'&&TECH_TREE.find(t=>t.id==='siegecraft'&&t.researched)?-3:0;
+  if(pr<ut.cost+siegeReduction){showEvent('Недостаточно ресурсов!');return}
+  h.units=h.units||[];
+  const existing=h.units.find(u=>u.type===type);
+  if(existing)existing.count+=1;
+  else h.units.push({type,count:1});
+  h.tr+=1;
+  addStory(hex,`${ut.icon} ${ut.n} завербован на [${hex.q},${hex.r}]`);
+}
+
+function addStory(h,txt){
+  document.getElementById('story-text').innerHTML=`<b>[${h.q},${h.r}]</b><br><br>${txt}<br><br><span style="color:#00ffaa">${getHumor()}</span>`;
+}
+
+function getHumor(){
+  let t=HA[Math.random()*HA.length|0];
+  t=t.replace('{h}',H.filter(h=>h.o===0).length);
+  t=t.replace('{t}',H.filter(h=>h.o===0&&h.tw).length);
+  t=t.replace('{p}',Math.random()*40+50|0);
+  t=t.replace('{tech}',TECH_TREE.filter(t=>t.researched).length+'из'+TECH_TREE.length);
+  t=t.replace('{diplo}',diplomacy[0]?Object.values(diplomacy[0]).filter(d=>d.alliance).length+'союзов':'нет данных');
+  return t;
+}
+
+function showEvent(msg){
+  const el=document.getElementById('event-log');
+  el.textContent=msg;el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',4000);
+}
+
+function nextTurn(){
+  turn++;
+  var _econ=TECH_TREE.find(function(t){return t.id==='economics'&&t.researched});
+  const econBonus=_econ?0.5:0;
+  H.forEach(h=>{
+    if(h.o>=0&&h.t!=='WATER'){
+      h.tr+=Math.floor(T[h.t].res*(.5+econBonus));
+      if(h.tw)h.tr++;
+    }
+  });
+
+  Object.keys(diplomacy).forEach(fid=>{
+    Object.keys(diplomacy[fid]).forEach(tid=>{
+      const d=diplomacy[fid][tid];
+      if(d.truce>0)d.truce--;
+    });
+  });
+
+  F.filter(f=>f.ai).forEach(f=>aiTurn(f));
+  checkSurround();
+
+  if(Math.random()<.08)triggerNaturalEvent();
+
+  if(activeCampaign)checkCampaignWin();
+}
+
+function aiTurn(f){
+  const own=H.filter(h=>h.o===f.id);
+  own.forEach(h=>{
+    if(h.tr>f.s+2){
+      const ns=nb(h.q,h.r).filter(n=>{
+        const nh=gH(n.q,n.r);
+        if(!nh||nh.o===f.id||nh.t==='WATER')return false;
+        if(diplomacy[f.id]&&diplomacy[f.id][nh.o]&&diplomacy[f.id][nh.o].alliance)return false;
+        if(diplomacy[f.id]&&diplomacy[f.id][nh.o]&&diplomacy[f.id][nh.o].status==='peace'&&diplomacy[f.id][nh.o].truce>0)return false;
+        return true;
+      });
+      if(ns.length&&Math.random()<.3){
+        const t=ns[Math.random()*ns.length|0],th=gH(t.q,t.r);
+        const pw=Math.floor(h.tr*.5);
+        if(pw>th.tr){th.o=f.id;th.tr=pw-th.tr;th.fl=.8;h.tr-=pw;th.units=[{type:'infantry',count:th.tr}];if(Math.random()<.3)th.tw=true}
+        else{h.tr-=Math.floor(pw*.3);th.tr-=Math.floor(pw*.2);th.fl=.4}
+      }
+    }
+  });
+
+  if(f.ai&&Math.random()<.05){
+    const otherAI=F.filter(ff=>ff.ai&&ff.id!==f.id);
+    if(otherAI.length){
+      const target=otherAI[Math.random()*otherAI.length|0];
+      if(diplomacy[f.id]&&diplomacy[f.id][target.id]){
+        const d=diplomacy[f.id][target.id];
+        if(d.status==='war'&&Math.random()<.2){d.status='peace';d.truce=3+Math.floor(Math.random()*3)}
+        else if(d.status==='peace'&&!d.alliance&&Math.random()<.1){d.alliance=true;d.status='alliance'}
+      }
+    }
+  }
+}
+
+function triggerNaturalEvent(){
+  const evt=NATURAL_EVENTS[Math.random()*NATURAL_EVENTS.length|0];
+  const q=Math.floor(Math.random()*MW),r=Math.floor(Math.random()*MH);
+  const h=gH(q,r);
+  if(!h||h.t==='WATER')return;
+
+  playEventSound();
+
+  switch(evt.effect){
+    case'quake':
+      h.ev=1;h.evColor=evt.color;
+      nb(q,r).forEach(n=>{const nh=gH(n.q,n.r);if(nh){nh.tr=Math.max(0,nh.tr-2);nh.ev=.5;nh.evColor=evt.color}});
+      break;
+    case'eruption':
+      h.ev=1.2;h.evColor=evt.color;h.tr=0;h.t='DESERT';
+      nb(q,r).forEach(n=>{const nh=gH(n.q,n.r);if(nh){nh.tr=Math.max(0,nh.tr-3);nh.ev=.7;nh.evColor=evt.color}});
+      break;
+    case'flood':
+      h.ev=1;h.evColor=evt.color;
+      if(h.t!=='MOUNTAIN'){h.t='SWAMP';h.tr=Math.floor(h.tr*.5)}
+      nb(q,r).forEach(n=>{const nh=gH(n.q,n.r);if(nh&&nh.t!=='MOUNTAIN'){nh.ev=.5;nh.evColor=evt.color;nh.tr=Math.floor(nh.tr*.7)}});
+      break;
+    case'meteor':
+      h.ev=1.5;h.evColor=evt.color;h.t='VOLCANO';h.tr=0;h.tw=false;
+      nb(q,r).forEach(n=>{const nh=gH(n.q,n.r);if(nh){nh.tr=0;nh.ev=1;nh.evColor=evt.color}});
+      break;
+    case'plague':
+      h.ev=.8;h.evColor=evt.color;
+      H.filter(hh=>hh.o===h.o).forEach(hh=>{hh.tr=Math.max(1,Math.floor(hh.tr*.5))});
+      break;
+  }
+  showEvent(evt.msg.replace('[q,r]',`[${q},${r}]`));
+  addStory({q,r},`🌍 ${evt.n}: ${evt.msg.replace('[q,r]',`[${q},${r}]`)}`);
+}
+
+function checkSurround(){
+  H.forEach(h=>{
+    if(h.o<0)return;
+    const ns=nb(h.q,h.r),en=ns.filter(n=>{const nh=gH(n.q,n.r);return nh&&nh.o!==h.o&&nh.o>=0});
+    h.ct=en.length>=3;
+  });
+  if(!H.some(h=>h.o>0)){
+    document.getElementById('story-text').innerHTML='<b style="color:#00ffaa">ПОБЕДА!</b><br><br>Все земли захвачены. Эфелевы башни возвышаются над каждой территорией.';
+    checkCampaignWin();
+  }
+}
+
+function checkCampaignWin(){
+  if(!activeCampaign)return;
+  const p=getCampaignProgress();
+  if(p>=activeCampaign.value){
+    showEvent(`🏆 КАМПАНИЯ "${activeCampaign.n}" ВЫИГРАНА!`);
+    document.getElementById('story-text').innerHTML=`<b style="color:#ff44ff">🏆 ПОБЕДА В КАМПАНИИ!</b><br><br>${activeCampaign.icon} ${activeCampaign.n}<br>${activeCampaign.desc}<br><br>Достигнуто: ${p}/${activeCampaign.value}`;
+    activeCampaign=null;
+  }
+}
+
+function getCampaignProgress(){
+  if(!activeCampaign)return 0;
+  const pc=H.filter(h=>h.o===0).length;
+  switch(activeCampaign.goal){
+    case'percent':return Math.floor(pc/H.length*100);
+    case'towers':return H.filter(h=>h.o===0&&h.tw).length;
+    case'speed':return turn;
+    case'surround':{
+      let c=0;
+      F.filter(f=>f.ai).forEach(f=>{
+        const cap=H.find(h=>h.o===f.id&&h.tw);
+        if(cap){
+          const ns=nb(cap.q,cap.r);
+          if(ns.every(n=>{const nh=gH(n.q,n.r);return nh&&nh.o===0}))c++;
+        }
+      });
+      return c;
+    }
+    case'alliances':return diplomacy[0]?Object.values(diplomacy[0]).filter(d=>d.alliance).length:0;
+    default:return 0;
+  }
+}
+
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('#ui button').forEach(b=>b.classList.remove('active'));
+  var _bm=document.getElementById('bm-'+m);if(_bm)_bm.classList.add('active');
+}
+
+function toggleSpeed(){spd=spd===1?2:spd===2?5:spd===5?10:1;document.getElementById('bm-speed').textContent=`x${spd}`}
+function toggleWeather(){wth=!wth;document.getElementById('bm-weather').classList.toggle('active')}
+
+function openDiplomacy(){
+  const panel=document.getElementById('diplomacy-panel');
+  const list=document.getElementById('diplo-list');
+  list.innerHTML='';
+  const playerAlliances=diplomacy[0]?Object.values(diplomacy[0]).filter(d=>d.alliance).length:0;
+  var _dip=TECH_TREE.find(function(t){return t.id==='diplomacy_t'&&t.researched});
+  const diploCostReduction=_dip?0.5:0;
+
+  F.filter(f=>f.ai).forEach(f=>{
+    const d=diplomacy[0]?diplomacy[0][f.id]:{status:'war',truce:0,alliance:false};
+    const dsText={war:'⚔️ Война',peace:`🕊️ Мир (${d.truce}х)`,alliance:'🤝 Союз'};
+    const row=document.createElement('div');row.className='faction-row';
+    let actions='';
+
+    if(d.status==='war'){
+      const peaceCost=Math.floor(10*(1-diploCostReduction));
+      actions=`<button onclick="diplAction(${f.id},'peace')">Мир (${peaceCost}res)</button>`;
+      if(playerAlliances<2&&H.filter(h=>h.o===0).length>20){
+        const allyCost=Math.floor(25*(1-diploCostReduction));
+        actions+=` <button onclick="diplAction(${f.id},'alliance')">Союз (${allyCost}res)</button>`;
+      }
+    } else if(d.status==='peace'){
+      if(d.truce<=0)actions=`<button onclick="diplAction(${f.id},'war')">Напасть</button>`;
+      else actions=`<span style="color:#888;font-size:10px">Ждите ${d.truce}х</span>`;
+    } else if(d.status==='alliance'){
+      actions=`<button onclick="diplAction(${f.id},'break')">Разорвать</button> <button onclick="diplAction(${f.id},'attack_ally')" style="color:#ff4444">Предательство!</button>`;
+    }
+
+    row.innerHTML=`<span class="fname" style="color:${f.c}">${f.n}</span><span>${dsText[d.status]}</span><span>${actions}</span>`;
+    list.appendChild(row);
+  });
+  panel.style.display='block';
+}
+
+function closeDiplomacy(){document.getElementById('diplomacy-panel').style.display='none'}
+
+function diplAction(fid,action){
+  if(!diplomacy[0])diplomacy[0]={};
+  const d=diplomacy[0][fid];
+  const pr=H.filter(h=>h.o===0).reduce((s,h)=>s+T[h.t].res,0);
+  var _dip=TECH_TREE.find(function(t){return t.id==='diplomacy_t'&&t.researched});
+  const diploCostReduction=_dip?0.5:0;
+
+  switch(action){
+    case'peace':{
+      const cost=Math.floor(10*(1-diploCostReduction));
+      if(pr<cost){showEvent('Недостаточно ресурсов!');return}
+      d.status='peace';d.truce=5;
+      showEvent(`Перемирие с ${F[fid].n} заключено на 5 ходов.`);
+      addStory({q:0,r:0},DIPLOMACY_TEXTS[2].replace('{f}',F[fid].n));
+      researchPoints+=2;
+      break;
+    }
+    case'alliance':{
+      const cost=Math.floor(25*(1-diploCostReduction));
+      if(pr<cost){showEvent('Недостаточно ресурсов!');return}
+      const count=Object.values(diplomacy[0]).filter(dd=>dd.alliance).length;
+      if(count>=3){showEvent('Максимум 3 союза!');return}
+      d.status='alliance';d.alliance=true;d.truce=0;
+      showEvent(`Союз с ${F[fid].n} заключён!`);
+      addStory({q:0,r:0},DIPLOMACY_TEXTS[1].replace('{f}',F[fid].n));
+      researchPoints+=5;
+      checkCampaignWin();
+      break;
+    }
+    case'war':{
+      d.status='war';d.truce=0;d.alliance=false;
+      showEvent(`Война объявлена ${F[fid].n}!`);
+      addStory({q:0,r:0},DIPLOMACY_TEXTS[4].replace('{f}',F[fid].n));
+      break;
+    }
+    case'break':{
+      d.status='peace';d.alliance=false;d.truce=3;
+      showEvent(`Союз с ${F[fid].n} разорван!`);
+      break;
+    }
+    case'attack_ally':{
+      d.status='war';d.alliance=false;d.truce=0;
+      showEvent(`ПРЕДАТЕЛЬСТВО! ${F[fid].n} в шоке! Все фракции теперь враждебны.`);
+      F.filter(f=>f.ai).forEach(f=>{
+        if(diplomacy[0][f.id]){
+          diplomacy[0][f.id].status='war';
+          diplomacy[0][f.id].alliance=false;
+          diplomacy[0][f.id].truce=0;
+        }
+      });
+      break;
+    }
+  }
+  openDiplomacy();
+}
+
+function openTech(){
+  const panel=document.getElementById('tech-panel');
+  const list=document.getElementById('tech-list');
+  list.innerHTML='';
+  TECH_TREE.forEach(t=>{
+    const row=document.createElement('div');row.className='tech-row';
+    const canResearch=!t.researched&&t.requires.every(function(r){var _tt=TECH_TREE.find(function(tt){return tt.id===r});return _tt&&_tt.researched;})&&researchPoints>=t.cost;
+    const unlocked=t.researched;
+    const reqsMet=t.requires.every(function(r){var _tt=TECH_TREE.find(function(tt){return tt.id===r});return _tt&&_tt.researched;});
+    let btn='';
+    if(unlocked)btn=`<span class="unlocked">✅ Изучено</span>`;
+    else if(!reqsMet){var _rnames=t.requires.map(function(r){var _tt=TECH_TREE.find(function(tt){return tt.id===r});return _tt?_tt.n:r;}).join(', ');btn='<span style="color:#666">🔒 Требует: '+_rnames+'</span>';}
+
+    else btn=`<button onclick="researchTech('${t.id}')" ${canResearch?'':'disabled'}>${t.cost} науки</button>`;
+    row.innerHTML=`<div><b style="color:${canResearch?'#4488ff':'#888'}">${t.n}</b><br><span style="color:#888;font-size:10px">${t.desc}</span></div>${btn}`;
+    list.appendChild(row);
+  });
+  panel.style.display='block';
+}
+
+function closeTech(){document.getElementById('tech-panel').style.display='none'}
+
+function researchTech(id){
+  const t=TECH_TREE.find(tt=>tt.id===id);
+  if(!t||t.researched||researchPoints<t.cost)return;
+  if(!t.requires.every(function(r){var _tt=TECH_TREE.find(function(tt){return tt.id===r});return _tt&&_tt.researched;}))return;
+  researchPoints-=t.cost;t.researched=true;
+  showEvent(`🔬 Технология "${t.n}" исследована!`);
+  addStory({q:0,r:0},`🔬 Открытие: ${t.n}. ${t.desc}`);
+  playTowerSound();
+  openTech();
+}
+
+function openCampaign(){
+  const panel=document.getElementById('campaign-select');
+  const list=document.getElementById('campaign-list');
+  list.innerHTML='';
+  CAMPAIGNS.forEach(c=>{
+    const row=document.createElement('div');row.className='c-row';
+    row.innerHTML=`<div class="cname">${c.icon} ${c.n}</div><div class="cdesc">${c.desc}</div>`;
+    row.onclick=()=>{activeCampaign=c;closeCampaign();showEvent(`Кампания "${c.n}" активна! ${c.desc}`)};
+    list.appendChild(row);
+  });
+  const freeRow=document.createElement('div');freeRow.className='c-row';
+  freeRow.innerHTML=`<div class="cname">🎲 Свободная игра</div><div class="cdesc">Без целей, просто завоёвывай</div>`;
+  freeRow.onclick=()=>{activeCampaign=null;closeCampaign();showEvent('Свободная игра')};
+  list.appendChild(freeRow);
+  panel.style.display='block';
+}
+
+function closeCampaign(){document.getElementById('campaign-select').style.display='none'}
+
+function startGame(){
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('gc').style.pointerEvents='auto';
+  document.getElementById('ui').style.display='flex';
+  document.getElementById('ui2').style.display='flex';
+  document.getElementById('hud').style.display='block';
+  document.getElementById('info').style.display='block';
+  document.getElementById('story').style.display='block';
+  document.getElementById('minimap').style.display='block';
+  started=true;
+  if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)}catch(e){}
+  initMap();
+  render();
+  addStory({q:Math.floor(MW/2),r:Math.floor(MH/2)},LS[0]);
+  showEvent('Добро пожаловать! Исследуйте карту, захватывайте территории, ставьте башни.');
+}
+
+document.getElementById('startBtn').addEventListener('click',function(){
+  try{startGame();}catch(e){console.error('Error:',e);alert('Ошибка: '+e.message);}
+});
+</script>
+</body>
+</html>

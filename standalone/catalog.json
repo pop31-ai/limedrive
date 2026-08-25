@@ -1,9 +1,93 @@
 [
   {
+    "file": "standalone/train-jump-sea.html",
+    "title": "🚂 Train Jump Sea 🌊",
+    "category": "харвест",
+    "kb": 11
+  },
+  {
+    "file": "standalone/puzzle-3d.html",
+    "title": "15 Puzzle 3D",
+    "category": "харвест",
+    "kb": 16
+  },
+  {
+    "file": "standalone/snake-game.html",
+    "title": "3D Track Racer",
+    "category": "харвест",
+    "kb": 18
+  },
+  {
+    "file": "standalone/speedves/",
+    "title": "АРЕНА ДРОН-ГОНКИ · 30 треков",
+    "category": "харвест",
+    "kb": 41
+  },
+  {
+    "file": "standalone/games-3d-star.html",
+    "title": "АСТРОБОТ: Путь к Авроре",
+    "category": "харвест",
+    "kb": 101
+  },
+  {
     "file": "standalone/basketball.html",
     "title": "Баскетбол ПолиАрт",
     "category": "спорт",
     "kb": 12
+  },
+  {
+    "file": "standalone/biathlon-pursuit-game.html",
+    "title": "Биатлон — Гонка Преследования",
+    "category": "харвест",
+    "kb": 25
+  },
+  {
+    "file": "standalone/botograd.html",
+    "title": "БОТОГРАД — Интенсивный Тайминг-Экшен",
+    "category": "харвест",
+    "kb": 26
+  },
+  {
+    "file": "standalone/helicopter-rescuer.html",
+    "title": "Вертолётик-Спасатель",
+    "category": "харвест",
+    "kb": 36
+  },
+  {
+    "file": "standalone/bolt-nut.html",
+    "title": "Винтики и Гаечки",
+    "category": "харвест",
+    "kb": 20
+  },
+  {
+    "file": "standalone/toy-soldiers.html",
+    "title": "Война солдатиков",
+    "category": "харвест",
+    "kb": 38
+  },
+  {
+    "file": "standalone/val.html",
+    "title": "Волейбол: Контратака",
+    "category": "харвест",
+    "kb": 32
+  },
+  {
+    "file": "standalone/spacehall3d.html",
+    "title": "ГЕРМЕС — Зал приёма",
+    "category": "харвест",
+    "kb": 30
+  },
+  {
+    "file": "standalone/glitcher.html",
+    "title": "ГЛИТЧЕР — Пиксельный Пазл-Экшен",
+    "category": "харвест",
+    "kb": 30
+  },
+  {
+    "file": "standalone/the-deep/",
+    "title": "ГЛУБИНА — 16 Фарфоровых Статуэток",
+    "category": "харвест",
+    "kb": 110
   },
   {
     "file": "standalone/poliart-holo.html",
@@ -24,10 +108,34 @@
     "kb": 55
   },
   {
+    "file": "standalone/honey-factory-3d/",
+    "title": "Завод мёда «Купол» — 3D",
+    "category": "харвест",
+    "kb": 36
+  },
+  {
+    "file": "standalone/factorygrid.html",
+    "title": "Заводоград — Логистическая Фабрика",
+    "category": "харвест",
+    "kb": 46
+  },
+  {
+    "file": "standalone/castle-of-eternity.html",
+    "title": "Замок Вечности",
+    "category": "харвест",
+    "kb": 47
+  },
+  {
     "file": "standalone/builders-star.html",
     "title": "Звезда Строителей",
     "category": "настолка",
     "kb": 48
+  },
+  {
+    "file": "standalone/mirror-monogram.html",
+    "title": "Зеркальный Вензель",
+    "category": "харвест",
+    "kb": 38
   },
   {
     "file": "standalone/dice-cards/",
@@ -48,6 +156,18 @@
     "kb": 90
   },
   {
+    "file": "standalone/mosaic.html",
+    "title": "Мозаика — раскрась по номерам",
+    "category": "харвест",
+    "kb": 17
+  },
+  {
+    "file": "standalone/find-game-room.html",
+    "title": "Найди и покажи! - Hidden Object Quest",
+    "category": "харвест",
+    "kb": 46
+  },
+  {
     "file": "standalone/poliart-ogon.html",
     "title": "Огонь — Викторина огня",
     "category": "викторина",
@@ -60,10 +180,70 @@
     "kb": 44
   },
   {
+    "file": "standalone/orbitalgiant/",
+    "title": "ОРБИТАЛЬНЫЙ ГИГАНТ - Космическая Станция",
+    "category": "харвест",
+    "kb": 119
+  },
+  {
+    "file": "standalone/anime-game-ice-show.html",
+    "title": "Осколки Памяти",
+    "category": "харвест",
+    "kb": 39
+  },
+  {
+    "file": "standalone/ghost-hunter.html",
+    "title": "Охотники за привидениями",
+    "category": "харвест",
+    "kb": 23
+  },
+  {
+    "file": "standalone/train-game-3d.html",
+    "title": "Паравозики 3D",
+    "category": "харвест",
+    "kb": 97
+  },
+  {
+    "file": "standalone/sail-ship-3d.html",
+    "title": "ПАРУСНИК 3D · шпангоуты и снасти",
+    "category": "харвест",
+    "kb": 126
+  },
+  {
+    "file": "standalone/pyramid-game.html",
+    "title": "Пирамиды Мира",
+    "category": "харвест",
+    "kb": 16
+  },
+  {
+    "file": "standalone/game-dungeo.html",
+    "title": "Подземелья Тьмы — Roguelike",
+    "category": "харвест",
+    "kb": 47
+  },
+  {
+    "file": "standalone/fire-boat.html",
+    "title": "Пожарный кораблик",
+    "category": "харвест",
+    "kb": 30
+  },
+  {
     "file": "standalone/polygray/",
     "title": "ПолиГрей — шаблон настолки",
     "category": "настолка",
     "kb": 56
+  },
+  {
+    "file": "standalone/roman-galleys.html",
+    "title": "Римские Галеры",
+    "category": "харвест",
+    "kb": 32
+  },
+  {
+    "file": "standalone/knight-tournament.html",
+    "title": "Рыцарский Турнир",
+    "category": "харвест",
+    "kb": 34
   },
   {
     "file": "standalone/safari-marathon.html",
@@ -72,16 +252,76 @@
     "kb": 73
   },
   {
+    "file": "standalone/svechebot.html",
+    "title": "Свечебот — Мультиплеерная Игра с Роботами",
+    "category": "харвест",
+    "kb": 26
+  },
+  {
+    "file": "standalone/factory-game.html",
+    "title": "Фабрика Мечтаний",
+    "category": "харвест",
+    "kb": 26
+  },
+  {
     "file": "standalone/poliart-fotosafari.html",
     "title": "Фотосафари",
     "category": "аркада",
     "kb": 39
   },
   {
+    "file": "standalone/hockey-point.html",
+    "title": "Хоккей",
+    "category": "харвест",
+    "kb": 58
+  },
+  {
+    "file": "standalone/tennis3d-point.html",
+    "title": "Чемпионат по настольному теннису 3D",
+    "category": "харвест",
+    "kb": 40
+  },
+  {
+    "file": "standalone/car.html",
+    "title": "Шоссе-раннер",
+    "category": "харвест",
+    "kb": 14
+  },
+  {
+    "file": "standalone/echo-cards.html",
+    "title": "ЭХО КАРТ — Мозаика",
+    "category": "харвест",
+    "kb": 15
+  },
+  {
+    "file": "standalone/airliner.html",
+    "title": "A320neo — Интерактивная модель",
+    "category": "харвест",
+    "kb": 39
+  },
+  {
+    "file": "standalone/antique-game.html",
+    "title": "Antiquarium 3D",
+    "category": "харвест",
+    "kb": 27
+  },
+  {
+    "file": "standalone/carlson-rooftop-runner.html",
+    "title": "Carlson: Rooftop Runner — Крыши Стокгольма",
+    "category": "харвест",
+    "kb": 16
+  },
+  {
     "file": "standalone/fingerdraw.html",
     "title": "FingerDraw — рисование",
     "category": "тул",
     "kb": 4
+  },
+  {
+    "file": "standalone/galaxy-defender.html",
+    "title": "Galaxy Defender",
+    "category": "харвест",
+    "kb": 16
   },
   {
     "file": "standalone/grimart/",
@@ -96,10 +336,76 @@
     "kb": 8
   },
   {
+    "file": "standalone/kingdom-cards.html",
+    "title": "Mech Kings",
+    "category": "харвест",
+    "kb": 69
+  },
+  {
+    "file": "standalone/mirror-horizon.html",
+    "title": "MIRROR HORIZON",
+    "category": "харвест",
+    "kb": 49
+  },
+  {
+    "file": "standalone/neon-velocity-3d.html",
+    "title": "Neon Velocity 3D",
+    "category": "харвест",
+    "kb": 22
+  },
+  {
+    "file": "standalone/pixel-garden.html",
+    "title": "Plantagotchi",
+    "category": "харвест",
+    "kb": 29
+  },
+  {
     "file": "standalone/polyart-live/",
     "title": "PolyArt Live — 49 живых галерей",
     "category": "арт",
     "kb": 1457
+  },
+  {
+    "file": "standalone/robotflow.html",
+    "title": "RobotFlow v2 — Логистика Роботов",
+    "category": "харвест",
+    "kb": 46
+  },
+  {
+    "file": "standalone/ship-inspector.html",
+    "title": "Ship Inspector — 3D Парусник",
+    "category": "харвест",
+    "kb": 52
+  },
+  {
+    "file": "standalone/sky-rush.html",
+    "title": "Sky Rush",
+    "category": "харвест",
+    "kb": 28
+  },
+  {
+    "file": "standalone/star-defender.html",
+    "title": "Star Defender",
+    "category": "харвест",
+    "kb": 19
+  },
+  {
+    "file": "standalone/stonehold.html",
+    "title": "Stonehold",
+    "category": "харвест",
+    "kb": 38
+  },
+  {
+    "file": "standalone/terraconquest.html",
+    "title": "TerraConquest — Завоевание Земель",
+    "category": "харвест",
+    "kb": 45
+  },
+  {
+    "file": "standalone/train-tnspector.html",
+    "title": "Train Inspector — 3D Локомотив",
+    "category": "харвест",
+    "kb": 42
   },
   {
     "file": "standalone/poliart-phi.html",
@@ -112,5 +418,11 @@
     "title": "Φ-Атлет — Корпус в движении",
     "category": "арт-3D",
     "kb": 53
+  },
+  {
+    "file": "standalone/pilot-ty.html",
+    "title": "フィンテイル — 第一幕",
+    "category": "харвест",
+    "kb": 15
   }
 ]

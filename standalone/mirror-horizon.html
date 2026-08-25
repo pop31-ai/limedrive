@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>MIRROR HORIZON</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;cursor:crosshair;font-family:'Courier New',monospace}
+canvas{display:block}
+#ui{position:fixed;top:10px;left:10px;color:#0f0;font-size:13px;z-index:10;text-shadow:0 0 5px #0f0;line-height:1.6}
+#mirrors{position:fixed;bottom:10px;right:10px;display:flex;gap:4px;z-index:10}
+.mirror{border:1px solid #0f06;background:#000a;width:130px;height:85px}
+#crosshair{position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;border:2px solid #0f06;border-radius:50%;pointer-events:none;z-index:10}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:#0f06}
+#crosshair::before{width:1px;height:100%;left:50%}
+#crosshair::after{width:100%;height:1px;top:50%}
+#start{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#0f0;font-size:26px;z-index:20;text-align:center;text-shadow:0 0 15px #0f0;letter-spacing:4px;cursor:pointer}
+#start .sub{display:block;margin-top:12px;font-size:12px;color:#0f06;letter-spacing:1px}
+#start .keys{display:block;margin-top:18px;font-size:10px;color:#555;line-height:2}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="crosshair"></div>
+<div id="ui"></div>
+<div id="mirrors"></div>
+<div id="start">
+MIRROR HORIZON
+<span class="sub">CLICK TO DEPLOY</span>
+<span class="keys">W/S — ГАЗ / ТОРМОЗ | A/D — ПОВОРОТ<br>МЫШЬ — НАКЛОН ВВЕРХ/ВНИЗ | ЛКМ — ОГОНЬ<br>SHIFT — ТУРБО | ПКМ / E — ЗУМ ПРИЦЕЛА<br>АВТОПРИЦЕЛ | ОЧЕРЕДЯМИ</span>
+</div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),UI=document.getElementById('ui'),
+    START=document.getElementById('start'),MD=document.getElementById('mirrors');
+let W,H;
+function resize(){W=C.width=innerWidth;H=C.height=innerHeight}
+resize();addEventListener('resize',resize);
+
+const mirrors=[];
+for(let i=0;i<3;i++){const mc=document.createElement('canvas');mc.className='mirror';mc.width=130;mc.height=85;MD.appendChild(mc);mirrors.push(mc.getContext('2d'))}
+
+const zoomBuf=document.createElement('canvas');
+const Z=zoomBuf.getContext('2d');
+
+let game=null;const keys={};let mouseX=0,mouseY=0,prevMouseX=0,prevMouseY=0,mouseDeltaX=0,mouseDown=false,rightDown=false;
+const GAME_KEYS=new Set(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyE']);
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(GAME_KEYS.has(e.code))e.preventDefault()});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+document.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});
+document.addEventListener('mousedown',e=>{if(!game){game=new Game();START.style.display='none'}else if(e.button===0){mouseDown=true;game.shoot()}else if(e.button===2){rightDown=true}});
+document.addEventListener('mouseup',e=>{if(e.button===0)mouseDown=false;if(e.button===2)rightDown=false});
+C.addEventListener('contextmenu',e=>e.preventDefault());
+
+const ALLY_NAMES=['ВАРДЕН','СТРАЖ','ЩИТ','БАСТИОН','ГВАРД','ОПЛОТ','ЗАСЛОН','КАРАУЛ','ФОРПОСТ','КУРАНТ'];
+const ENEMY_NAMES=['ХИЩНИК','СОКОЛ','ГРОМ','ШТОРМ','ЯДОВИТ','СВИРЕП','КРАХ','КОССА','ВОЛК','ДОБЫЧ'];
+function pickName(l){return l[Math.floor(Math.random()*l.length)]}
+
+const TERRAIN_SIZE=150;
+const terrain=new Float32Array(TERRAIN_SIZE*TERRAIN_SIZE);
+function getTerrain(wx,wz){
+    const ix=Math.floor(((wx%500+500)%500)/500*TERRAIN_SIZE)&(TERRAIN_SIZE-1);
+    const iz=Math.floor(((wz%500+500)%500)/500*TERRAIN_SIZE)&(TERRAIN_SIZE-1);
+    return terrain[ix*TERRAIN_SIZE+iz]||0;
+}
+function deformTerrain(wx,wz,amt){
+    const cx=Math.floor(((wx%500+500)%500)/500*TERRAIN_SIZE)&(TERRAIN_SIZE-1);
+    const cz=Math.floor(((wz%500+500)%500)/500*TERRAIN_SIZE)&(TERRAIN_SIZE-1);
+    for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){
+        const ix=(cx+dx+TERRAIN_SIZE)&(TERRAIN_SIZE-1);
+        const iz=(cz+dz+TERRAIN_SIZE)&(TERRAIN_SIZE-1);
+        const d=Math.sqrt(dx*dx+dz*dz);
+        if(d<=2.5)terrain[ix*TERRAIN_SIZE+iz]+=amt*(1-d/2.5);
+    }
+}
+
+function proj(px,py,pz,cam){
+    const rx=px-cam.x,rz=pz-cam.z;
+    const cos=Math.cos(cam.angle),sin=Math.sin(cam.angle);
+    const depth=rx*sin+rz*cos;
+    if(depth<2)return null;
+    const inv=400/depth;
+    return{x:(rx*cos-rz*sin)*inv,y:(py-25)*inv*0.4,depth};
+}
+
+const MAX_PARTICLES=700,MAX_DEBRIS=300;
+
+class Robot{
+    constructor(x,z,type,team,name){
+        this.x=x;this.z=z;
+        this.type=type;this.team=team;this.name=name;
+        this.hp=type===1?90:type===2?35:55;
+        this.maxHp=this.hp;
+        this.speed=type===2?130:type===1?35:65;
+        this.size=type===1?28:type===2?14:20;
+        this.shootTimer=Math.random()*2+1;
+        this.alive=true;this.flash=0;
+        this.dmg=type===1?12:type===2?4:7;
+        this.range=type===1?500:type===2?350:450;
+        this.scd=type===1?2.5:type===2?0.6:1.3;
+    }
+    update(dt){
+        if(!this.alive)return;
+        const targets=this.team==='ally'?game.enemies:game.allies;
+        let closest=null,cd=1e9;
+        for(const t of targets){
+            if(!t.alive)continue;
+            const dx=t.x-this.x,dz=t.z-this.z,d=dx*dx+dz*dz;
+            if(d<cd){cd=d;closest=t}
+        }
+        if(closest){
+            const d=Math.sqrt(cd);
+            if(d>this.size*2){
+                const dx=closest.x-this.x,dz=closest.z-this.z;
+                this.x+=(dx/d)*this.speed*dt;
+                this.z+=(dz/d)*this.speed*dt;
+            }
+            this.shootTimer-=dt;
+            if(this.shootTimer<=0&&d<this.range){
+                this.shootTimer=this.scd;
+                game.robotShoot(this,closest);
+            }
+        }
+        this.flash=Math.max(0,this.flash-dt*5);
+    }
+    draw(ctx,cx,cy,cz,ca){
+        const rx=this.x-cx,rz=this.z-cz;
+        const cos=Math.cos(ca),sin=Math.sin(ca);
+        const depth=rx*sin+rz*cos;
+        if(depth<5)return;
+        const inv=400/depth;
+        const sx=W/2+(rx*cos-rz*sin)*inv;
+        const sy=H*0.42+25*400/(depth+80);
+        const sz=Math.max(3,this.size*inv);
+        const isA=this.team==='ally';
+        const bc=isA?(this.type===1?'#28f':this.type===2?'#4df':'#4af'):(this.type===1?'#f80':this.type===2?'#ff0':'#f44');
+
+        ctx.fillStyle=this.flash>0?'#fff':bc;
+        // Legs
+        ctx.fillRect(sx-sz*0.28,sy-sz*0.05,sz*0.13,sz*0.35);
+        ctx.fillRect(sx+sz*0.15,sy-sz*0.05,sz*0.13,sz*0.35);
+        // Body
+        ctx.fillRect(sx-sz*0.32,sy-sz*0.9,sz*0.65,sz*0.9);
+        // Shoulders
+        ctx.fillStyle=this.flash>0?'#fff8':bc+'aa';
+        ctx.fillRect(sx-sz*0.44,sy-sz*0.85,sz*0.18,sz*0.35);
+        ctx.fillRect(sx+sz*0.26,sy-sz*0.85,sz*0.18,sz*0.35);
+        // Head
+        ctx.fillStyle=this.flash>0?'#fff':(isA?'#39f':'#f63');
+        ctx.fillRect(sx-sz*0.18,sy-sz*1.25,sz*0.35,sz*0.35);
+        // Eyes
+        ctx.fillStyle=isA?'#0ff':'#f00';
+        ctx.fillRect(sx-sz*0.1,sy-sz*1.12,sz*0.08,sz*0.08);
+        ctx.fillRect(sx+sz*0.02,sy-sz*1.12,sz*0.08,sz*0.08);
+        // HP
+        const bw=sz*1.1;
+        ctx.fillStyle='#200';ctx.fillRect(sx-bw/2,sy-sz*1.32,bw,3);
+        ctx.fillStyle=isA?'#0af':'#f44';
+        ctx.fillRect(sx-bw/2,sy-sz*1.32,bw*(this.hp/this.maxHp),3);
+        // Name
+        if(sz>5){
+            ctx.font='bold '+Math.max(6,Math.min(11,sz*0.32))+'px Courier New';
+            ctx.textAlign='center';ctx.fillStyle=isA?'#4af':'#f44';
+            ctx.fillText(this.name,sx,sy-sz*1.38);
+        }
+    }
+}
+
+class Game{
+    constructor(){
+        this.cam={x:0,y:25,z:0,angle:0,pitch:0};
+        this.speed=0;
+        this.hp=120;this.maxHp=120;this.shield=80;this.maxShield=80;
+        this.score=0;this.wave=0;this.waveTimer=3;
+        this.allies=[];this.enemies=[];
+        this.particles=[];this.beams=[];this.debris=[];
+        this.cooldown=0;this.shake=0;this.kills=0;
+        this.shieldRegen=0;this.alerts=[];this.gameTime=0;
+        this.heat=0;this.zoomed=false;this.zoomLevel=1;this.targetLock=null;this.burstCount=0;this.burstTimer=0;
+        this.drones=[];this.airstrikes=[];this.smokeClouds=[];this.skyDebris=[];this.debrisScanTimer=0;this.startWave();
+    }
+    startWave(){
+        this.wave++;this.waveTimer=3;
+        const ec=Math.min(5+this.wave*3,30);
+        const ac=Math.min(2+this.wave,10);
+        for(let i=0;i<ec;i++){
+            const a=Math.random()*Math.PI*2,d=350+Math.random()*600;
+            const t=Math.random()<0.25?1:Math.random()<0.35?2:0;
+            this.enemies.push(new Robot(this.cam.x+Math.cos(a)*d,this.cam.z+Math.sin(a)*d,t,'enemy',pickName(ENEMY_NAMES)));
+        }
+        for(let i=0;i<ac;i++){
+            const a=Math.random()*Math.PI*2,d=40+Math.random()*120;
+            const t=Math.random()<0.3?1:Math.random()<0.3?2:0;
+            this.allies.push(new Robot(this.cam.x+Math.cos(a)*d,this.cam.z+Math.sin(a)*d,t,'ally',pickName(ALLY_NAMES)));
+        }
+        this.alerts.push({text:`ВОЛНА ${this.wave} — ${ec} ВРАГОВ / ${ac} СОЮЗНИКОВ`,time:3,color:'#f80'});
+    }
+    addParticle(x,y,z,vx,vy,vz,color,life,size){
+        if(this.particles.length>=MAX_PARTICLES)return;
+        this.particles.push({x,y,z,vx,vy,vz,color,life,maxLife:life,size});
+    }
+    addDebris(x,y,z,sz,color,name){
+        if(this.debris.length>=MAX_DEBRIS)this.debris.shift();
+        this.debris.push({x,y:15+Math.random()*10,z,vy:-40-Math.random()*60,size:sz,color,name,angle:Math.random()*6});
+    }
+    robotShoot(robot,target){
+        const dx=target.x-robot.x,dz=target.z-robot.z;
+        const d=Math.sqrt(dx*dx+dz*dz);
+        if(Math.random()<0.6){
+            const isE=robot.team==='enemy';
+            this.beams.push({x1:robot.x,y1:20,z1:robot.z,x2:target.x,y2:20,z2:target.z,
+                color:isE?'#f80c':'#0af8',life:0.18});
+            // Hit particles at target
+            for(let j=0;j<4;j++){
+                this.addParticle(target.x+(Math.random()-.5)*15,target.y+25,target.z+(Math.random()-.5)*15,
+                    (Math.random()-.5)*60,-Math.random()*80,(Math.random()-.5)*60,
+                    isE?'#f80':'#0af',0.3+Math.random()*0.3,3);
+            }
+            if(isE&&this.allies.indexOf(target)!==-1){
+                target.hp-=robot.dmg*0.4;
+                if(target.hp<=0){target.alive=false;this.addDebris(target.x,getTerrain(target.x,target.z),target.z,target.size,'#38f',target.name)}
+            }else if(!isE){
+                // Ally hit enemy — damage and sparks
+                target.hp-=robot.dmg*0.5;
+                target.flash=0.5;
+                if(target.hp<=0){
+                    target.alive=false;this.kills++;this.score+=100;
+                    this.addDebris(target.x,getTerrain(target.x,target.z),target.z,target.size,'#a33',target.name);
+                    for(let j=0;j<18;j++){
+                        this.addParticle(target.x+(Math.random()-.5)*30,Math.random()*35,target.z+(Math.random()-.5)*30,
+                            (Math.random()-.5)*140,-Math.random()*160,(Math.random()-.5)*140,
+                            '#f44',0.5+Math.random()*0.5,5+Math.random()*5);
+                    }
+                    deformTerrain(target.x,target.z,-2-Math.random()*3);
+                    this.shake=Math.max(this.shake,6);
+                }
+            }
+        }
+    }
+    shoot(){
+        if(this.cooldown>0||!game||this.heat>90)return;
+        this.cooldown=0.07;this.heat+=1.5;
+        this.burstCount++;this.burstTimer=0.3;
+
+        // Find nearest enemy on screen → aim directly at it
+        let bestE=null,bestS=1e9;
+        for(const e of this.enemies){
+            if(!e.alive)continue;
+            const rx=e.x-this.cam.x,rz=e.z-this.cam.z;
+            const cos=Math.cos(this.cam.angle),sin=Math.sin(this.cam.angle);
+            const depth=rx*sin+rz*cos;
+            if(depth<5)continue;
+            const sx=W/2+(rx*cos-rz*sin)*400/depth;
+            const dx=sx-W/2;
+            const s=dx*dx;
+            if(s<bestS){bestS=s;bestE=e}
+        }
+
+        // Shoot toward nearest enemy (auto-aim) or camera direction
+        let aimA=this.cam.angle;
+        if(bestE){
+            const dx=bestE.x-this.cam.x,dz=bestE.z-this.cam.z;
+            aimA=Math.atan2(dx,dz);
+        }
+
+        const spread=0.025;
+        for(let i=-1;i<=1;i++){
+            const a=aimA+i*spread;
+            let hitE=null,hitD=900;
+            for(const e of this.enemies){
+                if(!e.alive)continue;
+                const dx=e.x-this.cam.x,dz=e.z-this.cam.z;
+                const dist=Math.sqrt(dx*dx+dz*dz);
+                let ad=Math.atan2(dx,dz)-a;
+                while(ad>Math.PI)ad-=Math.PI*2;
+                while(ad<-Math.PI)ad+=Math.PI*2;
+                if(Math.abs(ad)<e.size/dist+0.15&&dist<hitD){hitE=e;hitD=dist}
+            }
+            const ex=this.cam.x+Math.sin(a)*hitD;
+            const ez=this.cam.z+Math.cos(a)*hitD;
+            this.beams.push({x1:this.cam.x,y1:20,z1:this.cam.z,x2:ex,y2:15,z2:ez,color:'#f00c',life:0.12});
+
+            if(hitE){
+                hitE.hp-=7+Math.random()*5;hitE.flash=1;this.shake=3;
+                for(let j=0;j<5;j++){
+                    this.addParticle(hitE.x+(Math.random()-.5)*14,hitE.y+20,hitE.z+(Math.random()-.5)*14,
+                        (Math.random()-.5)*90,-Math.random()*110,(Math.random()-.5)*90,'#f44',0.4,4);
+                }
+                if(hitE.hp<=0){
+                    hitE.alive=false;this.kills++;
+                    this.score+=hitE.type===1?500:hitE.type===2?200:100;
+                    this.addDebris(hitE.x,getTerrain(hitE.x,hitE.z),hitE.z,hitE.size,'#a33',hitE.name);
+                    for(let k=0;k<5;k++){
+                        this.addDebris(hitE.x+(Math.random()-.5)*30,getTerrain(hitE.x,hitE.z),hitE.z+(Math.random()-.5)*30,
+                            3+Math.random()*7,'#666','');
+                    }
+                    // MASSIVE explosion
+                    for(let j=0;j<30;j++){
+                        const angle=Math.random()*Math.PI*2,spd=80+Math.random()*120;
+                        this.addParticle(hitE.x+(Math.random()-.5)*15,Math.random()*35,hitE.z+(Math.random()-.5)*15,
+                            Math.cos(angle)*spd,-Math.random()*200,Math.sin(angle)*spd,
+                            j<10?'#ff4':j<20?'#f80':'#f44',0.7+Math.random()*0.8,5+Math.random()*7);
+                    }
+                    // Shockwave ring particles
+                    for(let j=0;j<16;j++){
+                        const a=j/16*Math.PI*2;
+                        this.addParticle(hitE.x+Math.cos(a)*5,3,hitE.z+Math.sin(a)*5,
+                            Math.cos(a)*150,-20,Math.sin(a)*150,'#ff8',0.3,3);
+                    }
+                    deformTerrain(hitE.x,hitE.z,-4-Math.random()*4);
+                    this.shake=15;this.shield=Math.min(this.maxShield,this.shield+15);
+                }
+            }
+        }
+    }
+    scanDebrisPiles(){
+        // Find clusters of debris — group nearby debris into piles
+        const used=new Set();const piles=[];
+        for(let i=0;i<this.debris.length;i++){
+            if(used.has(i))continue;
+            const pile=[i];used.add(i);
+            for(let j=i+1;j<this.debris.length;j++){
+                if(used.has(j))continue;
+                const dx=this.debris[i].x-this.debris[j].x,dz=this.debris[i].z-this.debris[j].z;
+                if(dx*dx+dz*dz<2500){pile.push(j);used.add(j)}
+            }
+            if(pile.length>=4){
+                let cx=0,cz=0;
+                for(const idx of pile){cx+=this.debris[idx].x;cz+=this.debris[idx].z}
+                cx/=pile.length;cz/=pile.length;
+                piles.push({x:cx,z:cz,count:pile.length});
+            }
+        }
+        // Also find large individual debris (size > 20)
+        for(let i=0;i<this.debris.length;i++){
+            if(this.debris[i].size>20){
+                let merged=false;
+                for(const p of piles){
+                    const dx=this.debris[i].x-p.x,dz=this.debris[i].z-p.z;
+                    if(dx*dx+dz*dz<3000){merged=true;break}
+                }
+                if(!merged)piles.push({x:this.debris[i].x,z:this.debris[i].z,count:1,large:true});
+            }
+        }
+        // Dispatch drone to pile if no ally nearby
+        for(const pile of piles){
+            let allyNear=false;
+            for(const a of this.allies){
+                if(!a.alive)continue;
+                const dx=a.x-pile.x,dz=a.z-pile.z;
+                if(dx*dx+dz*dz<15000){allyNear=true;break}
+            }
+            if(!allyNear&&!this.drones.find(d=>Math.abs(d.tx-pile.x)<50&&Math.abs(d.tz-pile.z)<50)){
+                this.dispatchDrone(pile.x,pile.z,pile.count);
+            }
+        }
+    }
+    dispatchDrone(tx,tz,pileSize){
+        const startX=this.cam.x+(Math.random()-.5)*100;
+        const startZ=this.cam.z+(Math.random()-.5)*100;
+        this.drones.push({
+            x:startX,y:40,z:startZ,tx,tz,
+            state:'flying_to',speed:250,life:20,done:false,
+            markerAlpha:0,pulseTimer:0,pileSize
+        });
+        this.alerts.push({text:'ДРОН НАПРАВЛЕН НА МЕТКУ ХЛАМА',time:2,color:'#0f0'});
+    }
+    updateDrone(d,dt){
+        d.pulseTimer+=dt;
+        if(d.state==='flying_to'){
+            const dx=d.tx-d.x,dz=d.tz-d.z;
+            const dist=Math.sqrt(dx*dx+dz*dz);
+            if(dist<15){
+                d.state='marking';d.markerAlpha=0;
+                // Smoke trail on arrival
+                for(let i=0;i<8;i++){
+                    this.addParticle(d.x+(Math.random()-.5)*8,d.y,d.z+(Math.random()-.5)*8,
+                        (Math.random()-.5)*30,-20-Math.random()*30,(Math.random()-.5)*30,'#0f0',0.5,2);
+                }
+            }else{
+                d.x+=(dx/dist)*d.speed*dt;
+                d.z+=(dz/dist)*d.speed*dt;
+                d.y=40+Math.sin(d.pulseTimer*3)*3;
+            }
+        }else if(d.state==='marking'){
+            d.markerAlpha=Math.min(1,d.markerAlpha+dt*2);
+            d.y=35+Math.sin(d.pulseTimer*5)*2;
+            // Pulse ring particles
+            if(Math.random()<dt*8){
+                const a=Math.random()*Math.PI*2;
+                this.addParticle(d.x+Math.cos(a)*8,5,d.z+Math.sin(a)*8,
+                    Math.cos(a)*40,-10,Math.sin(a)*40,'#0f0',0.4,2);
+            }
+            if(d.markerAlpha>=1){
+                d.state='returning';d.speed=350;
+                this.alerts.push({text:'МЕТКА УСТАНОВЛЕНА — УДАР ПРИНЯТ!',time:2.5,color:'#ff0'});
+                this.airstrikes.push({x:d.tx,z:d.z,timer:2.5,droneRef:d});
+            }
+        }else if(d.state==='returning'){
+            const dx=this.cam.x-d.x,dz=this.cam.z-d.z;
+            const dist=Math.sqrt(dx*dx+dz*dz);
+            if(dist<30){d.done=true;return}
+            d.x+=(dx/dist)*d.speed*dt;
+            d.z+=(dz/dist)*d.speed*dt;
+            d.y=45+Math.sin(d.pulseTimer*4)*2;
+        }
+    }
+    detonateAirstrike(strike){
+        // MASSIVE airstrike explosion on debris pile
+        this.shake=25;
+        for(let j=0;j<50;j++){
+            const angle=Math.random()*Math.PI*2,spd=60+Math.random()*150;
+            const h=Math.random()*40;
+            this.addParticle(strike.x+(Math.random()-.5)*20,h,strike.z+(Math.random()-.5)*20,
+                Math.cos(angle)*spd,-Math.random()*250-Math.random()*100,Math.sin(angle)*spd,
+                j<15?'#ff4':j<30?'#f80':j<40?'#f44':'#fff',0.8+Math.random()*1.2,4+Math.random()*8);
+        }
+        // Secondary explosions
+        for(let j=0;j<20;j++){
+            const a=Math.random()*Math.PI*2,r=Math.random()*25;
+            const delay=j*0.05;
+            setTimeout(()=>{
+                if(!game)return;
+                for(let k=0;k<8;k++){
+                    const ang=Math.random()*Math.PI*2,spd=30+Math.random()*80;
+                    this.addParticle(strike.x+Math.cos(a)*r+(Math.random()-.5)*5,3+Math.random()*8,
+                        strike.z+Math.sin(a)*r+(Math.random()-.5)*5,
+                        Math.cos(ang)*spd,-Math.random()*180,Math.sin(ang)*spd,
+                        Math.random()>.5?'#f80':'#ff4',0.5+Math.random()*0.6,3+Math.random()*5);
+                }
+            },delay*1000);
+        }
+        // Shockwave ring
+        for(let j=0;j<24;j++){
+            const a=j/24*Math.PI*2;
+            this.addParticle(strike.x+Math.cos(a)*3,3,strike.z+Math.sin(a)*3,
+                Math.cos(a)*200,-30,Math.sin(a)*200,'#ff8',0.4,4);
+        }
+        // Clear debris in radius
+        const clearR=80;
+        this.debris=this.debris.filter(d=>{
+            const dx=d.x-strike.x,dz=d.z-strike.z;
+            if(dx*dx+dz*dz<clearR*clearR){
+                // Convert some debris to particles
+                for(let k=0;k<3;k++){
+                    this.addParticle(d.x+(Math.random()-.5)*5,d.y,d.z+(Math.random()-.5)*5,
+                        (Math.random()-.5)*80,-Math.random()*120,(Math.random()-.5)*80,
+                        '#f80',0.3+Math.random()*0.3,2+Math.random()*3);
+                }
+                return false;
+            }
+            return true;
+        });
+        deformTerrain(strike.x,strike.z,-8-Math.random()*6);
+        this.smokeClouds.push({x:strike.x,y:5,z:strike.z,radius:60,life:4});
+        this.score+=200;
+    }
+    update(dt){
+        this.gameTime+=dt;
+        this.cooldown=Math.max(0,this.cooldown-dt);
+        this.heat=Math.max(0,this.heat-dt*30);
+        this.shake*=0.85;
+        this.burstTimer=Math.max(0,this.burstTimer-dt);
+        if(this.burstTimer<=0)this.burstCount=0;
+
+        // Zoom toggle
+        this.zoomed=rightDown||keys['KeyE'];
+        document.getElementById('crosshair').style.display=this.zoomed?'none':'block';
+
+        if(mouseDown)this.shoot();
+
+        // Mouse Y = pitch only. Rotation = WASD keys only
+        const mouseOffY=(mouseY-H/2)/(H*0.5);
+        const targetPitch=-mouseOffY*0.4;
+        this.cam.pitch+=(targetPitch-this.cam.pitch)*Math.min(1,10*dt);
+
+        // WASD moves, A/D also turns camera
+        const turbo=keys['ShiftLeft']||keys['ShiftRight'];
+        const maxSpd=(turbo?250:140)*(this.zoomed?0.5:1);
+        if(keys['KeyA']||keys['ArrowLeft'])this.cam.angle-=2.5*dt*(this.zoomed?0.4:1);
+        if(keys['KeyD']||keys['ArrowRight'])this.cam.angle+=2.5*dt*(this.zoomed?0.4:1);
+        let moveF=0;
+        if(keys['KeyW']||keys['ArrowUp'])moveF+=1;
+        if(keys['KeyS']||keys['ArrowDown'])moveF-=1;
+        if(moveF!==0){
+            this.speed=Math.min(this.speed+400*dt,maxSpd);
+            this.cam.x+=Math.sin(this.cam.angle)*moveF*this.speed*dt;
+            this.cam.z+=Math.cos(this.cam.angle)*moveF*this.speed*dt;
+        }else{
+            this.speed*=0.9;
+        }
+        this.cam.y=getTerrain(this.cam.x,this.cam.z)+25;
+
+        // Target lock detection
+        this.targetLock=null;
+        let bestSD=1e9;
+        for(const e of this.enemies){
+            if(!e.alive)continue;
+            const rx=e.x-this.cam.x,rz=e.z-this.cam.z;
+            const cos=Math.cos(this.cam.angle),sin=Math.sin(this.cam.angle);
+            const depth=rx*sin+rz*cos;
+            if(depth<5)continue;
+            const sx=(rx*cos-rz*sin)*400/depth;
+            const sd=sx*sx;
+            if(sd<bestSD&&sd<90000){bestSD=sd;this.targetLock=e}
+        }
+
+        this.shieldRegen+=dt;
+        if(this.shieldRegen>2&&this.shield<this.maxShield)this.shield=Math.min(this.maxShield,this.shield+10*dt);
+
+        for(const a of this.allies)if(a.alive)a.update(dt);
+        for(const e of this.enemies)if(e.alive)e.update(dt);
+
+        // Update particles inline (no function call overhead)
+        for(let i=this.particles.length-1;i>=0;i--){
+            const p=this.particles[i];
+            p.x+=p.vx*dt;p.z+=p.vz*dt;
+            p.y+=p.vy*dt;p.vy+=120*dt;
+            p.life-=dt;
+            if(p.life<=0){this.particles[i]=this.particles[this.particles.length-1];this.particles.pop()}
+        }
+
+        // Update debris — gravity pulls down to terrain
+        for(const d of this.debris){
+            d.vy-=400*dt;
+            d.y+=d.vy*dt;
+            d.angle+=dt*0.5;
+            const ground=getTerrain(d.x,d.z);
+            if(d.y<=ground){d.y=ground;d.vy=Math.abs(d.vy)*0.3;if(Math.abs(d.vy)<5)d.vy=0}
+        }
+
+        // === DRONE / AIRSTRIKE SYSTEM ===
+        // Scan for debris piles periodically
+        this.debrisScanTimer-=dt;
+        if(this.debrisScanTimer<=0){
+            this.debrisScanTimer=4;
+            this.scanDebrisPiles();
+        }
+        // Update drones
+        for(let i=this.drones.length-1;i>=0;i--){
+            this.drones[i].life-=dt;
+            if(this.drones[i].life<=0||this.drones[i].done){this.drones.splice(i,1);continue}
+            this.updateDrone(this.drones[i],dt);
+        }
+        // Update airstrikes
+        for(let i=this.airstrikes.length-1;i>=0;i--){
+            this.airstrikes[i].timer-=dt;
+            if(this.airstrikes[i].timer<=0){
+                this.detonateAirstrike(this.airstrikes[i]);
+                this.airstrikes.splice(i,1);
+            }
+        }
+        // Update smoke clouds (visibility blockers)
+        for(let i=this.smokeClouds.length-1;i>=0;i--){
+            const s=this.smokeClouds[i];
+            s.life-=dt;s.radius+=30*dt;
+            if(s.life<=0)this.smokeClouds.splice(i,1);
+        }
+        // Sky debris — falling chunks from above
+        if(Math.random()<dt*0.6&&this.skyDebris.length<12){
+            const a=Math.random()*Math.PI*2,d=200+Math.random()*500;
+            this.skyDebris.push({
+                x:this.cam.x+Math.cos(a)*d,z:this.cam.z+Math.sin(a)*d,
+                y:80+Math.random()*60,vy:-200-Math.random()*150,vx:(Math.random()-.5)*40,
+                vz:(Math.random()-.5)*40,size:4+Math.random()*12,life:3+Math.random()*2,
+                trail:[]
+            });
+        }
+        for(let i=this.skyDebris.length-1;i>=0;i--){
+            const sd=this.skyDebris[i];
+            sd.vy-=180*dt;sd.x+=sd.vx*dt;sd.z+=sd.vz*dt;sd.y+=sd.vy*dt;
+            sd.life-=dt;
+            sd.trail.push({x:sd.x,y:sd.y,z:sd.z,life:0.4});
+            if(sd.trail.length>15)sd.trail.shift();
+            for(const t of sd.trail)t.life-=dt;
+            if(sd.life<=0||sd.y<-5){
+                // Impact explosion
+                const ix=sd.x,iz=sd.z;
+                for(let j=0;j<12;j++){
+                    const ang=Math.random()*Math.PI*2,spd=40+Math.random()*80;
+                    this.addParticle(ix+(Math.random()-.5)*5,5+Math.random()*10,iz+(Math.random()-.5)*5,
+                        Math.cos(ang)*spd,-Math.random()*150,Math.sin(ang)*spd,
+                        j<4?'#ff4':j<8?'#f80':'#888',0.4+Math.random()*0.5,3+Math.random()*5);
+                }
+                this.addDebris(ix,getTerrain(ix,iz),iz,2+Math.random()*4,'#666','');
+                this.shake=Math.max(this.shake,4);
+                this.smokeClouds.push({x:ix,y:5,z:iz,radius:15,life:2+Math.random()});
+                this.skyDebris.splice(i,1);
+            }
+        }
+
+        // Update beams
+        for(let i=this.beams.length-1;i>=0;i--){
+            this.beams[i].life-=dt;
+            if(this.beams[i].life<=0){this.beams[i]=this.beams[this.beams.length-1];this.beams.pop()}
+        }
+
+        for(const a of this.alerts)a.time-=dt;this.alerts=this.alerts.filter(a=>a.time>0);
+
+        if(Math.random()<dt*0.08&&this.allies.filter(a=>a.alive).length<4){
+            const a=Math.random()*Math.PI*2,d=60+Math.random()*80;
+            const t=Math.random()<0.3?1:Math.random()<0.3?2:0;
+            this.allies.push(new Robot(this.cam.x+Math.cos(a)*d,this.cam.z+Math.sin(a)*d,t,'ally',pickName(ALLY_NAMES)));
+        }
+
+        if(this.enemies.filter(e=>e.alive).length===0){
+            this.waveTimer-=dt;if(this.waveTimer<=0)this.startWave();
+        }
+
+        if(this.hp<=0){
+            this.alerts=[{text:'МЕХ УНИЧТОЖЕН — РЕСТАРТ',time:2,color:'#f00'}];
+            this.hp=this.maxHp;this.shield=this.maxShield;
+            this.cam.x=0;this.cam.z=0;this.speed=0;
+            this.enemies=[];this.allies=[];
+            this.wave=Math.max(1,this.wave-1);this.waveTimer=5;
+        }
+    }
+    draw(){
+        const horizonY=H*0.42;
+        // Sky
+        const sg=X.createLinearGradient(0,0,0,horizonY);
+        sg.addColorStop(0,'#050510');sg.addColorStop(0.3,'#0a0818');sg.addColorStop(1,'#18102a');
+        X.fillStyle=sg;X.fillRect(0,0,W,horizonY);
+        X.fillStyle='#fff2';
+        for(let i=0;i<60;i++){
+            const sx=(i*137.5+this.cam.angle*25)%W,sy=(i*97.3)%(horizonY*0.85);
+            X.fillRect(sx,sy,1,1);
+        }
+        // Mountains
+        X.fillStyle='#08061a';
+        X.beginPath();X.moveTo(0,horizonY);
+        for(let i=0;i<=W;i+=20){
+            X.lineTo(i,horizonY-Math.sin(i*0.004+this.cam.angle*0.2)*18-Math.sin(i*0.011)*10);
+        }
+        X.lineTo(W,horizonY);X.fill();
+        // Distant fires
+        for(let i=0;i<Math.min(this.debris.length,6);i++){
+            const gx=(i*197+W*0.5+this.cam.angle*100)%W;
+            X.fillStyle=`rgba(255,80,0,${0.03+Math.sin(this.gameTime*2+i)*0.02})`;
+            X.fillRect(gx-15,horizonY-4,30,8);
+        }
+
+        // Ground
+        const gg=X.createLinearGradient(0,horizonY,0,H);
+        gg.addColorStop(0,'#1a1208');gg.addColorStop(0.5,'#0e0904');gg.addColorStop(1,'#050200');
+        X.fillStyle=gg;X.fillRect(0,horizonY,W,H-horizonY);
+
+        // Grid lines
+        X.strokeStyle='#fff006';X.lineWidth=1;
+        for(let i=0;i<40;i++){
+            const z=i*40-(this.cam.z%40);
+            if(z<2)continue;
+            const y=horizonY+400/z*15;
+            if(y>horizonY&&y<H){X.beginPath();X.moveTo(0,y);X.lineTo(W,y);X.stroke()}
+        }
+
+        X.save();
+        X.translate((Math.random()-.5)*this.shake,(Math.random()-.5)*this.shake);
+
+        // Craters
+        for(let i=0;i<TERRAIN_SIZE;i+=5){
+            const wx=this.cam.x-250+i*(500/TERRAIN_SIZE);
+            const wz=this.cam.z-250+i*(500/TERRAIN_SIZE);
+            const h=getTerrain(wx,wz);
+            if(h<-0.3){
+                const p=proj(wx,0,wz,this.cam);
+                if(p&&p.depth>5&&p.depth<400){
+                    const sz=Math.max(2,Math.abs(h)*600/p.depth);
+                    X.fillStyle=`rgba(20,10,0,${Math.min(0.3,Math.abs(h)*0.08)})`;
+                    X.beginPath();X.ellipse(W/2+p.x,H*0.42+p.y,sz,sz*0.3,0,0,Math.PI*2);X.fill();
+                }
+            }
+        }
+
+        // Debris (sorted far to near)
+        this.debris.sort((a,b)=>{
+            const pa=proj(a.x,a.y,a.z,this.cam),pb=proj(b.x,b.y,b.z,this.cam);
+            return (pb?pb.depth:0)-(pa?pa.depth:0);
+        });
+        for(const d of this.debris){
+            const p=proj(d.x,d.y,d.z,this.cam);
+            if(!p||p.depth>500)continue;
+            const sz=Math.max(1,d.size*150/p.depth);
+            X.save();X.translate(W/2+p.x,H*0.42+p.y);X.rotate(d.angle);
+            X.fillStyle=d.color+'80';X.fillRect(-sz/2,-sz/4,sz,sz/2);
+            X.restore();
+            if(sz>4&&d.name){
+                X.font='bold '+Math.max(6,Math.min(9,sz*0.25))+'px Courier New';
+                X.textAlign='center';X.fillStyle='#f004';
+                X.fillText(d.name,W/2+p.x,H*0.42+p.y-sz*0.6);
+            }
+        }
+
+        // Robots
+        const allR=[];
+        for(const r of this.allies)if(r.alive)allR.push(r);
+        for(const r of this.enemies)if(r.alive)allR.push(r);
+        allR.sort((a,b)=>{
+            const ra=proj(a.x,a.y,a.z,this.cam),rb=proj(b.x,b.y,b.z,this.cam);
+            return (rb?rb.depth:0)-(ra?ra.depth:0);
+        });
+        for(const r of allR)r.draw(X,this.cam.x,this.cam.y,this.cam.z,this.cam.angle);
+
+        // Laser beams (fast — just 2 lines per beam)
+        for(const b of this.beams){
+            const p1=proj(b.x1,b.y1,b.z1,this.cam);
+            const p2=proj(b.x2,b.y2,b.z2,this.cam);
+            if(p1&&p2){
+                X.strokeStyle=b.color;
+                X.lineWidth=2;X.shadowColor='#f00';X.shadowBlur=6;
+                X.beginPath();
+                X.moveTo(W/2+p1.x,H*0.42+p1.y);
+                X.lineTo(W/2+p2.x,H*0.42+p2.y);
+                X.stroke();
+                X.shadowBlur=0;X.lineWidth=1;
+            }
+        }
+
+        // Particles
+        for(const p of this.particles){
+            const pp=proj(p.x,p.y,p.z,this.cam);
+            if(pp&&pp.depth>3){
+                X.globalAlpha=Math.max(0,p.life/p.maxLife);
+                X.fillStyle=p.color;
+                const ps=Math.max(1,p.size*200/pp.depth);
+                X.fillRect(W/2+pp.x-ps/2,H*0.42+pp.y-ps/2,ps,ps);
+            }
+        }
+        X.globalAlpha=1;
+
+        // === DRAW SKY DEBRIS (trails + chunks) ===
+        for(const sd of this.skyDebris){
+            // Trail
+            for(let i=0;i<sd.trail.length;i++){
+                const t=sd.trail[i];
+                const tp=proj(t.x,t.y,t.z,this.cam);
+                if(tp&&tp.depth>2){
+                    X.globalAlpha=t.life*2;
+                    X.fillStyle='#f80';
+                    const ts=Math.max(1,(3+i*0.3)*200/tp.depth);
+                    X.fillRect(W/2+tp.x-ts/2,H*0.42+tp.y-ts/2,ts,ts);
+                }
+            }
+            X.globalAlpha=1;
+            const sp=proj(sd.x,sd.y,sd.z,this.cam);
+            if(sp&&sp.depth>2){
+                const ss=Math.max(2,sd.size*200/sp.depth);
+                X.fillStyle='#fa0';
+                X.shadowColor='#f80';X.shadowBlur=8;
+                X.fillRect(W/2+sp.x-ss/2,H*0.42+sp.y-ss/2,ss,ss);
+                X.shadowBlur=0;
+            }
+        }
+
+        // === DRAW DRONES ===
+        for(const d of this.drones){
+            const dp=proj(d.x,d.y,d.z,this.cam);
+            if(!dp||dp.depth<3)continue;
+            const dsx=W/2+dp.x,dsy=H*0.42+dp.y;
+            const dsz=Math.max(4,800/dp.depth);
+            // Drone body
+            X.fillStyle='#0f0';
+            X.fillRect(dsx-dsz*0.5,dsy-dsz*0.15,dsz,dsz*0.3);
+            X.fillRect(dsx-dsz*0.08,dsy-dsz*0.5,dsz*0.16,dsz);
+            // Rotors
+            const rotorPhase=d.pulseTimer*15;
+            X.strokeStyle='#0f08';X.lineWidth=1;
+            X.beginPath();X.arc(dsx-dsz*0.35,dsy,dsz*0.2,rotorPhase,rotorPhase+Math.PI*1.5);X.stroke();
+            X.beginPath();X.arc(dsx+dsz*0.35,dsy,dsz*0.2,rotorPhase+1,rotorPhase+Math.PI*1.5+1);X.stroke();
+            // Marker beam when marking
+            if(d.state==='marking'){
+                const beamAlpha=d.markerAlpha*(0.5+Math.sin(d.pulseTimer*8)*0.3);
+                X.strokeStyle=`rgba(0,255,0,${beamAlpha})`;X.lineWidth=2;
+                X.beginPath();X.moveTo(dsx,dsy+dsz*0.3);X.lineTo(dsx,dsy+200);X.stroke();
+                // Target circle on ground
+                const gp=proj(d.tx,0,d.tz,this.cam);
+                if(gp&&gp.depth>3){
+                    const gr=3000/gp.depth;
+                    X.strokeStyle=`rgba(0,255,0,${beamAlpha})`;X.lineWidth=2;
+                    X.beginPath();X.arc(W/2+gp.x,H*0.42+gp.y,gr,0,Math.PI*2);X.stroke();
+                    // Spinning brackets
+                    for(let i=0;i<4;i++){
+                        const ba=d.pulseTimer*2+i*Math.PI/2;
+                        const bx=W/2+gp.x+Math.cos(ba)*gr*1.2;
+                        const by=H*0.42+gp.y+Math.sin(ba)*gr*0.4;
+                        X.fillStyle=`rgba(0,255,0,${beamAlpha})`;
+                        X.fillRect(bx-2,by-2,4,4);
+                    }
+                }
+            }
+            // State label
+            X.fillStyle='#0f0a';X.font='8px Courier New';X.textAlign='center';
+            const stateLabel=d.state==='flying_to'?'НА ПОДЛЕТЕ':d.state==='marking'?'МАРКИРОВКА':'ВОЗВРАТ';
+            X.fillText(stateLabel,dsx,dsy-dsz*0.7);
+        }
+
+        // === DRAW AIRSTRIKE INDICATORS ===
+        for(const st of this.airstrikes){
+            const sp=proj(st.x,0,st.z,this.cam);
+            if(sp&&sp.depth>3){
+                const flash=0.5+Math.sin(st.timer*10)*0.5;
+                const sr=5000/sp.depth;
+                X.strokeStyle=`rgba(255,255,0,${flash*0.6})`;X.lineWidth=3;
+                X.beginPath();X.arc(W/2+sp.x,H*0.42+sp.y,sr,0,Math.PI*2);X.stroke();
+                X.strokeStyle=`rgba(255,80,0,${flash*0.4})`;X.lineWidth=2;
+                X.beginPath();X.arc(W/2+sp.x,H*0.42+sp.y,sr*1.3,0,Math.PI*2);X.stroke();
+                X.fillStyle=`rgba(255,255,0,${flash*0.8})`;X.font='bold 12px Courier New';X.textAlign='center';
+                X.fillText('УДАР ЧЕРЕЗ '+st.timer.toFixed(1)+'с',W/2+sp.x,H*0.42+sp.y-sr-10);
+            }
+        }
+
+        // === DRAW SMOKE CLOUDS (visibility blockers) ===
+        for(const s of this.smokeClouds){
+            const sp=proj(s.x,s.y,s.z,this.cam);
+            if(sp&&sp.depth>3){
+                const sr=Math.max(10,s.radius*400/sp.depth);
+                const alpha=Math.min(0.5,s.life*0.2);
+                const grad=X.createRadialGradient(W/2+sp.x,H*0.42+sp.y,0,W/2+sp.x,H*0.42+sp.y,sr);
+                grad.addColorStop(0,`rgba(40,30,20,${alpha})`);
+                grad.addColorStop(0.5,`rgba(30,20,10,${alpha*0.5})`);
+                grad.addColorStop(1,'rgba(20,10,0,0)');
+                X.fillStyle=grad;
+                X.beginPath();X.arc(W/2+sp.x,H*0.42+sp.y,sr,0,Math.PI*2);X.fill();
+            }
+        }
+
+        X.restore();
+
+        // HUD
+        const bw=W*0.35,bh=50;
+        const bx=W/2-bw/2,by=H-bh-10;
+        X.fillStyle='#0a1520';X.fillRect(bx,by,bw,bh);
+        for(let i=0;i<8;i++){X.fillStyle=i%2?'#080f16':'#060d14';X.fillRect(bx+i*bw/8,by+bh-8,bw/8-1,8)}
+        X.fillStyle='#0f1a25';X.beginPath();X.arc(W/2,by+bh*0.3,18,0,Math.PI*2);X.fill();
+        X.strokeStyle='#0af6';X.lineWidth=3;
+        X.beginPath();X.moveTo(W/2,by+bh*0.3);X.lineTo(W/2,by+bh*0.3-22);X.stroke();X.lineWidth=1;
+        X.fillStyle=this.shield>0?'#0af':'#333';X.fillRect(W/2-8,by+6,5,5);
+        X.fillStyle=this.hp>50?'#0f0':this.hp>25?'#ff0':'#f00';X.fillRect(W/2+3,by+6,5,5);
+        X.fillStyle='#200';X.fillRect(W/2-40,by+2,80,3);
+        X.fillStyle=this.heat>70?'#f00':this.heat>40?'#ff0':'#0a0';
+        X.fillRect(W/2-40,by+2,80*(this.heat/100),3);
+        X.fillStyle='#0f08';X.font='10px Courier New';X.textAlign='center';
+        X.fillText(Math.abs(Math.round(this.speed))+' км/ч',W/2,by+bh+12);
+
+        UI.innerHTML=`<div style="color:${this.hp>40?'#0af':'#f00'}">МЕХ: ${Math.ceil(this.hp)}/${this.maxHp}</div>
+<div style="color:#08f">ЩИТ: ${Math.ceil(this.shield)}/${this.maxShield}</div>
+<div style="color:${this.heat>70?'#f00':'#0f0'}">ТЕПЛО: ${Math.ceil(this.heat)}%</div>
+<div style="color:#ff0">ОЧКИ: ${this.score}</div>
+<div style="color:#f80">ВОЛНА: ${this.wave}</div>
+<div style="color:#f44">ВРАГИ: ${this.enemies.filter(e=>e.alive).length}</div>
+<div style="color:#4af">СОЮЗНИКИ: ${this.allies.filter(a=>a.alive).length}</div>
+<div style="color:#fff8">УНИЧТОЖЕНО: ${this.kills}</div>
+${this.drones.length?`<div style="color:#0f0">ДРОНЫ: ${this.drones.length}</div>`:''}
+${this.airstrikes.length?`<div style="color:#ff0">УДАРЫ: ${this.airstrikes.length}</div>`:''}
+<div style="color:#fff3;font-size:9px">W/S ГАЗ | A/D ПОВОРОТ<br>МЫШЬ БАШНЯ | ЛКМ ОГОНЬ<br>ПКМ/E — ЗУМ | АВТОПРИЦЕЛ</div>`;
+
+        // Mirrors
+        const ae=this.enemies.filter(e=>e.alive);
+        this.drawMirror(mirrors[0],ae,-Math.PI/2,'ЛЕВОЕ');
+        this.drawMirror(mirrors[1],ae,0,'ЦЕНТР');
+        this.drawMirror(mirrors[2],ae,Math.PI/2,'ПРАВОЕ');
+
+        // Alerts
+        for(let i=0;i<this.alerts.length;i++){
+            const a=this.alerts[i];
+            X.globalAlpha=Math.min(1,a.time);
+            X.font='bold 22px Courier New';X.textAlign='center';
+            X.fillStyle='#000';X.fillText(a.text,W/2+2,H*0.25+i*28+2);
+            X.fillStyle=a.color;X.shadowColor=a.color;X.shadowBlur=10;
+            X.fillText(a.text,W/2,H*0.25+i*28);X.shadowBlur=0;
+        }
+        X.globalAlpha=1;
+        if(this.enemies.filter(e=>e.alive).length===0&&this.waveTimer>0){
+            X.fillStyle='#0f06';X.font='16px Courier New';X.textAlign='center';
+            X.fillText('ВОЛНА '+(this.wave+1)+' ЧЕРЕЗ '+Math.ceil(this.waveTimer)+'с',W/2,H*0.55);
+        }
+
+        this.drawMiniMap();
+
+        // Draw targeting brackets on locked enemy (when visible)
+        if(this.targetLock){
+            const tl=this.targetLock;
+            const rx=tl.x-this.cam.x,rz=tl.z-this.cam.z;
+            const cos=Math.cos(this.cam.angle),sin=Math.sin(this.cam.angle);
+            const depth=rx*sin+rz*cos;
+            if(depth>5){
+                const sx=W/2+(rx*cos-rz*sin)*400/depth;
+                const sy=H*0.42+25*400/(depth+80);
+                const sz=Math.max(8,tl.size*400/depth*1.3);
+                X.strokeStyle=this.zoomed?'#0f0':'#0f04';
+                X.lineWidth=this.zoomed?2:1;
+                const bsz=sz*0.7;
+                // Corner brackets
+                for(let cx=-1;cx<=1;cx+=2)for(let cy=-1;cy<=1;cy+=2){
+                    X.beginPath();
+                    X.moveTo(sx+cx*bsz,sy+cy*bsz*0.3);
+                    X.lineTo(sx+cx*bsz,sy+cy*bsz*0.3+cy*-bsz*0.4);
+                    X.moveTo(sx+cx*bsz,sy+cy*bsz*0.3);
+                    X.lineTo(sx+cx*bsz-cx*bsz*0.4,sy+cy*bsz*0.3);
+                    X.stroke();
+                }
+                // Distance label
+                const dist=Math.round(Math.sqrt(rx*rx+rz*rz));
+                X.fillStyle='#0f08';X.font='bold 10px Courier New';X.textAlign='center';
+                X.fillText(dist+'м',sx,sy+bsz*0.3+14);
+                X.fillStyle='#f448';X.font='9px Courier New';
+                X.fillText(tl.name,sx,sy+bsz*0.3+24);
+                X.lineWidth=1;
+            }
+        }
+
+        // Burst fire counter in HUD
+        if(this.burstCount>0){
+            X.fillStyle='#0f0a';X.font='bold 11px Courier New';X.textAlign='center';
+            X.fillText('ОЧЕРЕДЬ: '+this.burstCount,W/2,H*0.42-60);
+        }
+
+        // ZOOM SCOPE — actual zoom using offscreen buffer
+        if(this.zoomed){
+            const scopeR=Math.min(W,H)*0.32;
+            const cx=W/2,cy=H*0.42;
+            const zl=2.5;
+
+            // Darken everything outside scope
+            X.save();
+            X.fillStyle='rgba(0,0,0,0.8)';
+            X.beginPath();X.rect(0,0,W,H);
+            X.moveTo(cx+scopeR,cy);X.arc(cx,cy,scopeR,0,Math.PI*2,true);X.fill();
+
+            // Copy and draw zoomed scene inside scope
+            zoomBuf.width=W;zoomBuf.height=H;
+            Z.drawImage(C,0,0);
+            X.beginPath();X.arc(cx,cy,scopeR,0,Math.PI*2);X.clip();
+            X.translate(cx,cy);X.scale(zl,zl);X.translate(-cx,-cy);
+            X.drawImage(zoomBuf,0,0);
+            X.restore();
+
+            // Scope border glow (on top)
+            X.save();
+            X.strokeStyle='#0f0';X.lineWidth=2;
+            X.shadowColor='#0f0';X.shadowBlur=12;
+            X.beginPath();X.arc(cx,cy,scopeR,0,Math.PI*2);X.stroke();
+            X.shadowBlur=0;
+            // Inner ring
+            X.strokeStyle='#0f03';X.lineWidth=1;
+            X.beginPath();X.arc(cx,cy,scopeR*0.85,0,Math.PI*2);X.stroke();
+            // Crosshair lines inside scope
+            X.strokeStyle='#0f08';X.lineWidth=1;
+            X.beginPath();X.moveTo(cx-scopeR*0.9,cy);X.lineTo(cx-scopeR*0.15,cy);X.stroke();
+            X.beginPath();X.moveTo(cx+scopeR*0.15,cy);X.lineTo(cx+scopeR*0.9,cy);X.stroke();
+            X.beginPath();X.moveTo(cx,cy-scopeR*0.9);X.lineTo(cx,cy-scopeR*0.15);X.stroke();
+            X.beginPath();X.moveTo(cx,cy+scopeR*0.15);X.lineTo(cx,cy+scopeR*0.9);X.stroke();
+            // Center dot
+            X.fillStyle='#0f0';X.beginPath();X.arc(cx,cy,2,0,Math.PI*2);X.fill();
+            // Range marks on horizontal line
+            X.fillStyle='#0f05';X.font='8px Courier New';X.textAlign='center';
+            for(let i=-3;i<=3;i++){
+                if(i===0)continue;
+                const mx=cx+i*scopeR*0.22;
+                X.fillRect(mx,cy-3,1,6);
+                X.fillText(Math.abs(i*100)+'',mx,cy-8);
+            }
+            // Angle marks on vertical
+            for(let i=-3;i<=3;i++){
+                if(i===0)continue;
+                const my=cy+i*scopeR*0.22;
+                X.fillRect(cx-3,my,6,1);
+            }
+            // Scope info panel
+            X.fillStyle='#0f06';X.font='9px Courier New';X.textAlign='left';
+            X.fillText('ЗУМ x2.5',cx-scopeR+10,cy-scopeR+16);
+            X.fillText('ТЕПЛО: '+Math.ceil(this.heat)+'%',cx-scopeR+10,cy-scopeR+28);
+            const aliveEnemies=this.enemies.filter(e=>e.alive).length;
+            X.fillText('ЦЕЛИ: '+aliveEnemies,cx-scopeR+10,cy-scopeR+40);
+            if(this.targetLock){
+                const tl2=this.targetLock;
+                const rx2=tl2.x-this.cam.x,rz2=tl2.z-this.cam.z;
+                const d2=Math.round(Math.sqrt(rx2*rx2+rz2*rz2));
+                X.fillStyle='#f44a';X.textAlign='right';
+                X.fillText('БЛОКИРОВКА: '+tl2.name,cx+scopeR-10,cy-scopeR+16);
+                X.fillText('ДАЛЬНОСТЬ: '+d2+'м',cx+scopeR-10,cy-scopeR+28);
+                X.fillText('ТИП: '+(tl2.type===1?'ТЯЖЁЛЫЙ':tl2.type===2?'ЛЁГКИЙ':'СРЕДНИЙ'),cx+scopeR-10,cy-scopeR+40);
+            }else{
+                X.fillStyle='#0f05';X.textAlign='right';
+                X.fillText('ПОИСК ЦЕЛИ...',cx+scopeR-10,cy-scopeR+16);
+            }
+            X.restore();
+        }
+    }
+    drawMirror(ctx,enemies,offA,label){
+        ctx.fillStyle='#0008';ctx.fillRect(0,0,130,85);
+        ctx.save();ctx.translate(65,42);
+        const sa=(this.gameTime*2)%6-3;
+        ctx.strokeStyle='#0f03';ctx.beginPath();ctx.moveTo(0,0);
+        ctx.lineTo(Math.sin(sa)*55,-Math.cos(sa)*38);ctx.stroke();
+        for(const e of enemies){
+            const dx=e.x-this.cam.x,dz=e.z-this.cam.z;
+            const d=Math.sqrt(dx*dx+dz*dz);
+            let ad=Math.atan2(dx,dz)-this.cam.angle-offA;
+            while(ad>Math.PI)ad-=Math.PI*2;while(ad<-Math.PI)ad+=Math.PI*2;
+            if(Math.abs(ad)<1.5){
+                const mx=Math.sin(ad)*45,my=-d/14;
+                const col=e.type===1?'#f80':e.type===2?'#ff0':'#f44';
+                ctx.fillStyle=col;ctx.fillRect(mx-3,my-3,6,6);
+                if(my>-35){ctx.font='6px Courier New';ctx.textAlign='center';ctx.fillStyle=col+'90';ctx.fillText(e.name,mx,my-7)}
+            }
+        }
+        ctx.strokeStyle='#0f03';ctx.strokeRect(-65,-42,130,84);ctx.restore();
+        ctx.fillStyle='#0f05';ctx.font='8px Courier New';ctx.textAlign='left';ctx.fillText(label,3,10);
+    }
+    drawMiniMap(){
+        const mx=W-155,my=10,mw=145,mh=145;
+        X.fillStyle='#0008';X.fillRect(mx,my,mw,mh);X.strokeStyle='#0f03';X.strokeRect(mx,my,mw,mh);
+        X.save();X.translate(mx+mw/2,my+mh/2);X.rotate(this.cam.angle);
+        X.fillStyle='#0af';X.fillRect(-3,-5,6,10);X.restore();
+        const sc=0.14;
+        for(const a of this.allies){if(!a.alive)continue;
+            const ex=mx+mw/2+(a.x-this.cam.x)*sc,ey=my+mh/2+(a.z-this.cam.z)*sc;
+            if(ex>mx&&ex<mx+mw&&ey>my&&ey<my+mh){X.fillStyle='#4af';X.fillRect(ex-1,ey-1,3,3)}}
+        for(const e of this.enemies){if(!e.alive)continue;
+            const ex=mx+mw/2+(e.x-this.cam.x)*sc,ey=my+mh/2+(e.z-this.cam.z)*sc;
+            if(ex>mx&&ex<mx+mw&&ey>my&&ey<my+mh){X.fillStyle='#f44';X.fillRect(ex-1,ey-1,3,3)}}
+        // Drones on minimap
+        for(const d of this.drones){
+            const ex=mx+mw/2+(d.x-this.cam.x)*sc,ey=my+mh/2+(d.z-this.cam.z)*sc;
+            if(ex>mx&&ex<mx+mw&&ey>my&&ey<my+mh){X.fillStyle='#0f0';X.fillRect(ex-2,ey-2,4,4)}
+        }
+        // Airstrike targets on minimap
+        for(const s of this.airstrikes){
+            const ex=mx+mw/2+(s.x-this.cam.x)*sc,ey=my+mh/2+(s.z-this.cam.z)*sc;
+            if(ex>mx&&ex<mx+mw&&ey>my&&ey<my+mh){
+                X.strokeStyle='#ff0';X.lineWidth=1;
+                X.beginPath();X.arc(ex,ey,5+Math.sin(this.gameTime*8)*2,0,Math.PI*2);X.stroke();
+            }
+        }
+        X.fillStyle='#6668';X.font='8px Courier New';X.textAlign='left';
+        X.fillText('ХЛАМ:'+this.debris.length,mx+4,my+mh-4);
+    }
+}
+
+let lastTime=0;
+function loop(t){
+    if(game){const dt=Math.min(0.05,(t-lastTime)/1000);game.update(dt);game.draw()}
+    lastTime=t;requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

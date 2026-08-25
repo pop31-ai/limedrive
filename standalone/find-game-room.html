@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Найди и покажи! - Hidden Object Quest</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+body {
+  background: linear-gradient(135deg, #1a0533, #2d1b69, #1a0533);
+  min-height: 100vh; display: flex; justify-content: center; align-items: center;
+  font-family: 'Segoe UI', 'Comic Sans MS', cursive, sans-serif;
+  overflow: hidden;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,215,0,0.3); }
+  50% { box-shadow: 0 0 25px rgba(255,215,0,0.8), 0 0 50px rgba(255,215,0,0.3); }
+}
+@keyframes breathe {
+  0%, 100% { opacity: var(--obj-opacity, 0.5); transform: scale(0.85); }
+  50% { opacity: calc(var(--obj-opacity, 0.5) + 0.15); transform: scale(0.95); }
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+@keyframes bounce-in {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+@keyframes sparkle-burst {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+@keyframes slide-up {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes rainbow-bg {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+#game-wrapper {
+  position: relative;
+  width: 820px; height: 620px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(147,51,234,0.4), 0 20px 60px rgba(0,0,0,0.5);
+  border: 3px solid rgba(255,215,0,0.3);
+}
+
+#game-container {
+  position: relative;
+  width: 100%; height: 100%;
+  background: #87CEEB;
+  overflow: hidden;
+  cursor: default;
+}
+
+/* ── HUD ── */
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+  pointer-events: none;
+}
+#hud > * { pointer-events: auto; }
+.hud-item {
+  display: flex; align-items: center; gap: 6px;
+  color: #fff; font-size: 16px; font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.35); padding: 4px 12px; border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+.hud-item .icon { font-size: 20px; }
+
+#level-name {
+  color: #fff; font-size: 18px; font-weight: bold;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  letter-spacing: 1px;
+  background: rgba(0,0,0,0.3); padding: 4px 16px; border-radius: 20px;
+}
+
+/* ── Scene ── */
+#scene {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  overflow: hidden;
+}
+
+.scene-bg-layer {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* ── Furniture ── */
+.furniture {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* ── Hidden Objects ── */
+.hidden-object {
+  position: absolute;
+  cursor: pointer;
+  transition: transform 0.2s, filter 0.3s;
+  font-size: 40px;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
+  z-index: 10;
+}
+.hidden-object:hover {
+  animation-play-state: paused;
+  transform: scale(1.15) !important;
+  filter: brightness(1.2) !important;
+}
+.hidden-object.found {
+  pointer-events: none;
+  animation: bounce-in 0.5s ease forwards;
+}
+.hidden-object.found::after {
+  content: '✓';
+  position: absolute; top: -10px; right: -10px;
+  background: #4CAF50; color: #fff;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 16px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  border: 2px solid #fff;
+}
+.hidden-object {
+  animation: breathe 3s ease-in-out infinite;
+}
+.hidden-object.found {
+  animation: bounce-in 0.5s ease forwards;
+}
+.hidden-object .glow-ring {
+  position: absolute; inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,215,0,0.08);
+  animation: pulse-glow 3s infinite;
+  pointer-events: none;
+}
+.hidden-object.hint-glow .glow-ring {
+  border-color: rgba(255,215,0,0.8);
+}
+
+.hidden-object.wrong {
+  animation: shake 0.4s ease;
+}
+
+.object-peek {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── Hints Bar ── */
+#hints-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 50;
+  padding: 10px 16px 12px;
+  background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 70px;
+}
+.hint-item {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 12px; padding: 4px 10px;
+  min-width: 60px;
+  transition: all 0.3s;
+  cursor: default;
+}
+.hint-item .hint-icon { font-size: 28px; line-height: 1.2; }
+.hint-item .hint-label {
+  font-size: 10px; color: rgba(255,255,255,0.7);
+  margin-top: 2px; white-space: nowrap;
+}
+.hint-item.found-hint {
+  opacity: 0.4;
+  background: rgba(76,175,80,0.2);
+  border-color: rgba(76,175,80,0.4);
+  text-decoration: line-through;
+}
+.hint-item.found-hint .hint-icon { filter: grayscale(1); }
+
+/* ── Hint button ── */
+#hint-btn {
+  position: absolute; bottom: 80px; right: 16px; z-index: 60;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border: none; border-radius: 50%; width: 50px; height: 50px;
+  font-size: 24px; cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255,165,0,0.5);
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+#hint-btn:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(255,165,0,0.7); }
+#hint-btn:disabled {
+  opacity: 0.5; cursor: not-allowed; transform: none;
+}
+
+/* ── Level select ── */
+#level-select {
+  position: absolute; inset: 0; z-index: 200;
+  background: linear-gradient(135deg, #1a0533, #2d1b69, #1a0533);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 30px;
+}
+#level-select h1 {
+  color: #FFD700; font-size: 42px; margin-bottom: 8px;
+  text-shadow: 0 0 30px rgba(255,215,0,0.3);
+  letter-spacing: 2px;
+}
+#level-select .subtitle {
+  color: rgba(255,255,255,0.6); font-size: 16px; margin-bottom: 30px;
+}
+.level-grid {
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+}
+.level-card {
+  width: 140px; padding: 16px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 16px; cursor: pointer;
+  text-align: center; color: #fff;
+  transition: all 0.3s;
+}
+.level-card:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: #FFD700;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(255,215,0,0.2);
+}
+.level-card .lc-icon { font-size: 48px; margin-bottom: 8px; }
+.level-card .lc-name { font-size: 14px; font-weight: bold; }
+.level-card .lc-desc { font-size: 11px; opacity: 0.6; margin-top: 4px; }
+.level-card.locked {
+  opacity: 0.4; cursor: not-allowed;
+}
+.level-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.1); box-shadow: none; }
+
+/* ── Completion overlay ── */
+#completion {
+  position: absolute; inset: 0; z-index: 150;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  color: #fff;
+}
+#completion.show { display: flex; animation: slide-up 0.5s ease; }
+#completion .big-icon { font-size: 80px; margin-bottom: 10px; }
+#completion h2 { font-size: 36px; color: #FFD700; margin-bottom: 4px; }
+#completion .stats { display: flex; gap: 20px; margin: 16px 0 24px; }
+#completion .stat-item { text-align: center; }
+#completion .stat-item .num { font-size: 28px; font-weight: bold; color: #FFD700; }
+#completion .stat-item .label { font-size: 12px; opacity: 0.7; }
+#completion .btn {
+  padding: 12px 36px; border-radius: 30px; border: none;
+  font-size: 18px; font-weight: bold; cursor: pointer;
+  transition: all 0.2s; margin: 4px;
+}
+#completion .btn-primary {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #1a0533;
+}
+#completion .btn-primary:hover { transform: scale(1.05); }
+#completion .btn-secondary {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+#completion .btn-secondary:hover { background: rgba(255,255,255,0.25); }
+
+/* ── Confetti ── */
+.confetti-piece {
+  position: fixed; width: 10px; height: 10px;
+  animation: confetti-fall linear forwards;
+  pointer-events: none; z-index: 300;
+}
+.confetti-piece.circle { border-radius: 50%; }
+.confetti-piece.square { border-radius: 2px; }
+
+/* ── Combo popup ── */
+#combo-popup {
+  position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+  z-index: 120;
+  font-size: 32px; font-weight: bold; color: #FFD700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.3s;
+}
+#combo-popup.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Bonus popup ── */
+.bonus-popup {
+  position: absolute; z-index: 110;
+  font-size: 24px; font-weight: bold; color: #FFD700;
+  text-shadow: 0 0 15px rgba(255,215,0,0.5);
+  pointer-events: none;
+  animation: float 0.8s ease forwards, fade-up 0.8s ease forwards;
+}
+@keyframes fade-up {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  #game-wrapper { width: 95vw; height: calc(95vw * 0.75); border-radius: 16px; }
+  .hidden-object { font-size: 30px; }
+  #level-name { font-size: 14px; }
+  .hint-item .hint-icon { font-size: 20px; }
+  .hint-item { min-width: 44px; padding: 2px 6px; }
+  #hint-btn { width: 40px; height: 40px; font-size: 18px; bottom: 72px; right: 10px; }
+  #level-select h1 { font-size: 28px; }
+  .level-card { width: 100px; }
+  .level-card .lc-icon { font-size: 36px; }
+  #hud { padding: 4px 10px; }
+  .hud-item { font-size: 13px; padding: 2px 8px; }
+}
+</style>
+</head>
+<body>
+
+<div id="game-wrapper">
+<div id="game-container">
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-item">
+      <span class="icon">⭐</span>
+      <span id="stars-count">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="icon">🪙</span>
+      <span id="coins-count">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="icon">🔥</span>
+      <span id="combo-count">x1</span>
+    </div>
+    <div id="level-name">Моя комната</div>
+    <div class="hud-item">
+      <span class="icon">⏱️</span>
+      <span id="timer-display">0с</span>
+    </div>
+  </div>
+
+  <!-- Scene -->
+  <div id="scene"></div>
+
+  <!-- Hint button -->
+  <button id="hint-btn" title="Подсказка">💡</button>
+
+  <!-- Combo popup -->
+  <div id="combo-popup"></div>
+
+  <!-- Hints bar -->
+  <div id="hints-bar"></div>
+
+  <!-- Completion overlay -->
+  <div id="completion">
+    <div class="big-icon">🎉</div>
+    <h2>Уровень пройден!</h2>
+    <p style="opacity:0.7;margin-bottom:4px;" id="completion-msg">Отлично!</p>
+    <div class="stats">
+      <div class="stat-item"><div class="num" id="final-stars">0</div><div class="label">⭐ Звёзды</div></div>
+      <div class="stat-item"><div class="num" id="final-coins">0</div><div class="label">🪙 Монеты</div></div>
+      <div class="stat-item"><div class="num" id="final-time">0с</div><div class="label">⏱️ Время</div></div>
+      <div class="stat-item"><div class="num" id="final-combo">x1</div><div class="label">🔥 Комбо</div></div>
+    </div>
+    <div>
+      <button class="btn btn-primary" onclick="game.nextLevel()">➡️ Следующий</button>
+      <button class="btn btn-secondary" onclick="game.showLevelSelect()">🏠 Уровни</button>
+    </div>
+  </div>
+
+  <!-- Level select -->
+  <div id="level-select">
+    <h1>🔍 Найди и покажи!</h1>
+    <div class="subtitle">Находи спрятанные предметы и собирай звёзды! ✨</div>
+    <div class="level-grid" id="level-grid"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ─── SCENES ────────────────────────────────────────────────
+const SCENES = [
+  // ── LEVEL 0: Kids Room ──
+  {
+    name: 'Моя комната',
+    icon: '🧸',
+    bg: { type: 'room-wall' },
+    objects: [
+      { id: 'bear',   emoji: '🧸', name: 'Мишка',     x: 14, y: 40, w: 48, h: 48, zIdx: 15, hint: 'За шторой' },
+      { id: 'ball',   emoji: '⚽', name: 'Мяч',       x: 34, y: 72, w: 44, h: 44, zIdx: 15, hint: 'Под кроватью' },
+      { id: 'block',  emoji: '🧱', name: 'Кубик',     x: 68, y: 16, w: 38, h: 38, zIdx: 15, hint: 'На полке' },
+      { id: 'car',    emoji: '🚗', name: 'Машинка',   x: 78, y: 50, w: 48, h: 36, zIdx: 15, hint: 'Под одеялом' },
+      { id: 'book',   emoji: '📚', name: 'Книжка',    x: 5,  y: 24, w: 36, h: 40, zIdx: 15, hint: 'На подоконнике' },
+      { id: 'paints', emoji: '🎨', name: 'Краски',    x: 56, y: 42, w: 40, h: 40, zIdx: 15, hint: 'За тумбочкой' },
+      { id: 'yoYo',   emoji: '🪀', name: 'Йо-йо',     x: 40, y: 76, w: 32, h: 32, zIdx: 15, hint: 'На ковре' },
+    ]
+  },
+  // ── LEVEL 1: Space ──
+  {
+    name: 'Космическое путешествие',
+    icon: '🚀',
+    bg: { type: 'space' },
+    objects: [
+      { id: 'rocket',   emoji: '🚀', name: 'Ракета',    x: 38, y: 15, w: 52, h: 52, zIdx: 10, hint: 'За планетами' },
+      { id: 'alien',    emoji: '👽', name: 'Пришелец',  x: 80, y: 52, w: 44, h: 44, zIdx: 9,  hint: 'В кратере' },
+      { id: 'star',     emoji: '⭐', name: 'Звезда',    x: 22, y: 20, w: 36, h: 36, zIdx: 11, hint: 'В туманности' },
+      { id: 'ufo',      emoji: '🛸', name: 'НЛО',       x: 55, y: 30, w: 48, h: 36, zIdx: 8,  hint: 'За спутником' },
+      { id: 'moon',     emoji: '🌙', name: 'Луна',      x: 10, y: 12, w: 44, h: 44, zIdx: 12, hint: 'За кольцами' },
+    ]
+  },
+  // ── LEVEL 2: Underwater ──
+  {
+    name: 'Подводный мир',
+    icon: '🐠',
+    bg: { type: 'underwater' },
+    objects: [
+      { id: 'fish',     emoji: '🐠', name: 'Рыбка',     x: 28, y: 38, w: 44, h: 36, zIdx: 10, hint: 'За кораллом' },
+      { id: 'octopus',  emoji: '🐙', name: 'Осьминог',  x: 68, y: 50, w: 48, h: 44, zIdx: 9,  hint: 'За водорослями' },
+      { id: 'treasure', emoji: '💎', name: 'Сокровище', x: 42, y: 68, w: 38, h: 38, zIdx: 8,  hint: 'Под камнями' },
+      { id: 'starfish', emoji: '⭐', name: 'Морская звезда', x: 15, y: 72, w: 36, h: 36, zIdx: 7, hint: 'На песке' },
+      { id: 'shell',    emoji: '🐚', name: 'Ракушка',   x: 58, y: 74, w: 34, h: 34, zIdx: 7,  hint: 'В песке' },
+    ]
+  },
+];
+
+// ─── GAME CLASS ────────────────────────────────────────────
+class HiddenObjectGame {
+  constructor() {
+    this.currentLevel = 0;
+    this.unlockedLevels = [true, false, false];
+    this.stars = 0;
+    this.coins = 0;
+    this.combo = 1;
+    this.maxCombo = 1;
+    this.foundCount = 0;
+    this.totalObjects = 0;
+    this.isPlaying = false;
+    this.startTime = null;
+    this.timerInterval = null;
+    this.hintIndex = -1;
+    this.usedHints = new Set();
+
+    this.sceneEl = document.getElementById('scene');
+    this.hintsBar = document.getElementById('hints-bar');
+    this.completionEl = document.getElementById('completion');
+    this.levelSelect = document.getElementById('level-select');
+    this.levelGrid = document.getElementById('level-grid');
+    this.levelName = document.getElementById('level-name');
+    this.starsEl = document.getElementById('stars-count');
+    this.coinsEl = document.getElementById('coins-count');
+    this.comboEl = document.getElementById('combo-count');
+    this.timerEl = document.getElementById('timer-display');
+    this.comboPopup = document.getElementById('combo-popup');
+    this.hintBtn = document.getElementById('hint-btn');
+
+    this.hintBtn.addEventListener('click', () => this.useHint());
+
+    this.buildLevelSelect();
+  }
+
+  buildLevelSelect() {
+    this.levelGrid.innerHTML = '';
+    SCENES.forEach((scene, i) => {
+      const card = document.createElement('div');
+      card.className = 'level-card' + (this.unlockedLevels[i] ? '' : ' locked');
+      card.innerHTML = `
+        <div class="lc-icon">${scene.icon}</div>
+        <div class="lc-name">${scene.name}</div>
+        <div class="lc-desc">${this.unlockedLevels[i] ? 'Нажми, чтобы играть' : '🔒 Закрыто'}</div>
+      `;
+      if (this.unlockedLevels[i]) {
+        card.addEventListener('click', () => this.startLevel(i));
+      }
+      this.levelGrid.appendChild(card);
+    });
+  }
+
+  startLevel(index) {
+    if (!this.unlockedLevels[index]) return;
+    this.currentLevel = index;
+    this.foundCount = 0;
+    this.combo = 1;
+    this.maxCombo = 1;
+    this.hintIndex = -1;
+    this.usedHints.clear();
+    this.isPlaying = true;
+
+    this.levelSelect.style.display = 'none';
+    this.completionEl.classList.remove('show');
+    this.completionEl.style.display = 'none';
+
+    const scene = SCENES[index];
+    this.levelName.textContent = scene.name;
+    this.totalObjects = scene.objects.length;
+
+    this.renderScene(scene);
+    this.renderHints(scene);
+    this.updateHUD();
+
+    // Timer
+    this.startTime = Date.now();
+    clearInterval(this.timerInterval);
+    this.timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+      this.timerEl.textContent = elapsed + 'с';
+    }, 200);
+
+    // First hints
+    this.hintBtn.disabled = false;
+  }
+
+  renderScene(scene) {
+    this.sceneEl.innerHTML = '';
+
+    // Background
+    const bg = document.createElement('div');
+    bg.className = 'scene-bg-layer';
+    bg.id = 'bg-layer';
+    this.sceneEl.appendChild(bg);
+
+    // Draw background based on type
+    this.drawBackground(bg, scene.bg.type);
+
+    // Create furniture (decorative)
+    this.createFurniture(scene.bg.type);
+
+    // Create objects (sorted by zIndex so lower ones render first)
+    const sorted = [...scene.objects].sort((a, b) => a.zIdx - b.zIdx);
+    sorted.forEach((obj, i) => {
+      const el = document.createElement('div');
+      el.className = 'hidden-object';
+      el.dataset.id = obj.id;
+      el.style.left = obj.x + '%';
+      el.style.top = obj.y + '%';
+      el.style.width = obj.w + 'px';
+      el.style.height = obj.h + 'px';
+      el.style.fontSize = Math.min(obj.w, obj.h) * 0.7 + 'px';
+      el.style.zIndex = obj.zIdx;
+      el.style.transform = 'scale(0.85)';
+
+      // Random initial rotation for natural look
+      const rot = (Math.random() * 10 - 5);
+      el.style.transform = `scale(0.85) rotate(${rot}deg)`;
+
+      el.innerHTML = `<div class="glow-ring"></div><span style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">${obj.emoji}</span>`;
+
+      // Objects get partially hidden with opacity + brightness to simulate camouflage
+      const hidingEffects = {
+        'bear':   { opacity: 0.30, filter: 'brightness(0.55) saturate(0.7)' },
+        'ball':   { opacity: 0.25, filter: 'brightness(0.45) contrast(0.8)' },
+        'block':  { opacity: 0.50, filter: 'brightness(0.7) saturate(0.6)' },
+        'car':    { opacity: 0.20, filter: 'brightness(0.4) contrast(0.7)' },
+        'book':   { opacity: 0.40, filter: 'brightness(0.6) saturate(0.5)' },
+        'paints': { opacity: 0.45, filter: 'brightness(0.65) saturate(0.6)' },
+        'yoYo':   { opacity: 0.35, filter: 'brightness(0.55) contrast(0.8)' },
+        'rocket': { opacity: 0.30, filter: 'brightness(0.5) saturate(0.6)' },
+        'alien':  { opacity: 0.25, filter: 'brightness(0.4) contrast(0.7)' },
+        'star':   { opacity: 0.35, filter: 'brightness(0.6)' },
+        'ufo':    { opacity: 0.30, filter: 'brightness(0.5) saturate(0.5)' },
+        'moon':   { opacity: 0.40, filter: 'brightness(0.55) contrast(0.8)' },
+        'fish':   { opacity: 0.30, filter: 'brightness(0.5) saturate(0.6)' },
+        'octopus':{ opacity: 0.25, filter: 'brightness(0.45) saturate(0.5)' },
+        'treasure':{ opacity: 0.20, filter: 'brightness(0.35) contrast(0.7)' },
+        'starfish':{ opacity: 0.25, filter: 'brightness(0.45) saturate(0.4)' },
+        'shell':  { opacity: 0.30, filter: 'brightness(0.5) saturate(0.5)' },
+      };
+      const eff = hidingEffects[obj.id];
+      if (eff) {
+        el.style.setProperty('--obj-opacity', String(eff.opacity));
+        el.style.opacity = String(eff.opacity);
+        el.style.filter = eff.filter;
+      } else {
+        el.style.setProperty('--obj-opacity', '0.5');
+      }
+
+      el.addEventListener('click', (e) => this.onObjectClick(e, el, obj));
+      this.sceneEl.appendChild(el);
+    });
+  }
+
+  drawBackground(bgEl, type) {
+    if (type === 'room-wall') {
+      // Wall
+      bgEl.style.background = 'linear-gradient(180deg, #FFF8DC 0%, #FAEBD7 60%, #DEB887 60%, #D2B48C 100%)';
+
+      // Wall pattern (stripes)
+      for (let i = 0; i < 12; i++) {
+        const stripe = document.createElement('div');
+        stripe.style.cssText = `position:absolute;top:${i*5}%;left:0;width:100%;height:5px;background:rgba(255,255,255,0.05);`;
+        bgEl.appendChild(stripe);
+      }
+
+      // Window
+      const win = document.createElement('div');
+      win.style.cssText = 'position:absolute;left:5%;top:8%;width:18%;height:32%;background:linear-gradient(180deg,#87CEEB,#B0E0E6);border:6px solid #8B7355;border-radius:4px;box-shadow:inset 0 0 30px rgba(135,206,235,0.3);z-index:5;';
+      bgEl.appendChild(win);
+      // Window cross
+      const cross1 = document.createElement('div');
+      cross1.style.cssText = 'position:absolute;left:50%;top:0;width:3px;height:100%;background:#8B7355;transform:translateX(-50%);';
+      win.appendChild(cross1);
+      const cross2 = document.createElement('div');
+      cross2.style.cssText = 'position:absolute;top:50%;left:0;width:100%;height:3px;background:#8B7355;transform:translateY(-50%);';
+      win.appendChild(cross2);
+
+      // Curtain left
+      const curtainL = document.createElement('div');
+      curtainL.style.cssText = 'position:absolute;left:3%;top:6%;width:8%;height:36%;background:linear-gradient(135deg,#DC143C,#8B0000);border-radius:0 8px 8px 0;z-index:6;box-shadow:2px 2px 10px rgba(0,0,0,0.2);';
+      bgEl.appendChild(curtainL);
+      // Curtain drape
+      for (let i = 0; i < 5; i++) {
+        const drape = document.createElement('div');
+        drape.style.cssText = `position:absolute;left:${3+i*1.5}%;top:6%;width:3px;height:36%;background:rgba(0,0,0,0.15);border-radius:50%;`;
+        bgEl.appendChild(drape);
+      }
+
+      // Bed
+      const bed = document.createElement('div');
+      bed.style.cssText = 'position:absolute;right:4%;bottom:8%;width:35%;height:32%;background:#8B4513;border-radius:8px;z-index:7;box-shadow:0 4px 15px rgba(0,0,0,0.2);';
+      bgEl.appendChild(bed);
+      // Mattress
+      const mattress = document.createElement('div');
+      mattress.style.cssText = 'position:absolute;right:5%;bottom:9%;width:33%;height:20%;background:#FFF8DC;border-radius:6px;z-index:8;border:2px solid #DEB887;';
+      bgEl.appendChild(mattress);
+      // Blanket (partially covering bed)
+      const blanket = document.createElement('div');
+      blanket.style.cssText = 'position:absolute;right:10%;bottom:12%;width:25%;height:14%;background:linear-gradient(135deg,#4169E1,#6495ED);border-radius:4px;z-index:9;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+      bgEl.appendChild(blanket);
+      // Pillow
+      const pillow = document.createElement('div');
+      pillow.style.cssText = 'position:absolute;right:32%;bottom:24%;width:14%;height:10%;background:#fff;border-radius:10px;z-index:9;box-shadow:0 2px 6px rgba(0,0,0,0.1);';
+      bgEl.appendChild(pillow);
+
+      // Shelf
+      const shelf = document.createElement('div');
+      shelf.style.cssText = 'position:absolute;left:55%;top:14%;width:35%;height:4px;background:#8B4513;border-radius:2px;z-index:6;box-shadow:0 2px 4px rgba(0,0,0,0.2);';
+      bgEl.appendChild(shelf);
+      // Shelf brackets
+      const bracket1 = document.createElement('div');
+      bracket1.style.cssText = 'position:absolute;left:58%;top:15%;width:4px;height:12px;background:#8B4513;z-index:5;';
+      bgEl.appendChild(bracket1);
+      const bracket2 = document.createElement('div');
+      bracket2.style.cssText = 'position:absolute;left:86%;top:15%;width:4px;height:12px;background:#8B4513;z-index:5;';
+      bgEl.appendChild(bracket2);
+      // Items on shelf
+      const shelfItems = ['📖', '🏆', '🎪'];
+      shelfItems.forEach((item, i) => {
+        const si = document.createElement('div');
+        si.style.cssText = `position:absolute;left:${60+i*7}%;top:8%;font-size:22px;z-index:7;`;
+        si.textContent = item;
+        bgEl.appendChild(si);
+      });
+
+      // Rug
+      const rug = document.createElement('div');
+      rug.style.cssText = 'position:absolute;left:25%;bottom:2%;width:40%;height:10%;background:linear-gradient(135deg,#FF6347,#FF4500,#FF6347);border-radius:50%/20%;z-index:4;box-shadow:0 2px 10px rgba(0,0,0,0.15);';
+      bgEl.appendChild(rug);
+      // Rug pattern
+      for (let i = 0; i < 8; i++) {
+        const rp = document.createElement('div');
+        rp.style.cssText = `position:absolute;left:${28+i*4}%;bottom:4%;width:2%;height:6%;background:rgba(255,255,255,0.2);border-radius:50%;z-index:4;`;
+        bgEl.appendChild(rp);
+      }
+
+      // Nightstand
+      const stand = document.createElement('div');
+      stand.style.cssText = 'position:absolute;right:2%;bottom:30%;width:10%;height:16%;background:#A0522D;border-radius:4px;z-index:6;box-shadow:-2px 0 8px rgba(0,0,0,0.15);';
+      bgEl.appendChild(stand);
+      // Lamp on nightstand
+      const lamp = document.createElement('div');
+      lamp.style.cssText = 'position:absolute;right:3%;bottom:42%;width:8%;height:10%;background:linear-gradient(180deg,#FFD700,#FFA500);border-radius:50% 50% 4px 4px;z-index:7;box-shadow:0 0 20px rgba(255,215,0,0.3);';
+      bgEl.appendChild(lamp);
+      const lampBase = document.createElement('div');
+      lampBase.style.cssText = 'position:absolute;right:4.5%;bottom:44%;width:5%;height:4%;background:#8B7355;border-radius:2px;z-index:6;';
+      bgEl.appendChild(lampBase);
+
+      // Picture on wall
+      const pic = document.createElement('div');
+      pic.style.cssText = 'position:absolute;left:30%;top:6%;width:12%;height:16%;background:#FFE4B5;border:4px solid #8B7355;border-radius:3px;z-index:5;display:flex;align-items:center;justify-content:center;font-size:28px;';
+      pic.textContent = '🌈';
+      bgEl.appendChild(pic);
+
+      // Scattered toys on floor
+      const floorToys = ['✈️', '🎲', '🪁'];
+      floorToys.forEach((toy, i) => {
+        const t = document.createElement('div');
+        t.style.cssText = `position:absolute;left:${15+i*12}%;bottom:14%;font-size:20px;z-index:5;opacity:0.5;transform:rotate(${Math.random()*30-15}deg);`;
+        t.textContent = toy;
+        bgEl.appendChild(t);
+      });
+
+    } else if (type === 'space') {
+      // Dark space background
+      bgEl.style.background = 'radial-gradient(ellipse at 30% 20%, #1a0533, #000011 70%, #000000)';
+
+      // Stars
+      for (let i = 0; i < 80; i++) {
+        const star = document.createElement('div');
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+        const size = Math.random() * 3 + 1;
+        const delay = Math.random() * 3;
+        star.style.cssText = `position:absolute;left:${x}%;top:${y}%;width:${size}px;height:${size}px;background:#fff;border-radius:50%;z-index:1;animation:twinkle ${2+Math.random()*3}s ${delay}s infinite;opacity:${0.3+Math.random()*0.7};`;
+        bgEl.appendChild(star);
+      }
+
+      // Nebula
+      const nebula = document.createElement('div');
+      nebula.style.cssText = 'position:absolute;left:15%;top:10%;width:40%;height:40%;background:radial-gradient(ellipse, rgba(147,51,234,0.15), transparent 70%);border-radius:50%;z-index:2;';
+      bgEl.appendChild(nebula);
+      const nebula2 = document.createElement('div');
+      nebula2.style.cssText = 'position:absolute;right:10%;top:40%;width:35%;height:35%;background:radial-gradient(ellipse, rgba(59,130,246,0.12), transparent 70%);border-radius:50%;z-index:2;';
+      bgEl.appendChild(nebula2);
+
+      // Large planet (like Jupiter) - left
+      const planet1 = document.createElement('div');
+      planet1.style.cssText = 'position:absolute;left:6%;top:38%;width:22%;height:28%;background:linear-gradient(135deg,#D2691E,#CD853F,#DEB887);border-radius:50%;z-index:6;box-shadow:inset -10px -5px 30px rgba(0,0,0,0.4), 0 0 40px rgba(210,105,30,0.2);';
+      bgEl.appendChild(planet1);
+      // Planet stripes
+      for (let i = 0; i < 3; i++) {
+        const strip = document.createElement('div');
+        strip.style.cssText = `position:absolute;left:6%;top:${45+i*8}%;width:22%;height:3%;background:rgba(139,90,43,0.3);border-radius:50%;z-index:7;`;
+        bgEl.appendChild(strip);
+      }
+
+      // Planet with rings (like Saturn) - top right
+      const planet2 = document.createElement('div');
+      planet2.style.cssText = 'position:absolute;right:8%;top:6%;width:16%;height:20%;background:linear-gradient(135deg,#F4A460,#FFDAB9);border-radius:50%;z-index:6;box-shadow:inset -5px -3px 20px rgba(0,0,0,0.3);';
+      bgEl.appendChild(planet2);
+      // Rings
+      const rings = document.createElement('div');
+      rings.style.cssText = 'position:absolute;right:3%;top:8%;width:26%;height:16%;border:3px solid rgba(210,180,140,0.6);border-radius:50%;z-index:7;transform:rotate(-20deg);box-shadow:0 0 15px rgba(210,180,140,0.2);';
+      bgEl.appendChild(rings);
+
+      // Small planet (Mars-like) - bottom
+      const planet3 = document.createElement('div');
+      planet3.style.cssText = 'position:absolute;left:55%;bottom:5%;width:8%;height:10%;background:linear-gradient(135deg,#CD5C5C,#DC143C);border-radius:50%;z-index:6;box-shadow:inset -3px -2px 10px rgba(0,0,0,0.3);';
+      bgEl.appendChild(planet3);
+
+      // Moon
+      const moon = document.createElement('div');
+      moon.style.cssText = 'position:absolute;left:48%;top:14%;width:6%;height:8%;background:#F5F5DC;border-radius:50%;z-index:7;box-shadow:0 0 20px rgba(245,245,220,0.3);';
+      bgEl.appendChild(moon);
+
+      // Satellite/debris
+      const satellite = document.createElement('div');
+      satellite.style.cssText = 'position:absolute;right:30%;top:28%;width:8%;height:6%;background:#708090;border-radius:4px;z-index:8;box-shadow:0 0 15px rgba(112,128,144,0.3);';
+      bgEl.appendChild(satellite);
+      // Solar panels
+      const panel1 = document.createElement('div');
+      panel1.style.cssText = 'position:absolute;right:27%;top:26%;width:4%;height:10%;background:#4169E1;z-index:7;border-radius:2px;opacity:0.7;';
+      bgEl.appendChild(panel1);
+      const panel2 = document.createElement('div');
+      panel2.style.cssText = 'position:absolute;right:39%;top:26%;width:4%;height:10%;background:#4169E1;z-index:7;border-radius:2px;opacity:0.7;';
+      bgEl.appendChild(panel2);
+
+      // Crater on ground
+      const crater = document.createElement('div');
+      crater.style.cssText = 'position:absolute;right:20%;bottom:4%;width:14%;height:8%;background:rgba(100,100,100,0.3);border-radius:50%;z-index:5;border:2px solid rgba(100,100,100,0.2);';
+      bgEl.appendChild(crater);
+
+    } else if (type === 'underwater') {
+      // Water gradient
+      bgEl.style.background = 'linear-gradient(180deg, #006994 0%, #0088B0 30%, #0077B6 60%, #005B96 80%, #003B5C 100%)';
+
+      // Light rays from above
+      for (let i = 0; i < 5; i++) {
+        const ray = document.createElement('div');
+        const x = 10 + i * 20;
+        ray.style.cssText = `position:absolute;left:${x}%;top:0;width:8%;height:60%;background:linear-gradient(180deg, rgba(255,255,255,0.08), transparent);transform:skewX(${Math.random()*20-10}deg);z-index:1;`;
+        bgEl.appendChild(ray);
+      }
+
+      // Bubbles
+      for (let i = 0; i < 20; i++) {
+        const bubble = document.createElement('div');
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+        const size = 2 + Math.random() * 6;
+        bubble.style.cssText = `position:absolute;left:${x}%;top:${y}%;width:${size}px;height:${size}px;background:rgba(255,255,255,0.15);border-radius:50%;z-index:2;border:1px solid rgba(255,255,255,0.1);animation:float ${2+Math.random()*4}s ${Math.random()*3}s infinite;`;
+        bgEl.appendChild(bubble);
+      }
+
+      // Sandy bottom
+      const sand = document.createElement('div');
+      sand.style.cssText = 'position:absolute;left:0;bottom:0;width:100%;height:18%;background:linear-gradient(180deg, #C2B280, #BDB76B, #A09050);z-index:3;border-radius:50% 50% 0 0 / 20% 20% 0 0;';
+      bgEl.appendChild(sand);
+      // Sand texture dots
+      for (let i = 0; i < 30; i++) {
+        const dot = document.createElement('div');
+        dot.style.cssText = `position:absolute;left:${Math.random()*100}%;bottom:${Math.random()*15}%;width:3px;height:3px;background:rgba(0,0,0,0.05);border-radius:50%;z-index:3;`;
+        bgEl.appendChild(dot);
+      }
+
+      // Coral reef - left
+      const coral1 = document.createElement('div');
+      coral1.style.cssText = 'position:absolute;left:3%;bottom:10%;width:28%;height:40%;background:linear-gradient(135deg, #FF6B6B, #FF4757, #FF3838);border-radius:40% 40% 0 0;z-index:6;box-shadow:0 0 30px rgba(255,71,87,0.2);';
+      bgEl.appendChild(coral1);
+      // Coral branches
+      for (let i = 0; i < 6; i++) {
+        const branch = document.createElement('div');
+        const bx = 5 + i * 4;
+        const by = 25 + Math.random() * 20;
+        const bw = 3 + Math.random() * 4;
+        const bh = 8 + Math.random() * 12;
+        branch.style.cssText = `position:absolute;left:${bx}%;bottom:${by}%;width:${bw}%;height:${bh}%;background:linear-gradient(180deg, #FF6B6B, #FF3838);border-radius:50% 50% 0 0;z-index:7;transform:rotate(${Math.random()*30-15}deg);`;
+        bgEl.appendChild(branch);
+      }
+
+      // Coral reef - right side
+      const coral2 = document.createElement('div');
+      coral2.style.cssText = 'position:absolute;right:5%;bottom:8%;width:22%;height:35%;background:linear-gradient(135deg, #FFA502, #FF7F50, #FF6348);border-radius:30% 30% 0 0;z-index:6;box-shadow:0 0 25px rgba(255,165,2,0.2);';
+      bgEl.appendChild(coral2);
+
+      // Seaweed - left
+      for (let i = 0; i < 5; i++) {
+        const weed = document.createElement('div');
+        const wx = 42 + i * 3;
+        const wh = 20 + Math.random() * 25;
+        weed.style.cssText = `position:absolute;left:${wx}%;bottom:5%;width:2%;height:${wh}%;background:linear-gradient(0deg, #228B22, #32CD32);border-radius:50%;z-index:6;opacity:${0.6+Math.random()*0.3};transform:rotate(${Math.random()*20-10}deg);`;
+        bgEl.appendChild(weed);
+      }
+      // Seaweed - right
+      for (let i = 0; i < 4; i++) {
+        const weed = document.createElement('div');
+        const wx = 72 + i * 3;
+        const wh = 15 + Math.random() * 20;
+        weed.style.cssText = `position:absolute;left:${wx}%;bottom:5%;width:2%;height:${wh}%;background:linear-gradient(0deg, #006400, #228B22);border-radius:50%;z-index:6;opacity:${0.5+Math.random()*0.3};transform:rotate(${Math.random()*15-7}deg);`;
+        bgEl.appendChild(weed);
+      }
+
+      // Rocks on bottom
+      const rockPositions = [
+        { left: 32, bottom: 5, w: 10, h: 6 },
+        { left: 50, bottom: 4, w: 8, h: 5 },
+        { left: 68, bottom: 4, w: 7, h: 4 },
+      ];
+      rockPositions.forEach(r => {
+        const rock = document.createElement('div');
+        rock.style.cssText = `position:absolute;left:${r.left}%;bottom:${r.bottom}%;width:${r.w}%;height:${r.h}%;background:linear-gradient(135deg, #696969, #808080);border-radius:50%;z-index:7;box-shadow:inset -3px -2px 8px rgba(0,0,0,0.3);`;
+        bgEl.appendChild(rock);
+      });
+
+      // Treasure chest
+      const chest = document.createElement('div');
+      chest.style.cssText = 'position:absolute;left:42%;bottom:8%;width:10%;height:8%;background:linear-gradient(135deg, #8B4513, #A0522D);border-radius:4px;z-index:8;box-shadow:0 2px 10px rgba(0,0,0,0.3);';
+      bgEl.appendChild(chest);
+      // Chest lid
+      const chestLid = document.createElement('div');
+      chestLid.style.cssText = 'position:absolute;left:42%;bottom:14%;width:10%;height:4%;background:#D2691E;border-radius:4px 4px 0 0;z-index:9;';
+      bgEl.appendChild(chestLid);
+      // Chest lock
+      const chestLock = document.createElement('div');
+      chestLock.style.cssText = 'position:absolute;left:46.5%;bottom:9.5%;width:1%;height:3%;background:#FFD700;border-radius:2px;z-index:10;';
+      bgEl.appendChild(chestLock);
+    }
+  }
+
+  createFurniture(type) {
+    // Additional scene objects are handled in drawBackground
+  }
+
+  renderHints(scene) {
+    this.hintsBar.innerHTML = '';
+    scene.objects.forEach(obj => {
+      const el = document.createElement('div');
+      el.className = 'hint-item';
+      el.dataset.id = obj.id;
+      el.innerHTML = `<div class="hint-icon">${obj.emoji}</div><div class="hint-label">${obj.name}</div>`;
+      el.title = obj.hint;
+      this.hintsBar.appendChild(el);
+    });
+  }
+
+  onObjectClick(e, el, obj) {
+    if (!this.isPlaying) return;
+    if (el.classList.contains('found')) return;
+
+    // Check if this object is still to be found
+    const scene = SCENES[this.currentLevel];
+    const stillToFind = scene.objects.filter(o => {
+      const oEl = this.sceneEl.querySelector(`[data-id="${o.id}"]`);
+      return !oEl.classList.contains('found');
+    });
+
+    if (stillToFind.some(o => o.id === obj.id)) {
+      // Found!
+      el.classList.add('found');
+
+      // Calculate bonus
+      const elapsed = Date.now() - this.startTime;
+      const speedBonus = elapsed < 45000 ? 3 : elapsed < 90000 ? 2 : 1;
+      const comboBonus = this.combo;
+
+      const starsEarned = 1 * speedBonus;
+      const coinsEarned = 10 * comboBonus;
+
+      this.stars += starsEarned;
+      this.coins += coinsEarned;
+
+      this.foundCount++;
+      this.combo = Math.min(this.combo + 1, 10);
+      this.maxCombo = Math.max(this.maxCombo, this.combo);
+
+      // Show bonus popup
+      this.showBonusPopup(e.clientX || e.touches?.[0]?.clientX || 400, 
+                          (e.clientY || e.touches?.[0]?.clientY || 300) - 30, 
+                          `+${starsEarned}⭐ +${coinsEarned}🪙`);
+
+      // Combo popup
+      if (this.combo >= 3) {
+        this.showComboPopup(`🔥 Комбо x${this.combo}!`);
+      }
+
+      // Update hint item
+      const hintEl = this.hintsBar.querySelector(`[data-id="${obj.id}"]`);
+      if (hintEl) hintEl.classList.add('found-hint');
+
+      this.updateHUD();
+
+      // Remove object after animation
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0)';
+      }, 400);
+
+      // Check level complete
+      if (this.foundCount >= this.totalObjects) {
+        setTimeout(() => this.completeLevel(), 600);
+      }
+    } else {
+      // Wrong click
+      el.classList.add('wrong');
+      setTimeout(() => el.classList.remove('wrong'), 400);
+      this.combo = 1;
+      this.updateHUD();
+      this.showBonusPopup(e.clientX || 400, (e.clientY || 300) - 30, '❌ Промах!', '#ff6b6b');
+    }
+  }
+
+  showBonusPopup(x, y, text, color = '#FFD700') {
+    const popup = document.createElement('div');
+    popup.className = 'bonus-popup';
+    popup.style.color = color;
+    popup.textContent = text;
+    const gameRect = document.getElementById('game-container').getBoundingClientRect();
+    let px = ((x || 400) - gameRect.left) / gameRect.width * 100;
+    let py = ((y || 300) - gameRect.top) / gameRect.height * 100;
+    px = Math.max(5, Math.min(px, 85));
+    py = Math.max(5, Math.min(py, 80));
+    popup.style.left = px + '%';
+    popup.style.top = py + '%';
+    document.getElementById('game-container').appendChild(popup);
+    setTimeout(() => popup.remove(), 900);
+  }
+
+  showComboPopup(text) {
+    this.comboPopup.textContent = text;
+    this.comboPopup.classList.add('show');
+    clearTimeout(this.comboPopup._timeout);
+    this.comboPopup._timeout = setTimeout(() => {
+      this.comboPopup.classList.remove('show');
+    }, 1200);
+  }
+
+  useHint() {
+    if (!this.isPlaying) return;
+    const scene = SCENES[this.currentLevel];
+    const stillToFind = scene.objects.filter(o => {
+      const oEl = this.sceneEl.querySelector(`[data-id="${o.id}"]`);
+      return !oEl.classList.contains('found');
+    });
+
+    if (stillToFind.length === 0) return;
+
+    // Find next unhinted object
+    let hintTarget = null;
+    for (let i = this.hintIndex + 1; i < scene.objects.length; i++) {
+      const o = scene.objects[i];
+      const oEl = this.sceneEl.querySelector(`[data-id="${o.id}"]`);
+      if (oEl && !oEl.classList.contains('found') && !this.usedHints.has(o.id)) {
+        hintTarget = o;
+        this.hintIndex = i;
+        break;
+      }
+    }
+    if (!hintTarget) {
+      // wrap around
+      for (let i = 0; i < scene.objects.length; i++) {
+        const o = scene.objects[i];
+        const oEl = this.sceneEl.querySelector(`[data-id="${o.id}"]`);
+        if (oEl && !oEl.classList.contains('found') && !this.usedHints.has(o.id)) {
+          hintTarget = o;
+          this.hintIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (!hintTarget) return;
+
+    // Cost: 5 coins
+    if (this.coins < 5) return;
+    this.coins -= 5;
+
+    this.usedHints.add(hintTarget.id);
+    const oEl = this.sceneEl.querySelector(`[data-id="${hintTarget.id}"]`);
+    if (!oEl) return;
+
+    // Temporarily reveal the hidden object
+    const origOpacity = oEl.style.opacity;
+    const origFilter = oEl.style.filter;
+    oEl.style.opacity = '1';
+    oEl.style.filter = 'brightness(1.2) saturate(1.3) drop-shadow(0 0 12px gold)';
+    oEl.classList.add('hint-glow');
+    oEl.style.transform = 'scale(1.3)';
+    setTimeout(() => {
+      oEl.style.opacity = origOpacity;
+      oEl.style.filter = origFilter;
+      oEl.classList.remove('hint-glow');
+      oEl.style.transform = '';
+    }, 2500);
+
+    this.updateHUD();
+  }
+
+  completeLevel() {
+    this.isPlaying = false;
+    clearInterval(this.timerInterval);
+
+    const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+    const finalStars = this.stars;
+    const finalCoins = this.coins;
+
+    document.getElementById('final-stars').textContent = finalStars;
+    document.getElementById('final-coins').textContent = finalCoins;
+    document.getElementById('final-time').textContent = elapsed + 'с';
+    document.getElementById('final-combo').textContent = 'x' + this.maxCombo;
+
+    // Messages based on performance
+    let msg = 'Отлично! Ты настоящий сыщик! 🔍';
+    if (this.maxCombo >= 5) msg = '🔥 ОГОНЬ! Невероятная серия!';
+    else if (elapsed < 30) msg = '⚡ Молниеносная скорость!';
+    else if (elapsed < 60) msg = '✨ Очень быстро! Молодец!';
+    document.getElementById('completion-msg').textContent = msg;
+
+    this.completionEl.style.display = 'flex';
+    this.completionEl.classList.add('show');
+
+    // Confetti!
+    this.spawnConfetti();
+
+    // Unlock next level
+    if (this.currentLevel + 1 < SCENES.length) {
+      this.unlockedLevels[this.currentLevel + 1] = true;
+    }
+  }
+
+  spawnConfetti() {
+    const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF6B6B', '#C084FC', '#FF8C00', '#FF69B4'];
+    const shapes = ['circle', 'square'];
+    const container = document.body;
+
+    for (let i = 0; i < 80; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece ' + shapes[Math.floor(Math.random() * shapes.length)];
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.width = (5 + Math.random() * 8) + 'px';
+      piece.style.height = (5 + Math.random() * 8) + 'px';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDuration = (2 + Math.random() * 3) + 's';
+      piece.style.animationDelay = (Math.random() * 2) + 's';
+      container.appendChild(piece);
+      setTimeout(() => piece.remove(), 6000);
+    }
+  }
+
+  nextLevel() {
+    const next = this.currentLevel + 1;
+    if (next < SCENES.length) {
+      this.startLevel(next);
+    } else {
+      this.showLevelSelect();
+    }
+  }
+
+  showLevelSelect() {
+    this.isPlaying = false;
+    clearInterval(this.timerInterval);
+    this.completionEl.classList.remove('show');
+    this.completionEl.style.display = 'none';
+    this.sceneEl.innerHTML = '';
+    this.hintsBar.innerHTML = '';
+    this.buildLevelSelect();
+    this.levelSelect.style.display = 'flex';
+  }
+
+  updateHUD() {
+    this.starsEl.textContent = this.stars;
+    this.coinsEl.textContent = this.coins;
+    this.comboEl.textContent = 'x' + this.combo;
+  }
+}
+
+// ─── START ─────────────────────────────────────────────────
+const game = new HiddenObjectGame();
+</script>
+
+</body>
+</html>
