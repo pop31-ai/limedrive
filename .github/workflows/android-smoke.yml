@@ -4,9 +4,9 @@ on:
   push:
     paths:
       - "platforms/android/**"
-      - "examples/**"
       - "engine/**"
       - "lang/**"
+      - "tools/build-apk.sh"
       - ".github/workflows/android-smoke.yml"
   workflow_dispatch:
 
@@ -14,11 +14,6 @@ jobs:
   emulator-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    permissions:
-      contents: write
-    concurrency:
-      group: android-smoke
-      cancel-in-progress: true
     env:
       APP: com.limedrive.app
     steps:
