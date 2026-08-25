@@ -64,6 +64,11 @@ jobs:
           AVDM="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
           EMU="$ANDROID_HOME/emulator/emulator"
 
+          echo "== ensure system image =="
+          "$SDKM" --install "system-images;android-30;google_apis;x86_64"
+          echo "== installed images =="
+          ls "$ANDROID_HOME/system-images"/*/*/* 2>/dev/null | head -3 || true
+
           echo "== create AVD =="
           echo "no" | "$AVDM" create avd -n ci -k "system-images;android-30;google_apis;x86_64" --force
 
