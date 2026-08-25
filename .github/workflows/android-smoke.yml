@@ -68,6 +68,8 @@ jobs:
           ls "$ANDROID_HOME/system-images"/*/*/* 2>/dev/null | head -3 || true
 
           echo "== create AVD =="
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           echo "no" | "$AVDM" create avd -n ci -k "system-images;android-30;google_apis;x86_64" --force
 
           echo "== boot emulator (headless) =="
