@@ -73,7 +73,7 @@ jobs:
           for i in $(seq 1 100); do
             B=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
             if [ "$B" = "1" ]; then OK=1; echo "boot completed at attempt $i"; break; fi
-            [ $((i % 10)) -eq 0 ] && echo "waiting… attempt $i"
+            [ $((i % 10)) -eq 0 ] && { echo "waiting… attempt $i"; } || true
             sleep 3
           done
           if [ -z "$OK" ]; then
