@@ -46,5 +46,9 @@
   "imp.hint": "import from file (Downloads)",
   "imp.error": "Import error",
   "mine.section": "My games",
-  "mine.clear": "Delete my games"
+  "mine.clear": "Delete my games",
+  "ai.title": "AI Prompt",
+  "ai.hint": "copy PROMPT.md template",
+  "imp.askPrompt": "AI prompt for this game (optional):",
+  "imp.promptCopied": "PROMPT.md copied to clipboard"
 }

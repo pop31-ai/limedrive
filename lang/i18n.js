@@ -132,10 +132,14 @@
               try {
                 var data = JSON.parse(r.result);
                 if (!data || !Array.isArray(data.levels)) throw new Error("not a LimeDrive game JSON");
+                var ask = api.t("imp.askPrompt");
+                var pr = "";
+                try { pr = prompt(ask, "") || ""; } catch (e2) {}
                 var list = myGames();
                 list.push({
                   id: (data.name || f.name) + "|" + data.levels.length + "|" + Date.now(),
                   title: data.name || f.name,
+                  prompt: String(pr).trim(),
                   data: r.result
                 });
                 saveMyGames(list);
@@ -148,6 +152,38 @@
             r.readAsText(f, "utf-8");
           });
           grid.insertBefore(card, grid.firstChild);
+
+          var aiCard = document.createElement("a");
+          aiCard.className = "card";
+          aiCard.id = "aiPromptCard";
+          aiCard.innerHTML = '<span class="t">🤖 ' + api.t("ai.title") + '</span><span class="m">' + api.t("ai.hint") + '</span>';
+          aiCard.addEventListener("click", function () {
+            var fallbackCopy = function (txt) {
+              var ta = document.createElement("textarea");
+              ta.value = txt;
+              ta.style.position = "fixed";
+              ta.style.opacity = "0";
+              document.body.appendChild(ta);
+              ta.select();
+              try { document.execCommand("copy"); } catch (e3) {}
+              document.body.removeChild(ta);
+            };
+            fetch(base + "../PROMPT.md").then(function (x) {
+              if (!x.ok) throw new Error("HTTP " + x.status);
+              return x.text();
+            }).then(function (txt) {
+              var done = function () { alert(api.t("imp.promptCopied")); };
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(done).catch(function () { fallbackCopy(txt); done(); });
+              } else {
+                fallbackCopy(txt);
+                done();
+              }
+            }).catch(function (e2) {
+              alert(api.t("imp.error") + ": " + e2.message);
+            });
+          });
+          grid.insertBefore(aiCard, card.nextSibling);
           document.body.appendChild(inp);
 
           var renderMine = function () {
@@ -164,7 +200,8 @@
               var c = document.createElement("a");
               c.className = "card";
               c.setAttribute("data-mine", "1");
-              c.innerHTML = '<span class="t">' + esc(g.title) + '</span><span class="m">' + api.t("ex.play") + '</span>';
+              var snip = g.prompt ? g.prompt.slice(0, 42) : api.t("ex.play");
+              c.innerHTML = '<span class="t">' + esc(g.title) + '</span><span class="m">' + esc(snip) + (g.prompt && g.prompt.length > 42 ? "…" : "") + '</span>';
               c.addEventListener("click", function () {
                 localStorage.setItem("currentGame", g.data);
                 location.href = "examples/player.html";

@@ -46,5 +46,9 @@
   "imp.hint": "Import aus Datei (Downloads)",
   "imp.error": "Importfehler",
   "mine.section": "Meine Spiele",
-  "mine.clear": "Meine Spiele löschen"
+  "mine.clear": "Meine Spiele löschen",
+  "ai.title": "KI-Prompt",
+  "ai.hint": "PROMPT.md-Vorlage kopieren",
+  "imp.askPrompt": "KI-Prompt für dieses Spiel (optional):",
+  "imp.promptCopied": "PROMPT.md in die Zwischenablage kopiert"
 }

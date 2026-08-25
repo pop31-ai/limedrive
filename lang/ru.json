@@ -46,5 +46,9 @@
   "imp.hint": "импорт из файла (Downloads)",
   "imp.error": "Ошибка импорта",
   "mine.section": "Мои игры",
-  "mine.clear": "Удалить мои игры"
+  "mine.clear": "Удалить мои игры",
+  "ai.title": "Промпт для ИИ",
+  "ai.hint": "скопировать шаблон PROMPT.md",
+  "imp.askPrompt": "Промпт ИИ для этой игры (необязательно):",
+  "imp.promptCopied": "PROMPT.md скопирован в буфер"
 }

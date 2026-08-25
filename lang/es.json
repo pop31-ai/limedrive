@@ -46,5 +46,9 @@
   "imp.hint": "importar desde archivo (Descargas)",
   "imp.error": "Error de importación",
   "mine.section": "Mis juegos",
-  "mine.clear": "Eliminar mis juegos"
+  "mine.clear": "Eliminar mis juegos",
+  "ai.title": "Prompt para IA",
+  "ai.hint": "copiar plantilla PROMPT.md",
+  "imp.askPrompt": "Prompt de IA para este juego (opcional):",
+  "imp.promptCopied": "PROMPT.md copiado al portapapeles"
 }
