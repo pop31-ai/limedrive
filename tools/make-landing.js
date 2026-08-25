@@ -21,6 +21,20 @@ for (const f of games) {
     <span class="t">${g.name || f}</span><span class="m">${label} · ${(g.levels || []).length} ур.</span></a>\n`;
 }
 
+// standalone games (harvested originals)
+let standalone = "";
+let catCount = 0;
+const catPath = path.join(ROOT, "standalone", "catalog.json");
+if (fs.existsSync(catPath)) {
+  const cat = JSON.parse(fs.readFileSync(catPath, "utf8"));
+  catCount = cat.length;
+  standalone = `<h1 style="margin-top:22px">🎲 Автономные игры</h1>
+<p class="sub">оригинальные сборки — клик открывает в новой вкладке</p>
+<div class="grid">
+${cat.map(c => `<a class="card" href="${c.file}" target="_blank"><span class="t">${c.title}</span><span class="m">${c.category} · ${c.kb} KB</span></a>`).join("\n")}
+</div>`;
+}
+
 const html = `<!DOCTYPE html>
 <html lang="ru"><head>
 <meta charset="UTF-8">
@@ -40,16 +54,32 @@ p.sub{color:#888;font-size:12px;margin-bottom:14px}
 .card:active{background:#1c1c34}
 .card .t{font-weight:bold;font-size:14px}
 .card .m{color:#7799;font-size:11px}
+.neuro{cursor:pointer;border-color:#00ff88}.neuro:active{background:#00331f}
 .hint{margin-top:14px;color:#556;font-size:11px}
 </style></head><body>
 <h1>◆ LimeDrive</h1>
-<p class="sub">${games.length} игр · работает офлайн</p>
+<p class="sub">${games.length} JSON-игр${catCount ? " + " + catCount + " автономных" : ""} · работает офлайн</p>
 <div class="grid">
 ${cards}</div>
+${standalone}
+<div class="card neuro" id="neuroCard"><span class="t">⚡ НЕЙРО-УРОВЕНЬ</span><span class="m">сгенерировать и играть</span></div>
 <p class="hint">Android: меню браузера → «Добавить на главный экран»</p>
+<script src="neuro.js"></script>
 <script>
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+if (window.NeuroGen) {
+  NeuroGen.ready().then(() => {
+    const card = document.getElementById("neuroCard");
+    if (card) card.addEventListener("click", () => {
+      const genres = NeuroGen.genres();
+      const g = genres[Math.floor(Math.random() * genres.length)];
+      const draft = NeuroGen.generate(g, Date.now() & 0xffffffff);
+      try { localStorage.setItem("currentGame", JSON.stringify(draft)); } catch (e) {}
+      location.href = "examples/player.html";
+    });
+  });
 }
 </script>
 </body></html>

@@ -116,7 +116,7 @@
 
   window.NeuroGen = {
     ready: load,
-    genres: function () { return W ? W.genres.slice() : []; },
+    genres: function () { return W ? W.genres.filter(function (g) { return g !== "turn-based-strategy"; }) : []; },
     generate: function (genre, seed) {
       if (!W) throw new Error("NeuroGen not loaded — call ready() first");
       var gi = W.genres.indexOf(genre);

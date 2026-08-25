@@ -1303,8 +1303,9 @@ function spawnParticles(x, y, color, count, type) {
 }
 
 function stripAlpha(hex) {
-  if (!hex || hex.length < 7) return hex || "#ffffff";
-  if (hex.length > 7) return hex.substring(0, 7);
+  if (!hex) return "#ffffff";
+  if (hex.charAt(0) !== "#") return hex;
+  if (hex.length === 9) return hex.substring(0, 7);
   return hex;
 }
 

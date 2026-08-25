@@ -21,7 +21,7 @@ p.sub{color:#888;font-size:12px;margin-bottom:14px}
 .hint{margin-top:14px;color:#556;font-size:11px}
 </style></head><body>
 <h1>◆ LimeDrive</h1>
-<p class="sub">18 игр · работает офлайн</p>
+<p class="sub">18 JSON-игр + 19 автономных · работает офлайн</p>
 <div class="grid">
 <a class="card" href="examples/player.html?game=01-lime-platformer.json">
     <span class="t">Lime Platformer</span><span class="m">Платформер · 4 ур.</span></a>
@@ -60,9 +60,31 @@ p.sub{color:#888;font-size:12px;margin-bottom:14px}
 <a class="card" href="examples/player.html?game=19-mirror-chess.json">
     <span class="t">Зеркальный Шах</span><span class="m">Тактика · 1 ур.</span></a>
 </div>
+<h1 style="margin-top:22px">🎲 Автономные игры</h1>
+<p class="sub">оригинальные сборки — клик открывает в новой вкладке</p>
+<div class="grid">
+<a class="card" href="standalone/basketball.html" target="_blank"><span class="t">Баскетбол ПолиАрт</span><span class="m">спорт · 12 KB</span></a>
+<a class="card" href="standalone/poliart-holo.html" target="_blank"><span class="t">Голоциадель — Архитектор голограмм</span><span class="m">настолка · 251 KB</span></a>
+<a class="card" href="standalone/poliart-grumble.html" target="_blank"><span class="t">Грумбл — Грустные портреты</span><span class="m">настолка · 46 KB</span></a>
+<a class="card" href="standalone/poliart-dragon.html" target="_blank"><span class="t">Дракон — Змеиные Врата</span><span class="m">викторина · 55 KB</span></a>
+<a class="card" href="standalone/builders-star.html" target="_blank"><span class="t">Звезда Строителей</span><span class="m">настолка · 48 KB</span></a>
+<a class="card" href="standalone/dice-cards/" target="_blank"><span class="t">Кубик-Карты</span><span class="m">настолка · 251 KB</span></a>
+<a class="card" href="standalone/poliart-lotto.html" target="_blank"><span class="t">Лотто — Золотая викторина</span><span class="m">викторина · 46 KB</span></a>
+<a class="card" href="standalone/meridian/" target="_blank"><span class="t">Меридиан — Золотое Сечение</span><span class="m">арт · 90 KB</span></a>
+<a class="card" href="standalone/poliart-ogon.html" target="_blank"><span class="t">Огонь — Викторина огня</span><span class="m">викторина · 46 KB</span></a>
+<a class="card" href="standalone/poliart-operator.html" target="_blank"><span class="t">Оператор ночного объекта</span><span class="m">3D · 44 KB</span></a>
+<a class="card" href="standalone/polygray/" target="_blank"><span class="t">ПолиГрей — шаблон настолки</span><span class="m">настолка · 56 KB</span></a>
+<a class="card" href="standalone/safari-marathon.html" target="_blank"><span class="t">Сафари-Марафон</span><span class="m">аркада · 73 KB</span></a>
+<a class="card" href="standalone/poliart-fotosafari.html" target="_blank"><span class="t">Фотосафари</span><span class="m">аркада · 39 KB</span></a>
+<a class="card" href="standalone/fingerdraw.html" target="_blank"><span class="t">FingerDraw — рисование</span><span class="m">тул · 4 KB</span></a>
+<a class="card" href="standalone/grimart/" target="_blank"><span class="t">GrimArt — генератор грима (эксперимент)</span><span class="m">арт · 15 KB</span></a>
+<a class="card" href="standalone/kandinsky-train.html" target="_blank"><span class="t">Kandinsky Train — паровозик</span><span class="m">раннер · 8 KB</span></a>
+<a class="card" href="standalone/polyart-live/" target="_blank"><span class="t">PolyArt Live — 49 живых галерей</span><span class="m">арт · 1457 KB</span></a>
+<a class="card" href="standalone/poliart-phi.html" target="_blank"><span class="t">Φ — Сетка золотого сечения</span><span class="m">арт-тул · 10 KB</span></a>
+<a class="card" href="standalone/poliart-atlet.html" target="_blank"><span class="t">Φ-Атлет — Корпус в движении</span><span class="m">арт-3D · 53 KB</span></a>
+</div>
 <div class="card neuro" id="neuroCard"><span class="t">⚡ НЕЙРО-УРОВЕНЬ</span><span class="m">сгенерировать и играть</span></div>
 <p class="hint">Android: меню браузера → «Добавить на главный экран»</p>
-<script src="lang/i18n.js"></script>
 <script src="neuro.js"></script>
 <script>
 if ("serviceWorker" in navigator && location.protocol === "https:") {
@@ -79,8 +101,6 @@ if (window.NeuroGen) {
       location.href = "examples/player.html";
     });
   });
-}
-else {
 }
 </script>
 </body></html>
