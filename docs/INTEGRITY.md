@@ -1,4 +1,4 @@
-# INTEGRITY — снимок ядра (2026-08-24 19:12)
+# INTEGRITY — снимок ядра (2026-08-25 12:36)
 
 Контроль дрейфа: перегенерируйте `node tools/integrity.js` и сравните diff.
 Изменилась строка без соответствующего коммита — ядро тронули.
@@ -7,10 +7,10 @@
 
 | Файл | Строки | Символы | sha256:12 |
 |------|-------:|--------:|-----------|
-| examples/player.html | 4516 | 152337 | `5caf714f2c66` |
+| examples/player.html | 4530 | 152717 | `b7af83cf3b84` |
 | sw.js | 44 | 1273 | `03a5130309c3` |
 | manifest.json | 16 | 440 | `b718f4b9d7c5` |
-| index.html | 69 | 4175 | `575698e3d331` |
+| index.html | 87 | 4946 | `a941e78af917` |
 | engine/limedrive-3d.js | 461 | 14741 | `23b25473feea` |
 | engine/limedrive-ai.js | 417 | 14451 | `034dd865a160` |
 | engine/limedrive-components.js | 605 | 20157 | `b9dc5c7233da` |
@@ -21,7 +21,7 @@
 | tools/check-game.js | 204 | 8010 | `0a4d52c96e9e` |
 | tests/run-all.js | 54 | 1651 | `e2e6be49f4c4` |
 | README.md | 80 | 2911 | `45eab9ebdea1` |
-| PROMPT.md | 523 | 18159 | `2192c991d212` |
+| PROMPT.md | 569 | 20192 | `ba09cbaf5787` |
 | docs/README.md | 175 | 7651 | `58909a4ba8be` |
 | docs/GAME-FORMAT.md | 156 | 6144 | `3997c314aa34` |
 
@@ -30,8 +30,8 @@
 | Категория | Кол-во |
 |-----------|-------:|
 | Игры (examples/*.json) | 18 |
-| Тестовые фикстуры (_fixture-*) | 10 |
-| Тестовые файлы (tests/) | 23 |
+| Тестовые фикстуры (_fixture-*) | 14 |
+| Тестовые файлы (tests/) | 24 |
 | Скрипты QA/tools (tools/*.js) | 12 |
 
 Правила: файлы с префиксом `_` не считаются играми; `reports/`, `node_modules/`
