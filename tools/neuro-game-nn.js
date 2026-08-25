@@ -194,3 +194,17 @@ if (mode === "generate") {
   console.log(`validator: ${rep.ok ? "PASS" : "FAIL"} (E:${rep.errors.length} W:${rep.warnings.length})`);
   rep.errors.slice(0, 5).forEach(e => console.log("  ERROR", e));
 }
+
+if (mode === "export") {
+  // ship trained weights + genre centroids for the browser runtime (neuro.js)
+  const centroids = {};
+  GENRES.forEach((g, gi) => {
+    const c = centroidFor(X, Y, gi);
+    if (c) centroids[g] = c;
+  });
+  const out = { version: 1, vocab: VOCAB, genres: GENRES,
+    W1: nn.W1, b1: nn.b1, W2: nn.W2, b2: nn.b2, centroids };
+  const outPath = path.join(ROOT, "neuro-weights.json");
+  fs.writeFileSync(outPath, JSON.stringify(out), "utf8");
+  console.log(`weights exported: ${path.relative(ROOT, outPath)} (${Math.round(fs.statSync(outPath).size / 1024)} KB)`);
+}
