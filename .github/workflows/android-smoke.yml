@@ -60,6 +60,8 @@ jobs:
         run: |
           set -eo pipefail
           {
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$PATH"
+          adb version
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           AVDM="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
           EMU="$ANDROID_HOME/emulator/emulator"
