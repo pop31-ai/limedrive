@@ -44,5 +44,7 @@
   "ui.capital": "КАПИТАЛ",
   "imp.title": "+ Своя игра",
   "imp.hint": "импорт из файла (Downloads)",
-  "imp.error": "Ошибка импорта"
+  "imp.error": "Ошибка импорта",
+  "mine.section": "Мои игры",
+  "mine.clear": "Удалить мои игры"
 }

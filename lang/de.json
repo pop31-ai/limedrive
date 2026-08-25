@@ -44,5 +44,7 @@
   "ui.capital": "KAPITAL",
   "imp.title": "+ Eigenes Spiel",
   "imp.hint": "Import aus Datei (Downloads)",
-  "imp.error": "Importfehler"
+  "imp.error": "Importfehler",
+  "mine.section": "Meine Spiele",
+  "mine.clear": "Meine Spiele löschen"
 }

@@ -44,5 +44,7 @@
   "ui.capital": "CAPITAL",
   "imp.title": "+ Custom game",
   "imp.hint": "import from file (Downloads)",
-  "imp.error": "Import error"
+  "imp.error": "Import error",
+  "mine.section": "My games",
+  "mine.clear": "Delete my games"
 }

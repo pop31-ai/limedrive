@@ -97,6 +97,20 @@
       init({ base: base }).then(function (api) {
         var sub = document.querySelector(".sub");
         if (sub && !sub.hasAttribute("data-i18n")) sub.textContent = api.t("sub.tagline");
+
+        var MY_KEY = "limedrive_my_games";
+        var esc = function (s) {
+          return String(s).replace(/[&<>"]/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+          });
+        };
+        var myGames = function () {
+          try { return JSON.parse(localStorage.getItem(MY_KEY) || "[]"); } catch (e) { return []; }
+        };
+        var saveMyGames = function (arr) {
+          try { localStorage.setItem(MY_KEY, JSON.stringify(arr)); } catch (e) {}
+        };
+
         var grid = document.querySelector(".grid");
         if (grid && !document.getElementById("impCard")) {
           var card = document.createElement("a");
@@ -118,7 +132,14 @@
               try {
                 var data = JSON.parse(r.result);
                 if (!data || !Array.isArray(data.levels)) throw new Error("not a LimeDrive game JSON");
-                localStorage.setItem("currentGame", r.result);
+                var list = myGames();
+                list.push({
+                  id: (data.name || f.name) + "|" + data.levels.length + "|" + Date.now(),
+                  title: data.name || f.name,
+                  data: r.result
+                });
+                saveMyGames(list);
+                try { localStorage.setItem("currentGame", r.result); } catch (e2) {}
                 location.href = "examples/player.html";
               } catch (e) {
                 alert((api.t("imp.error") || "Import error") + ": " + e.message);
@@ -128,7 +149,41 @@
           });
           grid.insertBefore(card, grid.firstChild);
           document.body.appendChild(inp);
+
+          var renderMine = function () {
+            var stale = grid.querySelectorAll("[data-mine]");
+            for (var s = 0; s < stale.length; s++) stale[s].parentNode.removeChild(stale[s]);
+            var list = myGames();
+            if (!list.length) return;
+            var lbl = document.createElement("div");
+            lbl.setAttribute("data-mine", "1");
+            lbl.style.cssText = "grid-column:1/-1;color:#00cc77;font-size:12px;margin-top:8px";
+            lbl.textContent = api.t("mine.section") + " (" + list.length + ")";
+            grid.appendChild(lbl);
+            list.forEach(function (g) {
+              var c = document.createElement("a");
+              c.className = "card";
+              c.setAttribute("data-mine", "1");
+              c.innerHTML = '<span class="t">' + esc(g.title) + '</span><span class="m">' + api.t("ex.play") + '</span>';
+              c.addEventListener("click", function () {
+                localStorage.setItem("currentGame", g.data);
+                location.href = "examples/player.html";
+              });
+              grid.appendChild(c);
+            });
+            var clr = document.createElement("a");
+            clr.className = "card";
+            clr.setAttribute("data-mine", "1");
+            clr.style.borderColor = "#aa4444";
+            clr.innerHTML = '<span class="t" style="color:#ff8888">🗑 ' + api.t("mine.clear") + '</span>';
+            clr.addEventListener("click", function () {
+              if (confirm(api.t("mine.clear") + "?")) { saveMyGames([]); renderMine(); }
+            });
+            grid.appendChild(clr);
+          };
+          renderMine();
         }
+
         if (!document.getElementById("langSwitch")) {
           var hint = document.querySelector(".hint") || document.body;
           var wrap = document.createElement("span");
