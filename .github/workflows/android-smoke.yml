@@ -62,8 +62,16 @@ jobs:
 
           RUNTAG=$(date +%s)
           EMULOG="emu-$RUNTAG.log"
-          export ANDROID_AVD_HOME="$ANDROID_HOME/avd"
-          mkdir -p "$ANDROID_AVD_HOME"
+          echo "== env check =="
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "HOME=$HOME"
+          ls "$ANDROID_HOME" 2>/dev/null | head -10 || echo "ANDROID_HOME not set or missing"
+
+          AVD_DIR="$HOME/.android/avd"
+          export ANDROID_AVD_HOME="$AVD_DIR"
+          export ANDROID_SDK_HOME="$HOME"
+          mkdir -p "$AVD_DIR"
 
           echo "== sdkmanager: install platform-tools + system image =="
           "$SDKM" --install "platform-tools"
@@ -71,14 +79,17 @@ jobs:
           echo "== installed images =="
           ls "$ANDROID_HOME/system-images"/*/*/* 2>/dev/null | head -3 || true
 
-          echo "== create AVD (ANDROID_AVD_HOME=$ANDROID_AVD_HOME) =="
-          echo "no" | "$AVDM" create avd -n ci -k "system-images;android-30;google_apis;x86_64" --force --path "$ANDROID_AVD_HOME/ci"
+          echo "== create AVD (AVD_DIR=$AVD_DIR) =="
+          "$AVDM" list avd 2>&1 | head -5 || true
+          echo "--- create attempt ---"
+          echo "no" | "$AVDM" create avd -n ci -k "system-images;android-30;google_apis;x86_64" --force 2>&1 || echo "WARN: avdmanager exit code: $?"
+          echo "--- post-create ---"
+          "$AVDM" list avd 2>&1 | head -10 || true
           echo "== avd home contents =="
-          ls -la "$ANDROID_AVD_HOME" || true
-          test -f "$ANDROID_AVD_HOME/ci.ini" && echo "ci.ini OK" || echo "WARN: ci.ini not at ANDROID_AVD_HOME"
+          ls -laR "$AVD_DIR" 2>/dev/null || true
+          find "$AVD_DIR" -type f -name "*.ini" 2>/dev/null | head -10 || true
+          find "$HOME" -name "ci.ini" -type f 2>/dev/null | head -5 || true
           find "$ANDROID_HOME" -name "ci.ini" -type f 2>/dev/null | head -5 || true
-          echo "== avdmanager list =="
-          "$AVDM" list avd 2>/dev/null | head -10 || true
 
           echo "== boot emulator (headless) =="
           "$EMU" -avd ci -no-window -gpu swiftshader_indirect -no-snapshot \
@@ -133,16 +144,14 @@ jobs:
           echo "== SMOKE OK =="
 
           kill $EMU_PID || true
-          echo "EMULOG=$EMULOG" >> "$GITHUB_ENV"
 
-      - name: Commit diagnostics
+      - name: Upload emulator log
         if: always()
-        run: |
-          git config user.email ci@limedrive.local
-          git config user.name limedrive-ci
-          git add -f "$EMULOG" emu-*.log 2>/dev/null || true
-          git commit -m "ci(diagnostics): emulator log [skip ci]" || true
-          git push || true
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-log
+          path: emu-*.log
+          if-no-files-found: ignore
 
       - name: Upload screenshots
         if: always()
