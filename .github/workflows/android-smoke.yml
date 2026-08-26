@@ -82,47 +82,41 @@ jobs:
 
           echo "== create AVD manually (AVD_DIR=$AVD_DIR) =="
           mkdir -p "$AVD_DIR/ci.avd"
-          cat > "$AVD_DIR/ci.ini" <<'AVDINI'
-avd.ini.encoding=UTF-8
-path=$HOME/.android/avd/ci.avd
-path.rel=ci.avd
-target=android-30
-AVDINI
-          sed -i "s|\$HOME|$HOME|g" "$AVD_DIR/ci.ini"
-          cat > "$AVD_DIR/ci.avd/config.ini" <<'CFG'
-AvdId=ci
-PlayStore.enabled=false
-abi.type=x86_64
-avd.ini.displayname=CI Emulator
-avd.ini.encoding=UTF-8
-disk.dataPartition.size=2G
-hw.accelerometer=yes
-hw.arc=false
-hw.audioInput=yes
-hw.battery=yes
-hw.cpu.arch=x86_64
-hw.cpu.ncore=2
-hw.dPad=no
-hw.device.manufacturer=Google
-hw.device.name=pixel
-hw.gps=yes
-hw.gpu.enabled=yes
-hw.gpu.mode=swiftshader_indirect
-hw.initialOrientation=Portrait
-hw.keyboard=yes
-hw.lcd.density=420
-hw.lcd.height=1920
-hw.lcd.width=1080
-hw.mainKeys=no
-hw.ramSize=2048
-hw.sdCard=yes
-hw.sensors.orientation=yes
-hw.sensors.proximity=yes
-hw.trackBall=no
-image.sysdir.1=system-images/android-30/google_apis/x86_64/
-tag.display=Google APIs
-tag.id=google_apis
-CFG
+          printf 'avd.ini.encoding=UTF-8\npath=%s/.android/avd/ci.avd\npath.rel=ci.avd\ntarget=android-30\n' "$HOME" > "$AVD_DIR/ci.ini"
+          {
+          echo "AvdId=ci"
+          echo "PlayStore.enabled=false"
+          echo "abi.type=x86_64"
+          echo "avd.ini.displayname=CI Emulator"
+          echo "avd.ini.encoding=UTF-8"
+          echo "disk.dataPartition.size=2G"
+          echo "hw.accelerometer=yes"
+          echo "hw.arc=false"
+          echo "hw.audioInput=yes"
+          echo "hw.battery=yes"
+          echo "hw.cpu.arch=x86_64"
+          echo "hw.cpu.ncore=2"
+          echo "hw.dPad=no"
+          echo "hw.device.manufacturer=Google"
+          echo "hw.device.name=pixel"
+          echo "hw.gps=yes"
+          echo "hw.gpu.enabled=yes"
+          echo "hw.gpu.mode=swiftshader_indirect"
+          echo "hw.initialOrientation=Portrait"
+          echo "hw.keyboard=yes"
+          echo "hw.lcd.density=420"
+          echo "hw.lcd.height=1920"
+          echo "hw.lcd.width=1080"
+          echo "hw.mainKeys=no"
+          echo "hw.ramSize=2048"
+          echo "hw.sdCard=yes"
+          echo "hw.sensors.orientation=yes"
+          echo "hw.sensors.proximity=yes"
+          echo "hw.trackBall=no"
+          echo "image.sysdir.1=system-images/android-30/google_apis/x86_64/"
+          echo "tag.display=Google APIs"
+          echo "tag.id=google_apis"
+          } > "$AVD_DIR/ci.avd/config.ini"
           echo "== AVD files =="
           cat "$AVD_DIR/ci.ini"
           cat "$AVD_DIR/ci.avd/config.ini" | head -5
