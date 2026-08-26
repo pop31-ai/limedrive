@@ -13,7 +13,7 @@ on:
 jobs:
   emulator-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
     env:
       APP: com.limedrive.app
     steps:
