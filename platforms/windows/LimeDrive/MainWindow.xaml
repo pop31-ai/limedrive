@@ -1,0 +1,22 @@
+<Window x:Class="LimeDrive.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="LimeDrive" Width="1024" Height="768"
+        WindowStartupLocation="CenterScreen"
+        Background="#0A0A14"
+        Closing="OnClosing">
+    <Grid>
+        <wv2:WebView2 x:Name="Web" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,12">
+            <Button Content="⟳ Update" Click="OnUpdate" Margin="0,0,0,6"
+                    Background="#1a1a2e" Foreground="#E0E0E0" BorderBrush="#333"
+                    Padding="12,6" FontSize="12" Cursor="Hand"/>
+            <Button Content="📂 Import ZIP…" Click="OnImportZip"
+                    Background="#1a1a2e" Foreground="#E0E0E0" BorderBrush="#333"
+                    Padding="12,6" FontSize="12" Cursor="Hand"/>
+        </StackPanel>
+        <TextBlock x:Name="Status" Text="" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                   Margin="12,0,0,12" Foreground="#666" FontSize="11"/>
+    </Grid>
+</Window>
