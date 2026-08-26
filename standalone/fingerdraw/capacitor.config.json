@@ -1,8 +1,0 @@
-{
-  "appId": "com.fingerdraw.app",
-  "appName": "FingerDraw",
-  "webDir": "www",
-  "server": {
-    "androidScheme": "https"
-  }
-}
