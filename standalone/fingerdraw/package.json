@@ -1,0 +1,17 @@
+{
+  "name": "fingerdraw",
+  "version": "1.0.0",
+  "description": "Professional finger drawing app for tablet artists",
+  "scripts": {
+    "start": "npx serve .",
+    "build:apk": "powershell -File scripts/build-apk.ps1",
+    "build:pdf": "python lessons/generate_pdf.py"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^6.2.1",
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}

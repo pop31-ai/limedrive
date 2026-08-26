@@ -378,7 +378,7 @@ function createMiniCard(card, index) {
   div.className = 'mini-card';
   const rank = card.rank;
   const suit = card.suit;
-  const p = getPalette(rank, suit);
+  const p = getPalette(rank, suit) || PALETTES[0];
   div.style.setProperty('--c1', p[0]);
   div.style.setProperty('--c2', p[1]);
   div.style.setProperty('--c3', p[2]);

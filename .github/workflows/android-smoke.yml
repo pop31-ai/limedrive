@@ -62,6 +62,12 @@ jobs:
           EMU="$ANDROID_HOME/emulator/emulator"
 
           echo "== ensure system image =="
+          RUNTAG=$(date +%s)
+          EMULOG="emu-$RUNTAG.log"
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          export ANDROID_SDK_HOME="$HOME"
+          export ANDROID_USER_HOME="$HOME/.android"
+          mkdir -p "$ANDROID_AVD_HOME"
           "$SDKM" --install "platform-tools"
           "$SDKM" --install "system-images;android-30;google_apis;x86_64"
           echo "== installed images =="
@@ -77,18 +83,18 @@ jobs:
 
           echo "== boot emulator (headless) =="
           "$EMU" -avd ci -no-window -gpu swiftshader_indirect -no-snapshot \
-            -no-audio -no-boot-anim -port 5554 > emulator.log 2>&1 &
+            -no-audio -no-boot-anim -port 5554 > "" 2>&1 &
           EMU_PID=$!
           DEV=""
           for i in $(seq 1 40); do
             DEV=$(adb devices | grep -E "emulator-5554[[:space:]]+device" || true)
             if [ -n "$DEV" ]; then echo "device online at attempt $i"; break; fi
-            if [ $((i % 5)) -eq 0 ]; then echo "waiting device… attempt $i"; tail -6 emulator.log || true; fi
+            if [ $((i % 5)) -eq 0 ]; then echo "waiting device… attempt $i"; tail -6 "$EMULOG" || true; fi
             sleep 8
           done
           if [ -z "$DEV" ]; then
             echo "FAIL: emulator device never came online"
-            tail -60 emulator.log
+            tail -60 "$EMULOG"
             kill $EMU_PID || true
             exit 1
           fi
@@ -100,7 +106,7 @@ jobs:
             sleep 3
           done
           if [ -z "$OK" ]; then
-            echo "FAIL: boot timeout"; tail -40 emulator.log
+            echo "FAIL: boot timeout"; tail -40 "$EMULOG"
             kill $EMU_PID || true
             exit 1
           fi
@@ -109,7 +115,7 @@ jobs:
           adb install -r platforms/android/dist/LimeDrive.apk
           adb shell am start -n $APP/.MainActivity
           sleep 7
-          adb shell pidof $APP > /dev/null || { echo "FAIL: app process died"; tail -30 emulator.log; exit 1; }
+          adb shell pidof $APP > /dev/null || { echo "FAIL: app process died"; tail -30 "$EMULOG"; exit 1; }
           if adb logcat -d | grep -q "FATAL EXCEPTION"; then echo "FAIL: FATAL in menu"; exit 1; fi
           adb exec-out screencap -p > menu.png
           MENU_SIZE=$(stat -c%s menu.png); echo "menu.png: $MENU_SIZE bytes"
@@ -128,14 +134,14 @@ jobs:
           echo "== SMOKE OK =="
 
           kill $EMU_PID || true
-          } 2>&1 | tee emu.log
+          } 2>&1 | tee "$EMULOG"
 
       - name: Commit diagnostics
         if: always()
         run: |
           git config user.email ci@limedrive.local
           git config user.name limedrive-ci
-          git add -f emu.log emulator.log 2>/dev/null || true
+          git add -f "$EMULOG" 2>/dev/null || true
           git commit -m "ci(diagnostics): emulator log [skip ci]" || true
           git push || true
 

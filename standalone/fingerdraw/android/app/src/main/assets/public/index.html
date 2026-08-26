@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>FingerDraw — Professional Drawing for Tablets</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="toolbar-btn active" data-tool="pen" title="Pen">🖊</button>
+      <button class="toolbar-btn" data-tool="brush" title="Brush">🖌</button>
+      <button class="toolbar-btn" data-tool="marker" title="Marker">🖍</button>
+      <button class="toolbar-btn" data-tool="airbrush" title="Airbrush">💨</button>
+      <button class="toolbar-btn" data-tool="eraser" title="Eraser">🧹</button>
+      <div class="separator"></div>
+      <button class="toolbar-btn" data-tool="undo" title="Undo">↩</button>
+      <button class="toolbar-btn" data-tool="redo" title="Redo">↪</button>
+      <button class="toolbar-btn" data-tool="clear" title="Clear">🗑</button>
+      <div class="separator"></div>
+      <button class="toolbar-btn" data-tool="layers" title="Layers">📑</button>
+      <button class="toolbar-btn" data-tool="export" title="Export PNG">💾</button>
+      <div class="separator"></div>
+      <button class="toolbar-btn color-btn active" data-color="#e94560" style="background:#e94560"></button>
+      <button class="toolbar-btn color-btn" data-color="#ff6b6b" style="background:#ff6b6b"></button>
+      <button class="toolbar-btn color-btn" data-color="#ffd93d" style="background:#ffd93d"></button>
+      <button class="toolbar-btn color-btn" data-color="#6bcb77" style="background:#6bcb77"></button>
+      <button class="toolbar-btn color-btn" data-color="#4d96ff" style="background:#4d96ff"></button>
+      <button class="toolbar-btn color-btn" data-color="#fff" style="background:#fff"></button>
+      <button class="toolbar-btn color-btn" data-color="#333" style="background:#333"></button>
+      <div class="separator"></div>
+      <input type="color" id="colorPicker" value="#e94560" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;flex-shrink:0">
+      <div class="separator"></div>
+      <input type="range" id="sizeSlider" class="size-slider" min="1" max="60" value="8">
+      <span class="size-label" id="sizeLabel">8</span>
+      <input type="range" id="opacitySlider" class="opacity-slider" min="0.05" max="1" step="0.05" value="1">
+      <span class="size-label" id="opacityLabel">100%</span>
+      <div class="separator"></div>
+      <button id="modeToggle" class="mode-toggle-btn">Precise Mode</button>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas-area">
+      <canvas id="mainCanvas"></canvas>
+      <div class="mode-indicator" id="modeIndicator">Precise Under Finger</div>
+      <div class="selection-info" id="selectionInfo"></div>
+      <div class="preview-panel">
+        <div class="label">Preview</div>
+        <div id="previewContainer"></div>
+      </div>
+      <div class="zoom-view">
+        <div id="zoomContainer"></div>
+        <div class="label">4× ZOOM</div>
+      </div>
+    </div>
+
+    <!-- Layer Panel -->
+    <div class="layer-panel" id="layerPanel">
+      <h3 style="color:#e94560;font-size:14px;margin-bottom:10px;">Layers</h3>
+      <div id="layerList"></div>
+      <button class="toolbar-btn" style="width:100%;margin-top:8px;" id="addLayerBtn">+ Add Layer</button>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span id="statusCoords">—</span>
+      <span id="statusSize">8px</span>
+      <span id="statusLayer">Background</span>
+      <span style="flex:1"></span>
+      <span>FingerDraw v1.0</span>
+    </div>
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
