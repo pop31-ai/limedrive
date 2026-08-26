@@ -54,36 +54,35 @@ jobs:
       - name: Emulator smoke (explicit, logged)
         run: |
           set -eo pipefail
-          {
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$PATH"
           adb version
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           AVDM="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
           EMU="$ANDROID_HOME/emulator/emulator"
 
-          echo "== ensure system image =="
           RUNTAG=$(date +%s)
           EMULOG="emu-$RUNTAG.log"
-          export ANDROID_AVD_HOME="$HOME/.android/avd"
-          export ANDROID_SDK_HOME="$HOME"
-          export ANDROID_USER_HOME="$HOME/.android"
+          export ANDROID_AVD_HOME="$ANDROID_HOME/avd"
           mkdir -p "$ANDROID_AVD_HOME"
+
+          echo "== sdkmanager: install platform-tools + system image =="
           "$SDKM" --install "platform-tools"
           "$SDKM" --install "system-images;android-30;google_apis;x86_64"
           echo "== installed images =="
           ls "$ANDROID_HOME/system-images"/*/*/* 2>/dev/null | head -3 || true
 
-          echo "== create AVD =="
-          export ANDROID_AVD_HOME="$HOME/.android/avd"
-          mkdir -p "$ANDROID_AVD_HOME"
-          echo "no" | "$AVDM" create avd -n ci -k "system-images;android-30;google_apis;x86_64" --force
+          echo "== create AVD (ANDROID_AVD_HOME=$ANDROID_AVD_HOME) =="
+          echo "no" | "$AVDM" create avd -n ci -k "system-images;android-30;google_apis;x86_64" --force --path "$ANDROID_AVD_HOME/ci"
           echo "== avd home contents =="
           ls -la "$ANDROID_AVD_HOME" || true
-          test -f "$ANDROID_AVD_HOME/ci.ini" && echo "ci.ini OK" || echo "WARN: ci.ini missing"
+          test -f "$ANDROID_AVD_HOME/ci.ini" && echo "ci.ini OK" || echo "WARN: ci.ini not at ANDROID_AVD_HOME"
+          find "$ANDROID_HOME" -name "ci.ini" -type f 2>/dev/null | head -5 || true
+          echo "== avdmanager list =="
+          "$AVDM" list avd 2>/dev/null | head -10 || true
 
           echo "== boot emulator (headless) =="
           "$EMU" -avd ci -no-window -gpu swiftshader_indirect -no-snapshot \
-            -no-audio -no-boot-anim -port 5554 > "" 2>&1 &
+            -no-audio -no-boot-anim -port 5554 -read-only > "$EMULOG" 2>&1 &
           EMU_PID=$!
           DEV=""
           for i in $(seq 1 40); do
@@ -134,14 +133,14 @@ jobs:
           echo "== SMOKE OK =="
 
           kill $EMU_PID || true
-          } 2>&1 | tee "$EMULOG"
+          echo "EMULOG=$EMULOG" >> "$GITHUB_ENV"
 
       - name: Commit diagnostics
         if: always()
         run: |
           git config user.email ci@limedrive.local
           git config user.name limedrive-ci
-          git add -f "$EMULOG" 2>/dev/null || true
+          git add -f "$EMULOG" emu-*.log 2>/dev/null || true
           git commit -m "ci(diagnostics): emulator log [skip ci]" || true
           git push || true
 
