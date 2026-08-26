@@ -59,7 +59,8 @@ for (const proj of fs.readdirSync(BASE).sort()) {
     const dst = path.join(OUT, slugName);
     fs.mkdirSync(dst, { recursive: true });
     fs.cpSync(srcDir, dst, { recursive: true, filter: s2 =>
-      !s2.includes(".git") && !s2.includes("__pycache__") && !s2.endsWith(".pyc") });
+      !s2.includes(".git") && !s2.includes("__pycache__") && !s2.endsWith(".pyc") &&
+      !/(\\|\/)(android|www|build|docs|lessons|scripts|assets|obj|dist)(\\|\/|$)/.test(s2) });
     file = "standalone/" + slugName + "/";
     let t = 0; (function w(d) { for (const f of fs.readdirSync(d)) { const p2 = path.join(d, f); const st = fs.statSync(p2); if (st.isDirectory()) w(p2); else t += st.size; } })(dst);
     kb = Math.round(t / 1024);
